@@ -1,0 +1,250 @@
+# DEPRECATED: Use PACTA-Team/pacta-desktop for desktop installers
+# This workflow is kept for server-only deployments.
+# See: https://github.com/PACTA-Team/pacta-desktop
+name: Build Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '22.14.0'
+
+jobs:
+  build-linux:
+    name: Build Linux (.deb)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        env:
+          JWT_SECRET: build-time-secret-for-standalone-output
+        run: npm run build
+
+      - name: Verify standalone build
+        run: |
+          echo "=== Standalone directory ==="
+          ls -la .next/standalone/ 2>/dev/null || echo "ERROR: .next/standalone not found!"
+          echo "=== Server.js check ==="
+          test -f .next/standalone/server.js && echo "server.js exists" || echo "ERROR: server.js missing"
+          echo "=== Static directory ==="
+          ls -la .next/static/ 2>/dev/null || echo "WARNING: .next/static not found"
+
+      - name: Download Node.js
+        run: |
+          mkdir -p dist/linux/opt/pacta/node
+          curl -fsSL https://nodejs.org/dist/v${{ env.NODE_VERSION }}/node-v${{ env.NODE_VERSION }}-linux-x64.tar.xz | \
+            tar -xJ -C dist/linux/opt/pacta/node --strip-components=1
+
+      - name: Assemble package
+        run: |
+          # Copy standalone build (includes server.js, node_modules, .next/BUILD_ID, .next/server/)
+          # Use shopt -s dotglob to include hidden files like .next/ inside standalone
+          (cd .next/standalone && cp -r ./* ../../dist/linux/opt/pacta/)
+          (cd .next/standalone && cp -r ./.* ../../dist/linux/opt/pacta/ 2>/dev/null || true)
+
+          # Copy .next/static for Next.js to find static assets
+          mkdir -p dist/linux/opt/pacta/.next
+          cp -r .next/static/* dist/linux/opt/pacta/.next/static/ 2>/dev/null || true
+
+          # Copy public folder if it exists
+          cp -r public dist/linux/opt/pacta/public 2>/dev/null || true
+
+          # Create required directories
+          mkdir -p dist/linux/opt/pacta/data dist/linux/opt/pacta/uploads dist/linux/opt/pacta/config dist/linux/opt/pacta/logs
+
+          # Copy config files
+          cp .env.example dist/linux/opt/pacta/config/.env.example
+          cp package/linux/pacta.service dist/linux/opt/pacta/
+
+          # Copy schema for database initialization
+          mkdir -p dist/linux/opt/pacta/src/lib
+          cp src/lib/schema.sql dist/linux/opt/pacta/src/lib/schema.sql
+
+      - name: Build .deb package
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          mkdir -p dist/linux/DEBIAN
+          cp package/linux/debian/control dist/linux/DEBIAN/
+          cp package/linux/debian/postinst dist/linux/DEBIAN/
+          cp package/linux/debian/prerm dist/linux/DEBIAN/
+
+          sed -i "s/^Version:.*/Version: $VERSION/" dist/linux/DEBIAN/control
+
+          chmod 755 dist/linux/DEBIAN/postinst dist/linux/DEBIAN/prerm
+
+          dpkg-deb --build dist/linux pacta_${VERSION}_amd64.deb
+          echo "Package size: $(du -h pacta_${VERSION}_amd64.deb | cut -f1)"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacta-linux
+          path: pacta_*.deb
+
+  build-windows:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        env:
+          JWT_SECRET: build-time-secret-for-standalone-output
+        run: npm run build
+
+      - name: Download Node.js
+        shell: bash
+        run: |
+          mkdir -p dist/windows/node
+          curl -fsSL https://nodejs.org/dist/v${{ env.NODE_VERSION }}/win-x64/node.exe -o dist/windows/node/node.exe
+
+      - name: Build PACTA Launcher
+        shell: bash
+        run: |
+          # Add Go bin to PATH
+          export PATH="$HOME/go/bin:$PATH"
+
+          # Install goversioninfo for embedding icon and version info
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+
+          # Copy icon to launcher directory (goversioninfo can't resolve deep relative paths on Windows)
+          cp src/images/contract_icon.ico package/windows/launcher/contract_icon.ico
+
+          # Generate version info with icon
+          cd package/windows/launcher
+          goversioninfo -o resource_windows.syso
+
+          # Build the launcher with embedded icon
+          go build -ldflags="-H windowsgui -s -w" -o ../../../dist/windows/PACTA.exe main.go
+
+          echo "Launcher built: $(du -h ../../../dist/windows/PACTA.exe | cut -f1)"
+
+      - name: Install NSSM
+        run: choco install nssm --no-progress --yes
+
+      - name: Copy NSSM to package
+        shell: bash
+        run: |
+          mkdir -p dist/windows
+          cp "/c/ProgramData/chocolatey/bin/nssm.exe" dist/windows/nssm.exe || \
+          cp "/c/tools/nssm/nssm.exe" dist/windows/nssm.exe || \
+          find /c/ProgramData/chocolatey -name "nssm.exe" -exec cp {} dist/windows/nssm.exe \;
+
+      - name: Assemble package
+        shell: bash
+        run: |
+          mkdir -p dist/windows/app
+          # Copy standalone build (includes server.js, node_modules, .next/BUILD_ID, .next/server/)
+          (cd .next/standalone && cp -r ./* ../../dist/windows/app/)
+          (cd .next/standalone && cp -r ./.* ../../dist/windows/app/ 2>/dev/null || true)
+
+          # Copy .next/static for Next.js to find static assets
+          mkdir -p dist/windows/app/.next
+          cp -r .next/static/* dist/windows/app/.next/static/ 2>/dev/null || true
+
+          # Copy public folder if it exists
+          cp -r public dist/windows/app/public 2>/dev/null || true
+
+          # Create required directories
+          mkdir -p dist/windows/shared/data dist/windows/shared/uploads dist/windows/shared/config dist/windows/shared/logs
+
+          # Copy config files
+          cp .env.example dist/windows/shared/config/.env.example
+          cp package/windows/start.bat dist/windows/
+
+          # Copy the PACTA launcher executable
+          cp dist/windows/PACTA.exe dist/windows/app/PACTA.exe
+
+          # Generate a secure JWT_SECRET for the release package
+          JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+          cat > dist/windows/app/.env << EOF
+          # PACTA Environment Configuration
+          # This file is auto-generated during installation
+
+          # Required: JWT Secret (auto-generated)
+          JWT_SECRET=${JWT_SECRET}
+
+          # Allowed origins for CORS (comma-separated)
+          ALLOWED_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
+
+          # Node environment
+          NODE_ENV=production
+
+          # Server port (default)
+          PORT=3000
+          EOF
+
+      - name: Generate Inno Setup script
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION="${VERSION#v}"
+          sed "s/{VERSION_PLACEHOLDER}/${VERSION}/g" package/windows/pacta.iss > dist/windows/pacta.iss
+
+          # Copy icon to dist directory for Inno Setup
+          cp src/images/contract_icon.ico dist/windows/contract_icon.ico
+
+      - name: Compile Inno Setup
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: dist/windows/pacta.iss
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacta-windows
+          path: dist/windows/pacta-setup-*.exe
+
+      - name: Upload standalone launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacta-windows-launcher
+          path: dist/windows/PACTA.exe
+
+  release:
+    name: Create GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pacta-linux/pacta_*.deb
+            pacta-windows/pacta-setup-*.exe
+            pacta-windows-launcher/PACTA.exe
+          generate_release_notes: true

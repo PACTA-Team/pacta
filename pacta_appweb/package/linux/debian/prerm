@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "deconfigure" ] || [ "$1" = "purge" ]; then
+    systemctl stop pacta || true
+    systemctl disable pacta || true
+    rm -f /etc/systemd/system/pacta.service
+    systemctl daemon-reload
+fi
+
+if [ "$1" = "purge" ]; then
+    # Remove pacta user on purge
+    if id -u pacta >/dev/null 2>&1; then
+        userdel pacta 2>/dev/null || true
+    fi
+    # Remove data directory on purge
+    rm -rf /opt/pacta/data /opt/pacta/uploads /opt/pacta/logs
+fi

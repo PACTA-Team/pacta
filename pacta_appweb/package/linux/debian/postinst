@@ -1,0 +1,85 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "configure" ]; then
+    # Create pacta system user if it doesn't exist
+    if ! id -u pacta >/dev/null 2>&1; then
+        useradd --system --no-create-home --shell /usr/sbin/nologin pacta
+        echo "Created system user 'pacta'"
+    fi
+
+    # Install systemd service file
+    cp /opt/pacta/pacta.service /etc/systemd/system/pacta.service
+    chmod 644 /etc/systemd/system/pacta.service
+
+    # Generate JWT_SECRET if not set
+    if [ -f /opt/pacta/config/.env ]; then
+        if grep -q "JWT_SECRET=change-me" /opt/pacta/config/.env 2>/dev/null; then
+            SECRET=$(openssl rand -base64 32)
+            sed -i "s|JWT_SECRET=.*|JWT_SECRET=$SECRET|" /opt/pacta/config/.env
+        fi
+    else
+        cp /opt/pacta/config/.env.example /opt/pacta/config/.env
+        SECRET=$(openssl rand -base64 32)
+        sed -i "s|JWT_SECRET=.*|JWT_SECRET=$SECRET|" /opt/pacta/config/.env
+        chmod 600 /opt/pacta/config/.env
+    fi
+
+    # Create required directories
+    mkdir -p /opt/pacta/data /opt/pacta/uploads /opt/pacta/logs
+
+    # Set ownership to pacta user
+    chown -R pacta:pacta /opt/pacta/
+    chmod 750 /opt/pacta/config/.env
+
+    # Initialize database with schema if it doesn't exist or is empty
+    DB_PATH="/opt/pacta/data/pacta.db"
+    SCHEMA_PATH="/opt/pacta/src/lib/schema.sql"
+
+    if [ ! -f "$DB_PATH" ] || [ ! -s "$DB_PATH" ]; then
+        # Remove any stale WAL/SHM files
+        rm -f "${DB_PATH}-wal" "${DB_PATH}-shm"
+
+        # Initialize database using Node.js
+        su -s /bin/bash pacta -c "cd /opt/pacta && /opt/pacta/node/bin/node -e \"
+const Database = require('better-sqlite3');
+const fs = require('fs');
+const db = new Database('$DB_PATH');
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+const schema = fs.readFileSync('$SCHEMA_PATH', 'utf-8');
+db.exec(schema);
+db.close();
+console.log('Database initialized with schema');
+\""
+    fi
+
+    # Create first-run flag if no active admin user exists
+    ADMIN_CHECK=$(su -s /bin/bash pacta -c "cd /opt/pacta && /opt/pacta/node/bin/node -e \"
+const Database = require('better-sqlite3');
+const db = new Database('$DB_PATH');
+const admin = db.prepare(\\\"SELECT id FROM users WHERE role = 'admin' AND status = 'active'\\\").get();
+console.log(admin ? 'exists' : 'missing');
+db.close();
+\"" 2>/dev/null || echo "missing")
+
+    if [ "$ADMIN_CHECK" = "missing" ]; then
+        touch /opt/pacta/data/.first-run
+        chown pacta:pacta /opt/pacta/data/.first-run
+    fi
+
+    # Reload and enable service
+    systemctl daemon-reload
+    systemctl enable pacta
+    systemctl start pacta
+
+    echo "PACTA installed successfully!"
+    echo "Access at: http://127.0.0.1:3000"
+    echo "For LAN access: sudo ufw allow 3000/tcp"
+
+    if [ -f /opt/pacta/data/.first-run ]; then
+        echo ""
+        echo "First-time setup detected!"
+        echo "Visit http://127.0.0.1:3000/setup to configure your admin account."
+    fi
+fi

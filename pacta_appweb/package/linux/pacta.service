@@ -1,0 +1,18 @@
+[Unit]
+Description=PACTA Contract Management System
+After=network.target
+
+[Service]
+User=pacta
+Group=pacta
+Type=simple
+WorkingDirectory=/opt/pacta
+ExecStart=/opt/pacta/node/bin/node /opt/pacta/server.js
+Restart=on-failure
+RestartSec=10
+EnvironmentFile=/opt/pacta/config/.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target

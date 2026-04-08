@@ -1,0 +1,10 @@
+Package: pacta
+Version: 0.0.0
+Section: web
+Priority: optional
+Architecture: amd64
+Depends: libsqlite3-0, openssl
+Maintainer: PACTA Team <maintainer@pacta.app>
+Description: PACTA Contract Management System
+ A local-first contract management system with SQLite backend,
+ built with Next.js. Runs as a systemd service on port 3000.
