@@ -144,7 +144,7 @@ export default function AuthorizedSignersPage() {
 
   if (showForm) {
     return (
-      
+      <>
         <AuthorizedSignerForm
           signer={editingSigner}
           onSubmit={handleCreateOrUpdate}
@@ -153,12 +153,12 @@ export default function AuthorizedSignersPage() {
             setEditingSigner(undefined);
           }}
         />
-      
+      </>
     );
   }
 
   return (
-    
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
@@ -318,6 +318,6 @@ export default function AuthorizedSignersPage() {
           )}
         </DialogContent>
       </Dialog>
-    
+    </>
   );
 }

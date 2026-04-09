@@ -18,7 +18,7 @@ import (
 	"github.com/PACTA-Team/pacta/internal/handlers"
 )
 
-//go:embed frontend/out
+//go:embed pacta_appweb/dist
 var staticFS embed.FS
 
 func Start(cfg *config.Config) error {
@@ -61,8 +61,8 @@ func Start(cfg *config.Config) error {
 		r.Post("/api/suppliers", h.HandleSuppliers)
 	})
 
-	// Static files (Next.js export) - catch-all
-	staticSub, _ := fs.Sub(staticFS, "frontend/out")
+	// Static files (Vite build output) - catch-all
+	staticSub, _ := fs.Sub(staticFS, "pacta_appweb/dist")
 	r.Handle("/*", http.FileServer(http.FS(staticSub)))
 
 	srv := &http.Server{

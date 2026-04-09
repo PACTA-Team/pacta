@@ -129,7 +129,7 @@ export default function ClientsPage() {
 
   if (showForm) {
     return (
-      
+      <>
         <ClientForm
           client={editingClient}
           onSubmit={handleCreateOrUpdate}
@@ -138,12 +138,12 @@ export default function ClientsPage() {
             setEditingClient(undefined);
           }}
         />
-      
+      </>
     );
   }
 
   return (
-    
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
@@ -283,6 +283,6 @@ export default function ClientsPage() {
           )}
         </DialogContent>
       </Dialog>
-    
+    </>
   );
 }

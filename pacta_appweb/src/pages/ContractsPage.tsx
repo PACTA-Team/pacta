@@ -176,7 +176,7 @@ export default function ContractsPage() {
 
   if (showForm) {
     return (
-      
+      <>
         <ContractForm
           contract={editingContract}
           onSubmit={handleCreateOrUpdate}
@@ -185,12 +185,12 @@ export default function ContractsPage() {
             setEditingContract(undefined);
           }}
         />
-      
+      </>
     );
   }
 
   return (
-    
+    <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
@@ -317,6 +317,6 @@ export default function ContractsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    
+    </>
   );
 }
