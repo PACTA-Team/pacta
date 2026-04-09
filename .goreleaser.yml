@@ -1,0 +1,48 @@
+version: 2
+project_name: pacta
+
+before:
+  hooks:
+    - bash -c 'cd pacta_appweb && npm ci && npm run build'
+
+builds:
+  - id: pacta
+    main: ./cmd/pacta
+    binary: pacta
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X github.com/PACTA-Team/pacta/internal/config.AppVersion={{.Version}}
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+nfpms:
+  - package_name: pacta
+    vendor: "PACTA Team"
+    maintainer: "PACTA Team"
+    description: "PACTA Contract Management System - Local-first contract management"
+    license: "MIT"
+    homepage: "https://github.com/PACTA-Team/pacta"
+    formats:
+      - deb
+    bindir: /usr/local/bin
+
+release:
+  draft: true
+  prerelease: auto
+  name_template: "PACTA {{ .Version }}"
