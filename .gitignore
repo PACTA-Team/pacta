@@ -1,0 +1,31 @@
+# Binaries
+pacta
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Database
+*.db
+*.db-*
+
+# Node
+node_modules/
+.next/
+out/
+
+# Build
+frontend/out/
+
+# Env
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
