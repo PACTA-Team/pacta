@@ -1,22 +1,21 @@
 
-'use client';
-
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import AppSidebar from './AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   useEffect(() => {
     if (!isAuthenticated && pathname !== '/') {
-      router.push('/');
+      navigate('/');
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [isAuthenticated, pathname, navigate]);
 
   if (!isAuthenticated) {
     return null;
