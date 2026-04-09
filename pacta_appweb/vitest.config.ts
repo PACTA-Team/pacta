@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
@@ -16,7 +16,6 @@ export default defineConfig({
         statements: 80,
       },
     },
-    setupFiles: ['./src/test-setup.ts'],
   },
   resolve: {
     alias: {
