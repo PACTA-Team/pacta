@@ -18,7 +18,7 @@ import (
 	"github.com/PACTA-Team/pacta/internal/handlers"
 )
 
-//go:embed pacta_appweb/dist
+//go:embed all:pacta_appweb/dist
 var staticFS embed.FS
 
 func Start(cfg *config.Config) error {
