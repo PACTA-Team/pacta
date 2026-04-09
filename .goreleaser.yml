@@ -43,6 +43,6 @@ nfpms:
     bindir: /usr/local/bin
 
 release:
-  draft: true
+  draft: false
   prerelease: auto
   name_template: "PACTA {{ .Version }}"
