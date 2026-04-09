@@ -2,7 +2,10 @@ module github.com/PACTA-Team/pacta
 
 go 1.23
 
-require modernc.org/sqlite v1.34.5
+require (
+	github.com/go-chi/chi/v5 v5.2.0
+	modernc.org/sqlite v1.34.5
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
