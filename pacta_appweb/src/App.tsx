@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import ContractsPage from './pages/ContractsPage';
 import ContractDetailsPage from './pages/ContractDetailsPage';
@@ -22,7 +23,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/setup" element={<SetupPage />} />
-        <Route path="/" element={<AppLayout><DashboardPage /></AppLayout>} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/dashboard" element={<AppLayout><DashboardPage /></AppLayout>} />
         <Route path="/contracts" element={<AppLayout><ContractsPage /></AppLayout>} />
         <Route path="/contracts/:id" element={<AppLayout><ContractDetailsPage /></AppLayout>} />
