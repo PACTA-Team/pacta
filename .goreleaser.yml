@@ -1,10 +1,6 @@
 version: 2
 project_name: pacta
 
-before:
-  hooks:
-    - bash -c 'cd pacta_appweb && npm ci && npm run build'
-
 builds:
   - id: pacta
     main: ./cmd/pacta

@@ -36,6 +36,10 @@ jobs:
       - name: Tidy Go modules
         run: go mod tidy
 
+      - name: Build frontend
+        working-directory: pacta_appweb
+        run: npm ci && npm run build
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
