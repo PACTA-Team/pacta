@@ -1,7 +1,6 @@
 package server
 
 import (
-	"embed"
 	"io/fs"
 	"log"
 	"net/http"
@@ -18,10 +17,7 @@ import (
 	"github.com/PACTA-Team/pacta/internal/handlers"
 )
 
-//go:embed all:pacta_appweb/dist
-var staticFS embed.FS
-
-func Start(cfg *config.Config) error {
+func Start(cfg *config.Config, staticFS fs.FS) error {
 	database, err := db.Open(cfg.DataDir)
 	if err != nil {
 		return err
