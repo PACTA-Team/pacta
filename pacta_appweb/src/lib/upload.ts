@@ -13,7 +13,7 @@ export const upload = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/next_api/upload', {
+    const response = await fetch('/api/upload', {
       method: 'POST',
       body: formData,
     });

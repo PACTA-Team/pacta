@@ -18,7 +18,7 @@ async function apiRequest<T = any>(
   options?: RequestInit,
 ): Promise<T> {
   try {
-    const response = await fetch(`/next_api${endpoint}`, {
+    const response = await fetch(`/api${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,

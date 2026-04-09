@@ -12,7 +12,7 @@ export default function Home() {
 
   useEffect(() => {
     // Check if this is a first-run setup
-    fetch('/next_api/setup/status')
+    fetch('/api/setup/status')
       .then(r => r.json())
       .then(data => {
         if (data.firstRun) {

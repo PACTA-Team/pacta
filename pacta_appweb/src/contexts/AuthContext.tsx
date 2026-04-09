@@ -5,9 +5,8 @@ import { User } from '@/types';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   login: (email: string, password: string) => Promise<User | null>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<User | null>;
   isAuthenticated: boolean;
   hasPermission: (role: User['role']) => boolean;
@@ -17,66 +16,53 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session from localStorage
-    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('pacta_token') : null;
-    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('pacta_user') : null;
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Check if session is valid via cookie
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setUser(data); })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
-      const res = await fetch('/next_api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-      const json = await res.json();
-      if (!res.ok || !json.data) return null;
-
-      const { token: newToken, user: loggedInUser } = json.data;
-      setToken(newToken);
-      setUser(loggedInUser);
-      localStorage.setItem('pacta_token', newToken);
-      localStorage.setItem('pacta_user', JSON.stringify(loggedInUser));
-      return loggedInUser;
+      if (!res.ok) return null;
+      const data = await res.json();
+      setUser(data);
+      return data;
     } catch {
       return null;
     }
   };
 
-  const logout = (): void => {
-    setToken(null);
+  const logout = async (): Promise<void> => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {}
     setUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('pacta_token');
-      localStorage.removeItem('pacta_user');
-    }
   };
 
   const register = async (name: string, email: string, password: string): Promise<User | null> => {
     try {
-      const res = await fetch('/next_api/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
+        credentials: 'include',
       });
-      const json = await res.json();
-      if (!res.ok || !json.data) return null;
-
-      const { token: newToken, user: newUser } = json.data;
-      setToken(newToken);
-      setUser(newUser);
-      localStorage.setItem('pacta_token', newToken);
-      localStorage.setItem('pacta_user', JSON.stringify(newUser));
-      return newUser;
+      if (!res.ok) return null;
+      const data = await res.json();
+      setUser(data);
+      return data;
     } catch {
       return null;
     }
@@ -101,7 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        token,
         login,
         logout,
         register,
