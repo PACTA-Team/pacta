@@ -11,7 +11,6 @@ import { User, UserRole } from '@/types';
 import { getUsers, setUsers } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 
 export default function UsersPage() {
   const [users, setUsersState] = useState<User[]>([]);
@@ -138,20 +137,20 @@ export default function UsersPage() {
 
   if (!hasPermission('admin')) {
     return (
-      <AppLayout>
+      
         <Card>
           <CardContent className="py-12 text-center">
             <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">You do not have permission to access this page</p>
           </CardContent>
         </Card>
-      </AppLayout>
+      
     );
   }
 
   if (showForm) {
     return (
-      <AppLayout>
+      
         <Card>
           <CardHeader>
             <CardTitle>{editingUser ? 'Edit User' : 'Add New User'}</CardTitle>
@@ -234,12 +233,12 @@ export default function UsersPage() {
             </form>
           </CardContent>
         </Card>
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground">
@@ -357,6 +356,6 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    
   );
 }

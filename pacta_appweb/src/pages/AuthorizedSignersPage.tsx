@@ -8,7 +8,6 @@ import { AuthorizedSigner, Client, Supplier } from '@/types';
 import { getAuthorizedSigners, setAuthorizedSigners, getCurrentUser, getClients, getSuppliers } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 import AuthorizedSignerForm from '@/components/authorized-signers/AuthorizedSignerForm';
 import {
   AlertDialog,
@@ -145,7 +144,7 @@ export default function AuthorizedSignersPage() {
 
   if (showForm) {
     return (
-      <AppLayout>
+      
         <AuthorizedSignerForm
           signer={editingSigner}
           onSubmit={handleCreateOrUpdate}
@@ -154,12 +153,12 @@ export default function AuthorizedSignersPage() {
             setEditingSigner(undefined);
           }}
         />
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
@@ -319,6 +318,6 @@ export default function AuthorizedSignersPage() {
           )}
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    
   );
 }

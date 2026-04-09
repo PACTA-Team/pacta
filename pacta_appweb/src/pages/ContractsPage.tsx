@@ -13,7 +13,6 @@ import { addAuditLog } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import AppLayout from '@/components/layout/AppLayout';
 import ContractForm from '@/components/contracts/ContractForm';
 import {
   AlertDialog,
@@ -177,7 +176,7 @@ export default function ContractsPage() {
 
   if (showForm) {
     return (
-      <AppLayout>
+      
         <ContractForm
           contract={editingContract}
           onSubmit={handleCreateOrUpdate}
@@ -186,12 +185,12 @@ export default function ContractsPage() {
             setEditingContract(undefined);
           }}
         />
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
@@ -318,6 +317,6 @@ export default function ContractsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppLayout>
+    
   );
 }

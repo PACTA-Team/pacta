@@ -7,7 +7,6 @@ import { generateNotifications } from '@/lib/notifications';
 import { Contract, ContractStatus } from '@/types';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import AppLayout from '@/components/layout/AppLayout';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
@@ -96,7 +95,7 @@ export default function DashboardPage() {
     }));
 
   return (
-    <AppLayout>
+    
       <div className="space-y-6">
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -268,6 +267,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-    </AppLayout>
+    
   );
 }

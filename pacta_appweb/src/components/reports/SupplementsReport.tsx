@@ -1,6 +1,7 @@
 
 
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -304,10 +305,10 @@ export default function SupplementsReport({
                   return (
                     <TableRow key={item.contractId}>
                       <TableCell>
-                        <a href={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
-                          <div className="font-medium">{item.contractNumber}</div>
-                          <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
-                        </a>
+                      <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                        <div className="font-medium">{item.contractNumber}</div>
+                        <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
+                      </Link>
                       </TableCell>
                       <TableCell className="text-center font-bold">{item.count}</TableCell>
                       <TableCell>
@@ -355,9 +356,9 @@ export default function SupplementsReport({
                   <TableRow key={supplement.id}>
                     <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
                     <TableCell>
-                      <a href={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
+                      <Link to={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
                         {getContractInfo(supplement.contractId)}
-                      </a>
+                      </Link>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{supplement.description}</TableCell>
                     <TableCell>{formatDate(supplement.effectiveDate)}</TableCell>

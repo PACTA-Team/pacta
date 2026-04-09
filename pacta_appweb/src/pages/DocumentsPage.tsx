@@ -9,7 +9,6 @@ import { getDocuments, setDocuments, getContracts, getCurrentUser } from '@/lib/
 import { addAuditLog } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 import { Link } from 'react-router-dom';
 
 export default function DocumentsPage() {
@@ -76,7 +75,7 @@ export default function DocumentsPage() {
   };
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
@@ -175,6 +174,6 @@ export default function DocumentsPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    
   );
 }

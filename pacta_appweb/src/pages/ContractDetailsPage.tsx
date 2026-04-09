@@ -9,7 +9,6 @@ import { Contract, Supplement, Document, AuditLog, Client, Supplier } from '@/ty
 import { getContracts, getSupplements, getDocuments, getClients, getSuppliers } from '@/lib/storage';
 import { getContractAuditLogs } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
-import AppLayout from '@/components/layout/AppLayout';
 
 export default function ContractDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,14 +59,14 @@ export default function ContractDetailsPage() {
 
   if (!contract) {
     return (
-      <AppLayout>
+      
         <div className="text-center py-12">
           <p className="text-muted-foreground">Contract not found</p>
           <Button onClick={() => navigate('/contracts')} className="mt-4">
             Back to Contracts
           </Button>
         </div>
-      </AppLayout>
+      
     );
   }
 
@@ -84,7 +83,7 @@ export default function ContractDetailsPage() {
   };
 
   return (
-    <AppLayout>
+    
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -276,6 +275,6 @@ export default function ContractDetailsPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    
   );
 }

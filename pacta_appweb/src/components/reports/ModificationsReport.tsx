@@ -1,6 +1,7 @@
 
 
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -205,10 +206,10 @@ export default function ModificationsReport({
                 reportData.contractModifications.map((item) => (
                   <TableRow key={item.contractId}>
                     <TableCell>
-                      <a href={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                      <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
                         <div className="font-medium">{item.contractNumber}</div>
                         <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
-                      </a>
+                      </Link>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary">{item.modificationCount}</Badge>
@@ -258,9 +259,9 @@ export default function ModificationsReport({
                   <TableRow key={supplement.id}>
                     <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
                     <TableCell>
-                      <a href={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
+                      <Link to={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
                         {getContractInfo(supplement.contractId)}
-                      </a>
+                      </Link>
                     </TableCell>
                     <TableCell className="max-w-md">
                       <p className="line-clamp-2">{supplement.modifications}</p>

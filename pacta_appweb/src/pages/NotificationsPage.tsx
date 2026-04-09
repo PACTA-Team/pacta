@@ -10,7 +10,6 @@ import { Notification, NotificationSettings } from '@/types';
 import { getNotifications, getNotificationSettings, setNotificationSettings } from '@/lib/storage';
 import { markNotificationAsRead, markNotificationAsAcknowledged } from '@/lib/notifications';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 import { Link } from 'react-router-dom';
 
 export default function NotificationsPage() {
@@ -72,7 +71,7 @@ export default function NotificationsPage() {
 
   if (showSettings) {
     return (
-      <AppLayout>
+      
         <Card>
           <CardHeader>
             <CardTitle>Notification Settings</CardTitle>
@@ -130,14 +129,14 @@ export default function NotificationsPage() {
             </div>
           </CardContent>
         </Card>
-      </AppLayout>
+      
     );
   }
 
   const unreadCount = notifications.filter(n => n.status === 'unread').length;
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -213,6 +212,6 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
-    </AppLayout>
+    
   );
 }

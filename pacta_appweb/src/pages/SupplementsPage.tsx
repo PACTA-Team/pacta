@@ -10,7 +10,6 @@ import { getSupplements, setSupplements, getContracts, getCurrentUser } from '@/
 import { addAuditLog } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 import SupplementForm from '@/components/supplements/SupplementForm';
 import { Link } from 'react-router-dom';
 
@@ -166,7 +165,7 @@ export default function SupplementsPage() {
 
   if (showForm) {
     return (
-      <AppLayout>
+      
         <SupplementForm
           onSubmit={handleSubmit}
           editingSupplement={editingSupplement}
@@ -174,12 +173,12 @@ export default function SupplementsPage() {
           formData={formData}
           setFormData={setFormData}
         />
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground">
@@ -249,6 +248,6 @@ export default function SupplementsPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    
   );
 }

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Contract, Supplement } from '@/types';
 import { getContracts, getSupplements } from '@/lib/storage';
-import AppLayout from '@/components/layout/AppLayout';
 import ReportFiltersComponent, { ReportFilters, defaultFilters } from '@/components/reports/ReportFilters';
 import ContractStatusReport from '@/components/reports/ContractStatusReport';
 import FinancialReport from '@/components/reports/FinancialReport';
@@ -134,7 +133,7 @@ export default function ReportsPage() {
   ];
 
   return (
-    <AppLayout>
+    
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -240,6 +239,6 @@ export default function ReportsPage() {
           )}
         </div>
       </div>
-    </AppLayout>
+    
   );
 }

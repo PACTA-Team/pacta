@@ -8,7 +8,6 @@ import { Supplier } from '@/types';
 import { getSuppliers, setSuppliers, getCurrentUser } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 import SupplierForm from '@/components/suppliers/SupplierForm';
 import {
   AlertDialog,
@@ -130,7 +129,7 @@ export default function SuppliersPage() {
 
   if (showForm) {
     return (
-      <AppLayout>
+      
         <SupplierForm
           supplier={editingSupplier}
           onSubmit={handleCreateOrUpdate}
@@ -139,12 +138,12 @@ export default function SuppliersPage() {
             setEditingSupplier(undefined);
           }}
         />
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
@@ -284,6 +283,6 @@ export default function SuppliersPage() {
           )}
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    
   );
 }

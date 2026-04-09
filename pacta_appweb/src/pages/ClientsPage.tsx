@@ -8,7 +8,6 @@ import { Client } from '@/types';
 import { getClients, setClients, getCurrentUser } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import AppLayout from '@/components/layout/AppLayout';
 import ClientForm from '@/components/clients/ClientForm';
 import {
   AlertDialog,
@@ -130,7 +129,7 @@ export default function ClientsPage() {
 
   if (showForm) {
     return (
-      <AppLayout>
+      
         <ClientForm
           client={editingClient}
           onSubmit={handleCreateOrUpdate}
@@ -139,12 +138,12 @@ export default function ClientsPage() {
             setEditingClient(undefined);
           }}
         />
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1 max-w-md">
@@ -284,6 +283,6 @@ export default function ClientsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    
   );
 }
