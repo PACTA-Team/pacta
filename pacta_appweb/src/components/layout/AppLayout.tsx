@@ -1,43 +1,81 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import AppSidebar from './AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
+
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/contracts': 'Contracts Management',
+  '/clients': 'Clients',
+  '/suppliers': 'Suppliers',
+  '/authorized-signers': 'Authorized Signers',
+  '/documents': 'Document Repository',
+  '/notifications': 'Notifications Center',
+  '/users': 'Users & Roles Management',
+  '/reports': 'Reports',
+  '/supplements': 'Supplements Management',
+};
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
+  const mainRef = useRef<HTMLDivElement>(null);
 
+  // Update document title on route change
+  useEffect(() => {
+    const title = pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || 'PACTA');
+    document.title = `${title} - PACTA`;
+    // Focus main content on route change for accessibility
+    mainRef.current?.focus();
+  }, [pathname]);
+
+  // Redirect if not authenticated (backup guard)
   useEffect(() => {
     if (!isAuthenticated && pathname !== '/') {
-      navigate('/');
+      navigate('/login', { replace: true });
     }
   }, [isAuthenticated, pathname, navigate]);
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-hidden="true" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Skip navigation link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
+      >
+        Skip to main content
+      </a>
+
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b bg-card px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {pathname === '/dashboard' && 'Dashboard'}
-            {pathname === '/contracts' && 'Contracts Management'}
-            {pathname?.startsWith('/contracts/') && 'Contract Details'}
-            {pathname === '/supplements' && 'Supplements Management'}
-            {pathname === '/documents' && 'Document Repository'}
-            {pathname === '/notifications' && 'Notifications Center'}
-            {pathname === '/users' && 'Users & Roles Management'}
-          </h2>
+        <header role="banner" className="border-b bg-card px-6 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">
+            {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
+          </h1>
           <ThemeToggle />
         </header>
-        <main className="flex-1 overflow-auto bg-background p-6">
+        <main
+          ref={mainRef}
+          id="main-content"
+          role="main"
+          tabIndex={-1}
+          className="flex-1 overflow-auto bg-background p-6 outline-none"
+        >
           {children}
         </main>
       </div>

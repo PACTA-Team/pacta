@@ -225,17 +225,17 @@ export default function AuthorizedSignersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setViewingSigner(signer)}>
-                            <Eye className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" onClick={() => setViewingSigner(signer)} aria-label={`View signer ${signer.firstName} ${signer.lastName}`}>
+                            <Eye className="h-4 w-4" aria-hidden="true" />
                           </Button>
                           {hasPermission('editor') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(signer)}>
-                              <Edit className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(signer)} aria-label={`Edit signer ${signer.firstName} ${signer.lastName}`}>
+                              <Edit className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                           {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(signer.id)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(signer.id)} aria-label={`Delete signer ${signer.firstName} ${signer.lastName}`}>
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                         </div>

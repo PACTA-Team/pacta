@@ -229,13 +229,13 @@ export default function SupplementsPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {hasPermission('editor') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(supplement)}>
-                              <Edit className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(supplement)} aria-label={`Edit supplement ${supplement.supplementNumber}`}>
+                              <Edit className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                           {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(supplement.id)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(supplement.id)} aria-label={`Delete supplement ${supplement.supplementNumber}`}>
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                         </div>

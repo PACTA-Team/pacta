@@ -139,15 +139,15 @@ export default function DocumentsPage() {
                       <TableCell>{new Date(doc.uploadedAt).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" aria-label={`View document ${doc.fileName}`}>
+                            <Eye className="h-4 w-4" aria-hidden="true" />
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <Download className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" aria-label={`Download document ${doc.fileName}`}>
+                            <Download className="h-4 w-4" aria-hidden="true" />
                           </Button>
                           {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} aria-label={`Delete document ${doc.fileName}`}>
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                         </div>
