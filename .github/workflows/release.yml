@@ -40,6 +40,9 @@ jobs:
         working-directory: pacta_appweb
         run: npm ci && npm run build
 
+      - name: Copy frontend dist
+        run: cp -r pacta_appweb/dist cmd/pacta/dist
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

@@ -58,7 +58,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	})
 
 	// Static files (Vite build output) - catch-all
-	staticSub, _ := fs.Sub(staticFS, "pacta_appweb/dist")
+	staticSub, _ := fs.Sub(staticFS, "dist")
 	r.Handle("/*", http.FileServer(http.FS(staticSub)))
 
 	srv := &http.Server{
