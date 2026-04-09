@@ -31,7 +31,7 @@ func (h *Handler) HandleContractByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		h.getContract(w, id)
 	case http.MethodPut:
-		h.updateContract(w, id)
+		h.updateContract(w, r, id)
 	case http.MethodDelete:
 		h.deleteContract(w, id)
 	default:
@@ -142,7 +142,7 @@ func (h *Handler) getContract(w http.ResponseWriter, id int) {
 	h.JSON(w, http.StatusOK, c)
 }
 
-func (h *Handler) updateContract(w http.ResponseWriter, id int) {
+func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int) {
 	var req createContractRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Error(w, http.StatusBadRequest, "invalid request")
