@@ -15,6 +15,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import Link from 'next/link';
 
+export function generateStaticParams() {
+  return [];
+}
+
 export default function ContractDetailsPage() {
   const params = useParams();
   const router = useRouter();
