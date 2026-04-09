@@ -9,7 +9,6 @@ import { Supplement, Contract } from '@/types';
 import { exportToCSV, exportToExcel, exportToPDF, formatDate, formatStatus, ExportColumn } from '@/lib/export-utils';
 import ExportButtons from './ExportButtons';
 import { FileEdit, History } from 'lucide-react';
-import Link from 'next/link';
 
 interface ModificationsReportProps {
   supplements: Supplement[];
@@ -206,10 +205,10 @@ export default function ModificationsReport({
                 reportData.contractModifications.map((item) => (
                   <TableRow key={item.contractId}>
                     <TableCell>
-                      <Link href={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                      <a href={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
                         <div className="font-medium">{item.contractNumber}</div>
                         <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
-                      </Link>
+                      </a>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary">{item.modificationCount}</Badge>
@@ -259,9 +258,9 @@ export default function ModificationsReport({
                   <TableRow key={supplement.id}>
                     <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
                     <TableCell>
-                      <Link href={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
+                      <a href={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
                         {getContractInfo(supplement.contractId)}
-                      </Link>
+                      </a>
                     </TableCell>
                     <TableCell className="max-w-md">
                       <p className="line-clamp-2">{supplement.modifications}</p>

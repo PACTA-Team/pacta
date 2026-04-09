@@ -9,7 +9,6 @@ import { Supplement, SupplementStatus, Contract } from '@/types';
 import { exportToCSV, exportToExcel, exportToPDF, formatDate, formatStatus, ExportColumn } from '@/lib/export-utils';
 import ExportButtons from './ExportButtons';
 import { FilePlus, FileCheck, FileEdit, Calendar } from 'lucide-react';
-import Link from 'next/link';
 
 interface SupplementsReportProps {
   supplements: Supplement[];
@@ -305,10 +304,10 @@ export default function SupplementsReport({
                   return (
                     <TableRow key={item.contractId}>
                       <TableCell>
-                        <Link href={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                        <a href={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
                           <div className="font-medium">{item.contractNumber}</div>
                           <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
-                        </Link>
+                        </a>
                       </TableCell>
                       <TableCell className="text-center font-bold">{item.count}</TableCell>
                       <TableCell>
@@ -356,9 +355,9 @@ export default function SupplementsReport({
                   <TableRow key={supplement.id}>
                     <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
                     <TableCell>
-                      <Link href={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
+                      <a href={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
                         {getContractInfo(supplement.contractId)}
-                      </Link>
+                      </a>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{supplement.description}</TableCell>
                     <TableCell>{formatDate(supplement.effectiveDate)}</TableCell>
