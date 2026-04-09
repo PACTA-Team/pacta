@@ -33,6 +33,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: pacta_appweb/package-lock.json
 
+      - name: Tidy Go modules
+        run: go mod tidy
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
