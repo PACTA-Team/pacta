@@ -199,17 +199,17 @@ export default function SuppliersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setViewingSupplier(supplier)}>
-                            <Eye className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" onClick={() => setViewingSupplier(supplier)} aria-label={`View supplier ${supplier.name}`}>
+                            <Eye className="h-4 w-4" aria-hidden="true" />
                           </Button>
                           {hasPermission('editor') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
-                              <Edit className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)} aria-label={`Edit supplier ${supplier.name}`}>
+                              <Edit className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                           {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier.id)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier.id)} aria-label={`Delete supplier ${supplier.name}`}>
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                         </div>

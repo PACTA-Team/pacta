@@ -10,13 +10,16 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:react/recommended", "plugin:react-hooks/recommended"),
   {
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
     rules: {
-      "@typescript-eslint/no-unused-vars": "off",
       "react/no-unescaped-entities": "off",
-      "prefer-const": "off",
-      "@typescript-eslint/no-explicit-any": "off",
+      "react/react-in-jsx-scope": "off", // Not needed in React 19
     },
   },
 ];

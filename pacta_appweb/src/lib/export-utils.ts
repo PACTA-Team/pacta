@@ -60,6 +60,13 @@ export const exportToPDF = (
   }
 };
 
+// HTML escape function to prevent XSS attacks
+const escapeHTML = (str: string): string => {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+};
+
 const generatePDFHTML = (
   title: string,
   data: Record<string, any>[],
@@ -67,9 +74,11 @@ const generatePDFHTML = (
   summary?: { label: string; value: string | number }[],
   chartImageBase64?: string
 ): string => {
+  // Escape all user-controlled data to prevent XSS
+  const safeTitle = escapeHTML(title);
   const tableRows = data.map(row => `
     <tr>
-      ${columns.map(col => `<td>${row[col.key] ?? ''}</td>`).join('')}
+      ${columns.map(col => `<td>${escapeHTML(String(row[col.key] ?? ''))}</td>`).join('')}
     </tr>
   `).join('');
 
@@ -79,8 +88,8 @@ const generatePDFHTML = (
       <div class="summary-grid">
         ${summary.map(item => `
           <div class="summary-item">
-            <span class="label">${item.label}:</span>
-            <span class="value">${item.value}</span>
+            <span class="label">${escapeHTML(item.label)}:</span>
+            <span class="value">${escapeHTML(String(item.value))}</span>
           </div>
         `).join('')}
       </div>
@@ -98,7 +107,7 @@ const generatePDFHTML = (
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${title}</title>
+      <title>${safeTitle}</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -171,9 +180,9 @@ const generatePDFHTML = (
       </style>
     </head>
     <body>
-      <h1>${title}</h1>
+      <h1>${safeTitle}</h1>
       <div class="report-info">
-        <p>Generated on: ${new Date().toLocaleString()}</p>
+        <p>Generated on: ${escapeHTML(new Date().toLocaleString())}</p>
         <p>Total Records: ${data.length}</p>
       </div>
       ${chartSection}
@@ -181,7 +190,7 @@ const generatePDFHTML = (
       <table>
         <thead>
           <tr>
-            ${columns.map(col => `<th>${col.header}</th>`).join('')}
+            ${columns.map(col => `<th>${escapeHTML(col.header)}</th>`).join('')}
           </tr>
         </thead>
         <tbody>

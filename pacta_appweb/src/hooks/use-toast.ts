@@ -184,7 +184,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, []) // mount/unmount only - prevents listener accumulation leak
 
   return {
     ...state,

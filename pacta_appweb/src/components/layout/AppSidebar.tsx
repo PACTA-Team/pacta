@@ -1,7 +1,7 @@
 
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard,
   FileText,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -40,16 +41,16 @@ function useIsTablet() {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Contracts', href: '/contracts', icon: FileText, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Supplements', href: '/supplements', icon: FilePlus, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Clients', href: '/clients', icon: Building2, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Suppliers', href: '/suppliers', icon: Truck, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Authorized Signers', href: '/authorized-signers', icon: UserCheck, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] },
-  { name: 'Users & Roles', href: '/users', icon: Users, roles: ['admin'] },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Contracts', href: '/contracts', icon: FileText, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Supplements', href: '/supplements', icon: FilePlus, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Clients', href: '/clients', icon: Building2, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Suppliers', href: '/suppliers', icon: Truck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Authorized Signers', href: '/authorized-signers', icon: UserCheck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { name: 'Users & Roles', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
 ];
 
 export default function AppSidebar() {
@@ -59,10 +60,14 @@ export default function AppSidebar() {
   const isTabletOrBelow = useIsTablet();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const filteredNavigation = navigation.filter(item =>
-    item.roles.some(role => hasPermission(role as any))
+  const filteredNavigation = useMemo(() =>
+    navigation.filter(item =>
+      item.roles.some(role => hasPermission(role))
+    ),
+    [hasPermission]
   );
 
+  // Mobile sidebar with proper dialog semantics
   if (isTabletOrBelow) {
     return (
       <>
@@ -71,32 +76,52 @@ export default function AppSidebar() {
           size="icon"
           className="fixed top-4 left-4 z-40"
           onClick={() => setSidebarOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={sidebarOpen}
+          aria-controls="mobile-sidebar"
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-4 w-4" aria-hidden="true" />
         </Button>
         {sidebarOpen && (
-          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
-            <div className="fixed left-0 top-0 h-full w-64 flex-col border-r bg-card" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          >
+            <div
+              id="mobile-sidebar"
+              className="fixed left-0 top-0 h-full w-64 flex-col border-r bg-card"
+              role="dialog"
+              aria-label="Navigation menu"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold text-primary">PACTA Web</h1>
                   <p className="text-sm text-muted-foreground">Contract Management</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-                  <X className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(false)}
+                  aria-label="Close navigation menu"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
 
               <Separator />
 
               <ScrollArea className="flex-1 px-3 py-4">
-                <nav className="space-y-1">
+                <nav role="navigation" aria-label="Main navigation" className="space-y-1">
                   {filteredNavigation.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                       <Link
                         key={item.name}
                         to={item.href}
+                        aria-current={isActive ? 'page' : undefined}
                         className={cn(
                           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                           isActive
@@ -105,7 +130,7 @@ export default function AppSidebar() {
                         )}
                         onClick={() => setSidebarOpen(false)}
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-5 w-5" aria-hidden="true" />
                         {item.name}
                       </Link>
                     );
@@ -127,7 +152,7 @@ export default function AppSidebar() {
                     className="w-full justify-start"
                     onClick={() => { logout(); setSidebarOpen(false); }}
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                     Logout
                   </Button>
                 </div>
@@ -139,6 +164,7 @@ export default function AppSidebar() {
     );
   }
 
+  // Desktop sidebar
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-card">
       <div className="p-6">
@@ -149,13 +175,14 @@ export default function AppSidebar() {
       <Separator />
 
       <ScrollArea className="flex-1 px-3 py-4">
-        <nav className="space-y-1">
+        <nav role="navigation" aria-label="Main navigation" className="space-y-1">
           {filteredNavigation.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.name}
                 to={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   isActive
@@ -163,7 +190,7 @@ export default function AppSidebar() {
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-5 w-5" aria-hidden="true" />
                 {item.name}
               </Link>
             );
@@ -186,7 +213,7 @@ export default function AppSidebar() {
           className="w-full justify-start"
           onClick={logout}
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
           Logout
         </Button>
       </div>
