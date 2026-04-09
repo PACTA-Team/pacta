@@ -46,4 +46,3 @@ release:
   draft: false
   prerelease: auto
   name_template: "PACTA {{ .Version }}"
-  allow_dirty: true
