@@ -33,6 +33,7 @@ PACTA occupies the middle ground: a professional-grade contract management syste
 | Feature | Description |
 |---------|-------------|
 | Contract CRUD | Create, read, update, delete contracts with soft delete protection |
+| Internal Contract IDs | Auto-generated system identifiers (`CNT-YYYY-NNNN`) for internal tracking, independent of legal contract numbers |
 | Party Management | Centralized registry of clients and suppliers with contact details |
 | Signer Tracking | Record authorized signers for each party and track execution status |
 | Approval Workflows | Supplement lifecycle: draft → approved → active with status transitions |
@@ -145,6 +146,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 |------|--------|
 | Authentication | Complete (login, logout, session management) |
 | Contract CRUD | Complete (create, read, update, soft delete) |
+| Internal Contract IDs | Complete (v0.4.0 -- auto-generated `CNT-YYYY-NNNN`, resets per year) |
 | Client Management | Complete |
 | Supplier Management | Complete |
 | Signer Tracking | Complete |
@@ -233,6 +235,41 @@ The following were identified but deferred to keep the initial PR focused on cri
 
 ---
 
+## Internal Contract IDs (v0.4.0)
+
+### Design Rationale
+
+Contracts in the real world have **two identifiers**:
+
+1. **Contract Number** (`contract_number`) -- The legal number assigned to the contract by the parties involved (client/supplier). This is the number that appears on the actual legal document. **Users must enter this manually** because it comes from the contract itself, not from PACTA.
+
+2. **Internal ID** (`internal_id`) -- A system-generated identifier (`CNT-YYYY-NNNN` format) used by PACTA to track contracts internally. This is auto-generated on creation and cannot be changed.
+
+### Why Both Are Needed
+
+- The **contract number** is what users reference in legal contexts, invoices, and communications. It may follow any format the organization uses (e.g., `CONTRATO-CLI-2024-001`, `SUP-2024-045`). PACTA cannot auto-generate this because it doesn't know the numbering scheme used by the parties.
+
+- The **internal ID** gives PACTA a reliable, unique, system-controlled identifier for internal operations, audit trails, and database integrity. It follows a predictable format (`CNT-2026-0001`) that resets each year.
+
+### Implementation
+
+| Component | Detail |
+|-----------|--------|
+| Format | `CNT-YYYY-NNNN` (e.g., `CNT-2026-0001`) |
+| Sequence | Increments per contract within the same year |
+| Year rollover | Resets to `0001` when year changes |
+| Storage | `internal_id TEXT NOT NULL UNIQUE` column |
+| Generation | `SELECT MAX(CAST(SUBSTR(internal_id, 10) AS INTEGER))` filtered by year |
+| Thread safety | SQLite serializes writes by default; no explicit transaction needed |
+| Migration | `011_contracts_internal_id.sql` -- `ALTER TABLE` + `CREATE UNIQUE INDEX` |
+
+### Error Handling
+
+- **Duplicate contract number**: Returns HTTP 409 Conflict with message `"contract number 'X' already exists"`
+- **Sanitized errors**: Internal database errors return generic `"failed to create contract"` message; details are logged server-side only
+
+---
+
 ## QA Deployment & Testing (v0.3.2 — 2026-04-09)
 
 ### Deployment Procedure
@@ -277,8 +314,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 |----|----------|-------|--------|
 | C-001 | Critical | Default admin password hash doesn't match `admin123` | Fixed in DB, migration needs fix |
 | H-001 | High | Contract creation returns 500 with raw SQLite error on missing FK | Open |
-| H-002 | High | Contract number not auto-generated, UNIQUE constraint fails on 2nd contract | Open |
-| H-003 | High | API error messages expose internal DB details to clients | Open |
+| H-002 | High | Contract number not auto-generated, UNIQUE constraint fails on 2nd contract | **Fixed v0.4.0** -- internal_id auto-generated, user enters legal contract_number |
+| H-003 | High | API error messages expose internal DB details to clients | **Fixed v0.4.0** -- sanitized errors, 409 Conflict on duplicates |
 | M-001 | Medium | Cookie missing `Secure` flag (implicit via HTTPS) | Open |
 
 ### QA Artifacts
@@ -292,10 +329,11 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ## Progress Tracking
 
-### Completed (v0.3.2)
+### Completed (v0.4.0)
 
 - [x] Authentication system (login, logout, session management)
 - [x] Contract CRUD (create, read, update, soft delete)
+- [x] Internal contract IDs (auto-generated `CNT-YYYY-NNNN`, migration 011)
 - [x] Client management (create, list)
 - [x] Supplier management (create, list)
 - [x] Signer tracking (database schema)
@@ -312,20 +350,19 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 - [x] QA deployment to VPS (v0.3.2)
 - [x] Caddy reverse proxy configuration
 - [x] Systemd service setup
+- [x] Duplicate contract number detection (409 Conflict, clean error messages)
+- [x] API error message sanitization (no raw SQLite errors)
 
 ### In Progress
 
 - [ ] Fix default admin password hash in migration `001_users.sql`
-- [ ] Add contract number auto-generation
 - [ ] Add input validation for contract creation
-- [ ] Sanitize API error messages
+- [ ] Add client/supplier update and delete endpoints
 
 ### Pending — Backend
 
 - [ ] Fix C-001: Replace fake bcrypt hash with real one in `internal/db/001_users.sql`
 - [ ] Fix H-001: Validate `client_id` and `supplier_id` before INSERT, return 400
-- [ ] Fix H-002: Auto-generate contract numbers (format: `CNT-YYYY-NNNN`)
-- [ ] Fix H-003: Wrap DB errors with generic messages, log details internally
 - [ ] Fix M-001: Add `Secure: true` to session cookie in `internal/handlers/auth.go`
 - [ ] Add client/supplier update and delete endpoints
 - [ ] Add signer CRUD endpoints
