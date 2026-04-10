@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-04-10
+
+### Added
+- **Internal contract ID auto-generation** -- System now generates unique internal IDs (`CNT-YYYY-NNNN` format) for each contract, independent of the user-entered legal contract number
+- **Duplicate contract number detection** -- Returns HTTP 409 Conflict with clean error message when user tries to create a contract with an existing number
+- **Sanitized API error messages** -- Internal database errors no longer expose raw SQLite details to clients
+
+### Changed
+- Contract table now displays both Internal ID and Contract Number columns
+- Contract edit form shows read-only Internal ID for reference
+- `Contract` model and API responses now include `internal_id` field
+- All contract queries updated to return `internal_id` alongside existing fields
+
+### Technical Details
+- **Files Created:** 1 (migration `011_contracts_internal_id.sql`)
+- **Files Modified:** 6 (3 backend Go files, 3 frontend TypeScript files)
+- **Migration:** `ALTER TABLE contracts ADD COLUMN internal_id TEXT NOT NULL DEFAULT ''` with unique index
+- **Generation algorithm:** `SELECT MAX(CAST(SUBSTR(internal_id, 10) AS INTEGER))` per year, resets to 0001 each new year
+
+### Fixed
+- H-002: Contract number UNIQUE constraint no longer blocks 2nd contract creation (user enters real number, system tracks via internal_id)
+- H-003: API error messages no longer expose internal DB details
+- Frontend type mismatch: `ContractFormProps` and `handleCreateOrUpdate` now properly omit `internalId` from form data
+
+---
+
 ## [0.3.0] - 2026-04-09
 
 ### Added

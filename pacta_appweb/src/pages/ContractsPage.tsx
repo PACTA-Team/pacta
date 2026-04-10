@@ -84,7 +84,7 @@ export default function ContractsPage() {
     setFilteredContracts(filtered);
   };
 
-  const handleCreateOrUpdate = (data: Omit<Contract, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateOrUpdate = (data: Omit<Contract, 'id' | 'internalId' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -101,15 +101,21 @@ export default function ContractsPage() {
       addAuditLog(updated.id, 'Contract Updated', `Contract ${updated.contractNumber} was updated`);
       toast.success('Contract updated successfully');
     } else {
+      const year = new Date().getFullYear();
+      const existingForYear = allContracts.filter(c => c.internalId?.startsWith(`CNT-${year}-`));
+      const seq = existingForYear.length + 1;
+      const internalId = `CNT-${year}-${String(seq).padStart(4, '0')}`;
+
       const newContract: Contract = {
         ...data,
+        internalId,
         id: Date.now().toString(),
         createdBy: user.id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       setContracts([...allContracts, newContract]);
-      addAuditLog(newContract.id, 'Contract Created', `Contract ${newContract.contractNumber} was created`);
+      addAuditLog(newContract.id, 'Contract Created', `Contract ${newContract.contractNumber} (${newContract.internalId}) was created`);
       toast.success('Contract created successfully');
     }
 
@@ -243,6 +249,7 @@ export default function ContractsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Internal ID</TableHead>
                   <TableHead>Contract Number</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Client/Supplier</TableHead>
@@ -256,13 +263,14 @@ export default function ContractsPage() {
               <TableBody>
                 {filteredContracts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       No contracts found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredContracts.map((contract) => (
                     <TableRow key={contract.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{contract.internalId || '—'}</TableCell>
                       <TableCell className="font-medium">{contract.contractNumber}</TableCell>
                       <TableCell>{contract.title}</TableCell>
                       <TableCell>

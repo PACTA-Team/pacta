@@ -38,6 +38,7 @@ type Supplier struct {
 
 type Contract struct {
 	ID               int        `json:"id"`
+	InternalID       string     `json:"internal_id"`
 	ContractNumber   string     `json:"contract_number"`
 	Title            string     `json:"title"`
 	ClientID         int        `json:"client_id"`
