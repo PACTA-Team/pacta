@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 interface ContractFormProps {
   contract?: Contract;
-  onSubmit: (data: Omit<Contract, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<Contract, 'id' | 'internalId' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }
 
@@ -90,6 +90,19 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {contract?.internalId && (
+            <div className="space-y-2">
+              <Label htmlFor="internalId">Internal ID (System)</Label>
+              <Input
+                id="internalId"
+                value={contract.internalId}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">Auto-generated system identifier. Cannot be changed.</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="contractNumber">Contract Number *</Label>

@@ -233,6 +233,148 @@ The following were identified but deferred to keep the initial PR focused on cri
 
 ---
 
+## QA Deployment & Testing (v0.3.2 — 2026-04-09)
+
+### Deployment Procedure
+
+PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is documented in `docs/plans/2026-04-09-qa-deployment-design.md` and `docs/plans/2026-04-09-qa-deployment-plan.md`.
+
+**Steps performed:**
+1. Downloaded latest release from GitHub Releases (`pacta_0.3.2_linux_amd64.tar.gz`)
+2. Extracted and installed to `/opt/pacta/pacta`
+3. Created systemd service (`/etc/systemd/system/pacta.service`)
+4. Configured Caddy reverse proxy at `pacta.duckdns.org` → `localhost:3000`
+5. TLS certificate auto-provisioned via Let's Encrypt (valid until Jul 7, 2026)
+6. Database created at `/root/.local/share/pacta/data/pacta.db` (XDG spec compliant)
+
+### Changes Made During QA
+
+**Critical fix applied:**
+- **C-001: Default admin password hash invalid** — The bcrypt hash in migration `001_users.sql` (`$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy`) does NOT match `admin123`. This is a well-known fake test hash. Generated a real bcrypt hash and updated the database directly. **Requires migration fix in source code.**
+
+**Test data created:**
+- 3 clients: Test Corp, Sample Inc, Demo LLC
+- 3 suppliers: Supply Co, Vendor Ltd, Provider SA
+- 1 contract: Active Service Agreement (status: active)
+
+### QA Health Score: 62/100
+
+| Category | Score | Notes |
+|----------|-------|-------|
+| Console | 100 | No errors detected |
+| Links | 100 | No broken links found |
+| Visual | 90 | Minor layout issues on mobile |
+| Functional | 50 | Contract creation broken |
+| UX | 60 | Error messages expose internals |
+| Performance | 80 | Fast response times |
+| Content | 100 | No typos found |
+| Accessibility | 40 | Not tested (requires browser) |
+| **Weighted Total** | **62** | |
+
+### Bugs Found
+
+| ID | Severity | Issue | Status |
+|----|----------|-------|--------|
+| C-001 | Critical | Default admin password hash doesn't match `admin123` | Fixed in DB, migration needs fix |
+| H-001 | High | Contract creation returns 500 with raw SQLite error on missing FK | Open |
+| H-002 | High | Contract number not auto-generated, UNIQUE constraint fails on 2nd contract | Open |
+| H-003 | High | API error messages expose internal DB details to clients | Open |
+| M-001 | Medium | Cookie missing `Secure` flag (implicit via HTTPS) | Open |
+
+### QA Artifacts
+
+- Full report: `.gstack/qa-reports/qa-report-pacta-duckdns-2026-04-09.md`
+- Cookie security: `.gstack/qa-reports/security-cookies.txt`
+- Input validation: `.gstack/qa-reports/security-input-validation.txt`
+- API results: `.gstack/qa-reports/api-auth-results.txt`
+
+---
+
+## Progress Tracking
+
+### Completed (v0.3.2)
+
+- [x] Authentication system (login, logout, session management)
+- [x] Contract CRUD (create, read, update, soft delete)
+- [x] Client management (create, list)
+- [x] Supplier management (create, list)
+- [x] Signer tracking (database schema)
+- [x] Supplement workflows (database schema)
+- [x] Document attachments (database schema)
+- [x] Notifications (database schema)
+- [x] Audit logging (database schema)
+- [x] Role-based access control (database schema)
+- [x] CI/CD pipeline (GoReleaser)
+- [x] Multi-platform builds (Linux, macOS, Windows)
+- [x] Frontend security hardening (v0.2.0)
+- [x] Frontend accessibility improvements (v0.2.0)
+- [x] Frontend performance optimization (v0.2.0)
+- [x] QA deployment to VPS (v0.3.2)
+- [x] Caddy reverse proxy configuration
+- [x] Systemd service setup
+
+### In Progress
+
+- [ ] Fix default admin password hash in migration `001_users.sql`
+- [ ] Add contract number auto-generation
+- [ ] Add input validation for contract creation
+- [ ] Sanitize API error messages
+
+### Pending — Backend
+
+- [ ] Fix C-001: Replace fake bcrypt hash with real one in `internal/db/001_users.sql`
+- [ ] Fix H-001: Validate `client_id` and `supplier_id` before INSERT, return 400
+- [ ] Fix H-002: Auto-generate contract numbers (format: `CNT-YYYY-NNNN`)
+- [ ] Fix H-003: Wrap DB errors with generic messages, log details internally
+- [ ] Fix M-001: Add `Secure: true` to session cookie in `internal/handlers/auth.go`
+- [ ] Add client/supplier update and delete endpoints
+- [ ] Add signer CRUD endpoints
+- [ ] Add supplement workflow endpoints
+- [ ] Add document attachment endpoints
+- [ ] Add notification endpoints
+- [ ] Add audit log query endpoint
+- [ ] Add user management endpoints (create, update, delete users)
+- [ ] Add rate limiting on login endpoint
+
+### Pending — Frontend
+
+- [ ] Full browser-based QA of all pages (dashboard, contracts, clients, suppliers)
+- [ ] Mobile responsive testing at 375px, 768px, 1280px
+- [ ] Keyboard navigation testing (WCAG 2.1)
+- [ ] Screen reader testing (ARIA landmarks, labels)
+- [ ] Color contrast verification (WCAG AA 4.5:1)
+- [ ] Contract creation form with client/supplier dropdowns
+- [ ] Contract detail view with edit functionality
+- [ ] Client/supplier edit/delete flows
+- [ ] Signer management UI
+- [ ] Supplement approval workflow UI
+- [ ] Document upload UI
+- [ ] Notification center UI
+- [ ] Settings/profile page
+- [ ] User management page (admin only)
+- [ ] CSRF token implementation
+- [ ] Remove password from localStorage
+- [ ] Add Zod validation to all forms
+- [ ] Add API auth interceptors (401/403 handling)
+
+### Pending — Testing
+
+- [ ] Unit tests for Go handlers (auth, contracts, clients, suppliers)
+- [ ] Integration tests for API endpoints
+- [ ] Frontend unit tests (vitest configured, none exist)
+- [ ] E2E tests with Playwright
+- [ ] Load testing for concurrent users
+
+### Pending — Documentation
+
+- [ ] User guide / manual
+- [ ] API documentation (OpenAPI/Swagger)
+- [ ] Deployment guide for different platforms
+- [ ] Backup and restore procedures
+- [ ] Troubleshooting guide
+
+---
+
 ## Future Roadmap
 
 - [ ] Contract template system with variable substitution
@@ -244,6 +386,9 @@ The following were identified but deferred to keep the initial PR focused on cri
 - [ ] Data export (CSV, PDF report generation)
 - [ ] Backup and restore utilities
 - [ ] Multi-language UI support (i18n)
+- [ ] systemd service template for easy installation
+- [ ] Docker container option
+- [ ] Windows installer (.exe with auto-start and browser launch)
 
 ---
 
@@ -256,6 +401,8 @@ The following were identified but deferred to keep the initial PR focused on cri
 | Sessions | Cookies over JWT | Simpler for local-only apps, httpOnly prevents XSS theft |
 | Embed location | `cmd/pacta/` over `internal/server/` | Go embed paths are relative to source file; must be at build root |
 | Build pipeline | GoReleaser over manual scripts | Automated multi-platform builds, checksums, release management |
+| Data directory | XDG spec (`~/.local/share/pacta/data`) | Professional standard, follows Linux conventions |
+| QA deployment | Caddy reverse proxy | Auto TLS, simple config, production-ready |
 
 ---
 
