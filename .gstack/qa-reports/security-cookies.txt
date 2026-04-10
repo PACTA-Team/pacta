@@ -1,0 +1,40 @@
+# Cookie Security Verification
+
+**Date:** 2026-04-09
+**Target:** https://pacta.duckdns.org/api/auth/login
+
+## Raw Set-Cookie Header
+```
+set-cookie: session=mCoB7GinWrmWkcGbFveXM4IDWjholAvsrPahxDy_HQQ=; Path=/; HttpOnly; SameSite=Strict
+```
+
+## Verification Results
+
+| Attribute | Expected | Actual | Status |
+|-----------|----------|--------|--------|
+| HttpOnly | Present | Present | ✅ PASS |
+| SameSite | Strict | Strict | ✅ PASS |
+| Secure | Present | NOT SET | ⚠️ FAIL |
+| Path | / | / | ✅ PASS |
+
+## Notes
+
+- `Secure` flag is NOT explicitly set in the Go code
+- However, Caddy terminates TLS, so cookies are only sent over HTTPS
+- This is implicit protection but not best practice — should be explicit in code
+- The Go handler sets: `HttpOnly: true, SameSite: http.SameSiteStrictMode`
+- Missing: `Secure: true` in the cookie struct
+
+## Recommendation
+
+Add `Secure: true` to the session cookie in `internal/handlers/auth.go`:
+```go
+http.SetCookie(w, &http.Cookie{
+    Name:     "session",
+    Value:    session.Token,
+    Path:     "/",
+    HttpOnly: true,
+    Secure:   true,  // ADD THIS
+    SameSite: http.SameSiteStrictMode,
+})
+```
