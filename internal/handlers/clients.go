@@ -72,7 +72,8 @@ func (h *Handler) createClient(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	id, _ := result.LastInsertId()
+	id64, _ := result.LastInsertId()
+	id := int(id64)
 	h.auditLog(r, userID, "create", "client", &id, nil, map[string]interface{}{
 		"id":       id,
 		"name":     req.Name,
