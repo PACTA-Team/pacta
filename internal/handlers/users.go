@@ -37,7 +37,7 @@ func (h *Handler) HandleUserByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		h.updateUser(w, r, id)
 	case http.MethodDelete:
-		h.deleteUser(w, id)
+		h.deleteUser(w, r, id)
 	case http.MethodPatch:
 		if strings.HasSuffix(r.URL.Path, "/reset-password") {
 			h.resetPassword(w, r, id)
@@ -217,7 +217,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-func (h *Handler) deleteUser(w http.ResponseWriter, id int) {
+func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 	var prevName, prevEmail, prevRole string
 	err := h.DB.QueryRow("SELECT name, email, role FROM users WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName, &prevEmail, &prevRole)
 	if err != nil {
