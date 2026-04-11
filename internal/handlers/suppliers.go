@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type supplierRow struct {
@@ -72,4 +74,75 @@ func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := result.LastInsertId()
 	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "status": "created"})
+}
+
+func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/suppliers/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getSupplier(w, id)
+	case http.MethodPut:
+		h.updateSupplier(w, r, id)
+	case http.MethodDelete:
+		h.deleteSupplier(w, id)
+	default:
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (h *Handler) getSupplier(w http.ResponseWriter, id int) {
+	var s supplierRow
+	err := h.DB.QueryRow(`
+		SELECT id, name, address, reu_code, contacts, created_at, updated_at
+		FROM suppliers WHERE id = ? AND deleted_at IS NULL
+	`, id).Scan(&s.ID, &s.Name, &s.Address, &s.REUCode, &s.Contacts, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "supplier not found")
+		return
+	}
+	h.JSON(w, http.StatusOK, s)
+}
+
+func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int) {
+	var req createSupplierRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	result, err := h.DB.Exec(`
+		UPDATE suppliers SET name=?, address=?, reu_code=?, contacts=?, updated_at=CURRENT_TIMESTAMP
+		WHERE id=? AND deleted_at IS NULL
+	`, req.Name, req.Address, req.REUCode, req.Contacts, id)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update supplier")
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		h.Error(w, http.StatusNotFound, "supplier not found")
+		return
+	}
+	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (h *Handler) deleteSupplier(w http.ResponseWriter, id int) {
+	result, err := h.DB.Exec(
+		"UPDATE suppliers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
+		id)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to delete supplier")
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		h.Error(w, http.StatusNotFound, "supplier not found")
+		return
+	}
+	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
