@@ -95,6 +95,15 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Get("/api/notifications/{id}", h.HandleNotificationByID)
 		r.Patch("/api/notifications/{id}/read", h.HandleNotificationByID)
 		r.Delete("/api/notifications/{id}", h.HandleNotificationByID)
+
+		// User management routes (admin only - enforced at handler level)
+		r.Get("/api/users", h.HandleUsers)
+		r.Post("/api/users", h.HandleUsers)
+		r.Get("/api/users/{id}", h.HandleUserByID)
+		r.Put("/api/users/{id}", h.HandleUserByID)
+		r.Delete("/api/users/{id}", h.HandleUserByID)
+		r.Patch("/api/users/{id}/reset-password", h.HandleUserByID)
+		r.Patch("/api/users/{id}/status", h.HandleUserByID)
 	})
 
 	// Static files (Vite build output) - catch-all
