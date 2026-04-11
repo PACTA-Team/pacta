@@ -155,7 +155,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Signer Tracking | Complete (v0.7.0 -- CRUD API endpoints with FK validation, soft delete) |
 | Supplement Workflows | Complete (v0.9.0 — CRUD endpoints, status transition workflow, internal IDs, frontend API migration) |
 | Document Attachments | Complete (v0.10.0 -- upload, download, list, delete with audit logging) |
-| Notifications | **Schema only** -- No API endpoints or routes implemented |
+| Notifications | Complete (v0.11.0 -- list, create, mark read, mark all read, count, delete) |
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
 | Role-Based Access | Schema complete -- No enforcement logic implemented |
 | User Management | **Schema only** -- No CRUD endpoints (only login/me) |
@@ -406,6 +406,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.11.0 | - | Notification endpoints (list, create, mark read, mark all read, count, delete) |
 | v0.10.0 | - | Document attachments (upload, download, list, delete, audit logging) |
 | v0.9.0 | Latest | Supplement workflow (CRUD, status transitions, internal IDs, frontend API migration) |
 | v0.8.0 | - | Audit logging system (CRUD logging, query endpoint, JSON state capture) |
@@ -422,6 +423,17 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.11.0)
+
+- [x] Notification list endpoint (`GET /api/notifications` with `?unread=true` filter)
+- [x] Notification create endpoint (`POST /api/notifications`)
+- [x] Notification mark read endpoint (`PATCH /api/notifications/{id}/read`)
+- [x] Mark all notifications read endpoint (`PATCH /api/notifications/mark-all-read`)
+- [x] Notification count endpoint (`GET /api/notifications/count`)
+- [x] Notification get by ID endpoint (`GET /api/notifications/{id}`)
+- [x] Notification delete endpoint (`DELETE /api/notifications/{id}`)
+- [x] User-scoped queries (notifications filtered by authenticated user)
 
 ### Completed (v0.10.0)
 
@@ -522,7 +534,6 @@ _No active work in progress._
 
 ### Pending — Backend (Highest Priority)
 
-- [ ] **Notification endpoints** — Schema exists (`008_notifications.sql`), no handlers or routes
 - [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
 - [ ] **Rate limiting on login endpoint** — Brute force protection
 

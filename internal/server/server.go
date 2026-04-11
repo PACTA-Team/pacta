@@ -86,6 +86,15 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Post("/api/documents", h.HandleDocuments)
 		r.Get("/api/documents/{id}/download", h.HandleDocumentByID)
 		r.Delete("/api/documents/{id}", h.HandleDocumentByID)
+
+		// Notification routes
+		r.Get("/api/notifications", h.HandleNotifications)
+		r.Post("/api/notifications", h.HandleNotifications)
+		r.Get("/api/notifications/count", h.HandleNotificationCount)
+		r.Patch("/api/notifications/mark-all-read", h.HandleMarkAllNotificationsRead)
+		r.Get("/api/notifications/{id}", h.HandleNotificationByID)
+		r.Patch("/api/notifications/{id}/read", h.HandleNotificationByID)
+		r.Delete("/api/notifications/{id}", h.HandleNotificationByID)
 	})
 
 	// Static files (Vite build output) - catch-all
