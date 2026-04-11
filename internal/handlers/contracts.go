@@ -131,6 +131,27 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		req.Type = "service"
 	}
 
+	// Validate foreign key references before INSERT
+	var clientExists int
+	if err := h.DB.QueryRow("SELECT COUNT(*) FROM clients WHERE id = ? AND deleted_at IS NULL", req.ClientID).Scan(&clientExists); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create contract")
+		return
+	}
+	if clientExists == 0 {
+		h.Error(w, http.StatusBadRequest, "client not found")
+		return
+	}
+
+	var supplierExists int
+	if err := h.DB.QueryRow("SELECT COUNT(*) FROM suppliers WHERE id = ? AND deleted_at IS NULL", req.SupplierID).Scan(&supplierExists); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create contract")
+		return
+	}
+	if supplierExists == 0 {
+		h.Error(w, http.StatusBadRequest, "supplier not found")
+		return
+	}
+
 	internalID, err := h.generateInternalID()
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to generate internal ID")
@@ -183,6 +204,28 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+
+	// Validate foreign key references before UPDATE
+	var clientExists int
+	if err := h.DB.QueryRow("SELECT COUNT(*) FROM clients WHERE id = ? AND deleted_at IS NULL", req.ClientID).Scan(&clientExists); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update contract")
+		return
+	}
+	if clientExists == 0 {
+		h.Error(w, http.StatusBadRequest, "client not found")
+		return
+	}
+
+	var supplierExists int
+	if err := h.DB.QueryRow("SELECT COUNT(*) FROM suppliers WHERE id = ? AND deleted_at IS NULL", req.SupplierID).Scan(&supplierExists); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update contract")
+		return
+	}
+	if supplierExists == 0 {
+		h.Error(w, http.StatusBadRequest, "supplier not found")
+		return
+	}
+
 	_, err := h.DB.Exec(`
 		UPDATE contracts SET title=?, client_id=?, supplier_id=?,
 			client_signer_id=?, supplier_signer_id=?, start_date=?, end_date=?,
@@ -191,7 +234,7 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 	`, req.Title, req.ClientID, req.SupplierID, req.ClientSignerID, req.SupplierSignerID,
 		req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description, id)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		h.Error(w, http.StatusInternalServerError, "failed to update contract")
 		return
 	}
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
