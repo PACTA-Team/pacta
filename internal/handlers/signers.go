@@ -103,7 +103,8 @@ func (h *Handler) createSigner(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, "failed to create signer")
 		return
 	}
-	id, _ := result.LastInsertId()
+	id64, _ := result.LastInsertId()
+	id := int(id64)
 	h.auditLog(r, userID, "create", "signer", &id, nil, map[string]interface{}{
 		"id":           id,
 		"company_id":   req.CompanyID,

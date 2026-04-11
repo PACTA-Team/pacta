@@ -175,7 +175,8 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, "failed to create contract")
 		return
 	}
-	id, _ := result.LastInsertId()
+	id64, _ := result.LastInsertId()
+	id := int(id64)
 	h.auditLog(r, userID, "create", "contract", &id, nil, map[string]interface{}{
 		"id":              id,
 		"internal_id":     internalID,
@@ -245,7 +246,7 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 	var prevAmount float64
 	var prevDescription *string
 	var prevClientSignerID, prevSupplierSignerID *int
-	err = h.DB.QueryRow(`
+	err := h.DB.QueryRow(`
 		SELECT title, client_id, supplier_id, client_signer_id, supplier_signer_id,
 		       start_date, end_date, amount, type, status, description
 		FROM contracts WHERE id = ? AND deleted_at IS NULL
