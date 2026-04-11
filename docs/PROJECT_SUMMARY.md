@@ -158,7 +158,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Notifications | Complete (v0.11.0 -- list, create, mark read, mark all read, count, delete) |
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
 | Role-Based Access | Schema complete -- No enforcement logic implemented |
-| User Management | **Schema only** -- No CRUD endpoints (only login/me) |
+| User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
 | Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
 | Frontend Pages | 15 pages created (Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |
