@@ -73,6 +73,13 @@ func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := result.LastInsertId()
+	h.auditLog(r, userID, "create", "supplier", &id, nil, map[string]interface{}{
+		"id":       id,
+		"name":     req.Name,
+		"address":  req.Address,
+		"reu_code": req.REUCode,
+		"contacts": req.Contacts,
+	})
 	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "status": "created"})
 }
 
@@ -90,7 +97,7 @@ func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		h.updateSupplier(w, r, id)
 	case http.MethodDelete:
-		h.deleteSupplier(w, id)
+		h.deleteSupplier(w, r, id)
 	default:
 		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
@@ -115,6 +122,14 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	// Fetch previous state
+	var prevName, prevAddress, prevREUCode, prevContacts string
+	err := h.DB.QueryRow("SELECT name, address, reu_code, contacts FROM suppliers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName, &prevAddress, &prevREUCode, &prevContacts)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "supplier not found")
+		return
+	}
+
 	result, err := h.DB.Exec(`
 		UPDATE suppliers SET name=?, address=?, reu_code=?, contacts=?, updated_at=CURRENT_TIMESTAMP
 		WHERE id=? AND deleted_at IS NULL
@@ -128,10 +143,29 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), "update", "supplier", &id, map[string]interface{}{
+		"id":       id,
+		"name":     prevName,
+		"address":  prevAddress,
+		"reu_code": prevREUCode,
+		"contacts": prevContacts,
+	}, map[string]interface{}{
+		"id":       id,
+		"name":     req.Name,
+		"address":  req.Address,
+		"reu_code": req.REUCode,
+		"contacts": req.Contacts,
+	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-func (h *Handler) deleteSupplier(w http.ResponseWriter, id int) {
+func (h *Handler) deleteSupplier(w http.ResponseWriter, r *http.Request, id int) {
+	var prevName string
+	err := h.DB.QueryRow("SELECT name FROM suppliers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "supplier not found")
+		return
+	}
 	result, err := h.DB.Exec(
 		"UPDATE suppliers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
 		id)
@@ -144,5 +178,9 @@ func (h *Handler) deleteSupplier(w http.ResponseWriter, id int) {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), "delete", "supplier", &id, map[string]interface{}{
+		"id":   id,
+		"name": prevName,
+	}, nil)
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

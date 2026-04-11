@@ -73,6 +73,13 @@ func (h *Handler) createClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := result.LastInsertId()
+	h.auditLog(r, userID, "create", "client", &id, nil, map[string]interface{}{
+		"id":       id,
+		"name":     req.Name,
+		"address":  req.Address,
+		"reu_code": req.REUCode,
+		"contacts": req.Contacts,
+	})
 	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "status": "created"})
 }
 
@@ -90,7 +97,7 @@ func (h *Handler) HandleClientByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		h.updateClient(w, r, id)
 	case http.MethodDelete:
-		h.deleteClient(w, id)
+		h.deleteClient(w, r, id)
 	default:
 		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
@@ -115,6 +122,14 @@ func (h *Handler) updateClient(w http.ResponseWriter, r *http.Request, id int) {
 		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	// Fetch previous state
+	var prevName, prevAddress, prevREUCode, prevContacts string
+	err := h.DB.QueryRow("SELECT name, address, reu_code, contacts FROM clients WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName, &prevAddress, &prevREUCode, &prevContacts)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "client not found")
+		return
+	}
+
 	result, err := h.DB.Exec(`
 		UPDATE clients SET name=?, address=?, reu_code=?, contacts=?, updated_at=CURRENT_TIMESTAMP
 		WHERE id=? AND deleted_at IS NULL
@@ -128,10 +143,29 @@ func (h *Handler) updateClient(w http.ResponseWriter, r *http.Request, id int) {
 		h.Error(w, http.StatusNotFound, "client not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), "update", "client", &id, map[string]interface{}{
+		"id":       id,
+		"name":     prevName,
+		"address":  prevAddress,
+		"reu_code": prevREUCode,
+		"contacts": prevContacts,
+	}, map[string]interface{}{
+		"id":       id,
+		"name":     req.Name,
+		"address":  req.Address,
+		"reu_code": req.REUCode,
+		"contacts": req.Contacts,
+	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-func (h *Handler) deleteClient(w http.ResponseWriter, id int) {
+func (h *Handler) deleteClient(w http.ResponseWriter, r *http.Request, id int) {
+	var prevName string
+	err := h.DB.QueryRow("SELECT name FROM clients WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "client not found")
+		return
+	}
 	result, err := h.DB.Exec(
 		"UPDATE clients SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
 		id)
@@ -144,5 +178,9 @@ func (h *Handler) deleteClient(w http.ResponseWriter, id int) {
 		h.Error(w, http.StatusNotFound, "client not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), "delete", "client", &id, map[string]interface{}{
+		"id":   id,
+		"name": prevName,
+	}, nil)
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
