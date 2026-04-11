@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, AlertTriangle, FilePlus, DollarSign, BarChart3 } from 'lucide-react';
-import { getContracts, getSupplements, getNotifications } from '@/lib/storage';
-import { generateNotifications } from '@/lib/notifications';
+import { getContracts, getSupplements } from '@/lib/storage';
 import { Contract, ContractStatus } from '@/types';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -34,9 +33,6 @@ export default function DashboardPage() {
   useEffect(() => {
     const contractsData = getContracts();
     setContracts(contractsData);
-
-    // Generate notifications
-    generateNotifications(contractsData);
 
     // Calculate stats
     const now = new Date();

@@ -1,25 +1,41 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Download, FilePlus, Upload, Eye } from 'lucide-react';
-import { Contract, Supplement, Document, AuditLog, Client, Supplier } from '@/types';
-import { getContracts, getSupplements, getDocuments, getClients, getSuppliers } from '@/lib/storage';
+import { Edit, Download, FilePlus, Upload, Eye, Trash2 } from 'lucide-react';
+import { Contract, Supplement, Client, Supplier } from '@/types';
+import { getContracts, getClients, getSuppliers } from '@/lib/storage';
+import { contractsAPI } from '@/lib/contracts-api';
+import { supplementsAPI } from '@/lib/supplements-api';
+import { documentsAPI, APIDocument } from '@/lib/documents-api';
 import { getContractAuditLogs } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export default function ContractDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [contract, setContract] = useState<Contract | null>(null);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<APIDocument[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const { hasPermission } = useAuth();
+
+  const contractId = id ? parseInt(id) : 0;
+
+  const loadDocuments = useCallback(async (cid: number) => {
+    if (cid <= 0) return;
+    try {
+      const docs = await documentsAPI.list(cid, 'contract');
+      setDocuments(docs);
+    } catch {
+      setDocuments([]);
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -32,8 +48,7 @@ export default function ContractDetailsPage() {
       const allSupplements = getSupplements();
       setSupplements(allSupplements.filter((s) => s.contractId === id));
 
-      const allDocuments = getDocuments();
-      setDocuments(allDocuments.filter((d) => d.contractId === id));
+      loadDocuments(contractId);
 
       const logs = getContractAuditLogs(id);
       setAuditLogs(logs);
@@ -43,7 +58,7 @@ export default function ContractDetailsPage() {
     const storedSuppliers = getSuppliers();
     setClients(storedClients);
     setSuppliers(storedSuppliers);
-  }, [id]);
+  }, [id, contractId, loadDocuments]);
 
   const clientName = useMemo(() => {
     if (!contract) return '';
@@ -223,19 +238,22 @@ export default function ContractDetailsPage() {
                 <TableBody>
                   {documents.map((doc) => (
                     <TableRow key={doc.id}>
-                      <TableCell className="font-medium">{doc.fileName}</TableCell>
-                      <TableCell>{doc.fileType}</TableCell>
-                      <TableCell>{(doc.fileSize / 1024).toFixed(2)} KB</TableCell>
-                      <TableCell>{new Date(doc.uploadedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium">{doc.filename}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{doc.mime_type || '—'}</TableCell>
+                      <TableCell>{doc.size_bytes ? (doc.size_bytes / 1024).toFixed(2) + ' KB' : '—'}</TableCell>
+                      <TableCell>{new Date(doc.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" onClick={() => documentsAPI.download(doc.id)}>
+                            <Download className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={doc.fileUrl} download={doc.fileName}>
-                              <Download className="h-4 w-4" />
-                            </a>
+                          <Button variant="ghost" size="sm" onClick={() => {
+                            documentsAPI.delete(doc.id).then(() => {
+                              toast.success('Document deleted');
+                              loadDocuments(contractId);
+                            }).catch(() => toast.error('Failed to delete document'));
+                          }}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
