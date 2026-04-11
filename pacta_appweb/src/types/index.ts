@@ -123,27 +123,25 @@ export interface UpdateSupplementRequest {
 }
 
 export interface Document {
-  id: string;
-  contractId: string;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
-  fileUrl: string;
-  fileKey: string;
-  uploadedBy: string;
-  uploadedAt: string;
+  id: number;
+  entityId: number;
+  entityType: string;
+  filename: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  createdAt: string;
 }
 
 export interface Notification {
-  id: string;
-  contractId: string;
-  contractNumber: string;
-  contractTitle: string;
-  type: 'expiration_30' | 'expiration_15' | 'expiration_7';
-  message: string;
-  status: 'unread' | 'read' | 'acknowledged';
+  id: number;
+  userId: number;
+  type: string;
+  title: string;
+  message: string | null;
+  entityId: number | null;
+  entityType: string | null;
+  readAt: string | null;
   createdAt: string;
-  readAt?: string;
 }
 
 export interface AuditLog {

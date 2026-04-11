@@ -1,217 +1,135 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Bell, Check, CheckCheck, Settings } from 'lucide-react';
-import { Notification, NotificationSettings } from '@/types';
-import { getNotifications, getNotificationSettings, setNotificationSettings } from '@/lib/storage';
-import { markNotificationAsRead, markNotificationAsAcknowledged } from '@/lib/notifications';
+import { Bell, Check, CheckCheck } from 'lucide-react';
+import { notificationsAPI, APINotification } from '@/lib/notifications-api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [settings, setSettings] = useState<NotificationSettings>({
-    enabled: true,
-    thresholds: [30, 15, 7],
-    recipients: [],
-  });
-  const [showSettings, setShowSettings] = useState(false);
+  const [notifications, setNotifications] = useState<APINotification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
+  const loadNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const notifs = await notificationsAPI.list();
+      setNotifications(notifs);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loadData = () => {
-    const notifs = getNotifications().sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    setNotifications(notifs);
-    setSettings(getNotificationSettings());
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await notificationsAPI.markRead(id);
+      toast.success('Notification marked as read');
+      loadNotifications();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update notification');
+    }
   };
 
-  const handleMarkAsRead = (id: string) => {
-    markNotificationAsRead(id);
-    toast.success('Notification marked as read');
-    loadData();
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationsAPI.markAllRead();
+      toast.success('All notifications marked as read');
+      loadNotifications();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update notifications');
+    }
   };
 
-  const handleMarkAsAcknowledged = (id: string) => {
-    markNotificationAsAcknowledged(id);
-    toast.success('Notification acknowledged');
-    loadData();
-  };
+  const unreadCount = notifications.filter(n => !n.read_at).length;
 
-  const handleSaveSettings = () => {
-    setNotificationSettings(settings);
-    toast.success('Notification settings saved');
-    setShowSettings(false);
-  };
-
-  const getStatusBadge = (status: Notification['status']) => {
-    const variants: Record<Notification['status'], 'default' | 'secondary' | 'outline'> = {
-      unread: 'default',
-      read: 'secondary',
-      acknowledged: 'outline',
-    };
-    return <Badge variant={variants[status]}>{status}</Badge>;
-  };
-
-  const getNotificationIcon = (type: Notification['type']) => {
-    const colors: Record<Notification['type'], string> = {
-      expiration_30: 'text-yellow-500',
-      expiration_15: 'text-orange-500',
-      expiration_7: 'text-red-500',
-    };
-    return <Bell className={`h-5 w-5 ${colors[type]}`} />;
-  };
-
-  if (showSettings) {
+  if (loading) {
     return (
-      
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive automatic notifications for contract expirations
-                </p>
-              </div>
-              <Switch
-                checked={settings.enabled}
-                onCheckedChange={(checked) => setSettings({ ...settings, enabled: checked })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Alert Thresholds (days before expiration)</Label>
-              <p className="text-sm text-muted-foreground">
-                Comma-separated values (e.g., 30,15,7)
-              </p>
-              <Input
-                value={settings.thresholds.join(',')}
-                onChange={(e) => {
-                  const values = e.target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
-                  setSettings({ ...settings, thresholds: values });
-                }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Email Recipients</Label>
-              <p className="text-sm text-muted-foreground">
-                Comma-separated email addresses
-              </p>
-              <Input
-                value={settings.recipients.join(',')}
-                onChange={(e) => {
-                  const emails = e.target.value.split(',').map(e => e.trim()).filter(e => e);
-                  setSettings({ ...settings, recipients: emails });
-                }}
-                placeholder="email1@example.com, email2@example.com"
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowSettings(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveSettings}>
-                Save Settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading notifications...</p>
+      </div>
     );
   }
 
-  const unreadCount = notifications.filter(n => n.status === 'unread').length;
-
   return (
-    
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground">
-              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => setShowSettings(true)}>
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-muted-foreground">
+            {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+          </p>
         </div>
+        {unreadCount > 0 && (
+          <Button variant="outline" onClick={handleMarkAllRead}>
+            <CheckCheck className="mr-2 h-4 w-4" />
+            Mark All Read
+          </Button>
+        )}
+      </div>
 
-        <div className="space-y-3">
-          {notifications.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No notifications yet</p>
-              </CardContent>
-            </Card>
-          ) : (
-            notifications.map((notification) => (
-              <Card key={notification.id} className={notification.status === 'unread' ? 'border-blue-500' : ''}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    {getNotificationIcon(notification.type)}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{notification.contractTitle}</h3>
-                          {getStatusBadge(notification.status)}
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(notification.createdAt).toLocaleDateString()}
-                        </span>
+      <div className="space-y-3">
+        {notifications.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No notifications yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          notifications.map((notification) => (
+            <Card key={notification.id} className={!notification.read_at ? 'border-blue-500' : ''}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <Bell className={`h-5 w-5 ${notification.read_at ? 'text-muted-foreground' : 'text-blue-500'}`} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{notification.title}</h3>
+                        <Badge variant={notification.read_at ? 'secondary' : 'default'}>
+                          {notification.read_at ? 'read' : 'unread'}
+                        </Badge>
                       </div>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(notification.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {notification.message && (
                       <p className="text-sm text-muted-foreground mb-3">
                         {notification.message}
                       </p>
-                      <div className="flex items-center gap-2">
-                        <Link to={`/contracts/${notification.contractId}`}>
+                    )}
+                    <div className="flex items-center gap-2">
+                      {notification.entity_id && notification.entity_type === 'contract' && (
+                        <Link to={`/contracts/${notification.entity_id}`}>
                           <Button variant="outline" size="sm">
                             View Contract
                           </Button>
                         </Link>
-                        {notification.status === 'unread' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleMarkAsRead(notification.id)}
-                          >
-                            <Check className="mr-2 h-4 w-4" />
-                            Mark as Read
-                          </Button>
-                        )}
-                        {notification.status === 'read' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleMarkAsAcknowledged(notification.id)}
-                          >
-                            <CheckCheck className="mr-2 h-4 w-4" />
-                            Acknowledge
-                          </Button>
-                        )}
-                      </div>
+                      )}
+                      {!notification.read_at && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkAsRead(notification.id)}
+                        >
+                          <Check className="mr-2 h-4 w-4" />
+                          Mark as Read
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
-    
+    </div>
   );
 }

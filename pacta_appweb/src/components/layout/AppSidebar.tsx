@@ -23,6 +23,7 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { notificationsAPI } from '@/lib/notifications-api';
 
 const TABLET_BREAKPOINT = 1024;
 
@@ -59,6 +60,21 @@ export default function AppSidebar() {
   const { user, logout, hasPermission } = useAuth();
   const isTabletOrBelow = useIsTablet();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const data = await notificationsAPI.count();
+        setUnreadCount(data.unread);
+      } catch {
+        // Silently fail - badge is non-critical
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredNavigation = useMemo(() =>
     navigation.filter(item =>
@@ -132,6 +148,11 @@ export default function AppSidebar() {
                       >
                         <item.icon className="h-5 w-5" aria-hidden="true" />
                         {item.name}
+                        {item.href === '/notifications' && unreadCount > 0 && (
+                          <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -192,6 +213,11 @@ export default function AppSidebar() {
               >
                 <item.icon className="h-5 w-5" aria-hidden="true" />
                 {item.name}
+                {item.href === '/notifications' && unreadCount > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}
