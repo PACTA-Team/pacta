@@ -35,7 +35,7 @@ func (h *Handler) HandleContractByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		h.updateContract(w, r, id)
 	case http.MethodDelete:
-		h.deleteContract(w, id)
+		h.deleteContract(w, r, id)
 	default:
 		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
@@ -176,6 +176,19 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := result.LastInsertId()
+	h.auditLog(r, userID, "create", "contract", &id, nil, map[string]interface{}{
+		"id":              id,
+		"internal_id":     internalID,
+		"contract_number": req.ContractNumber,
+		"title":           req.Title,
+		"client_id":       req.ClientID,
+		"supplier_id":     req.SupplierID,
+		"start_date":      req.StartDate,
+		"end_date":        req.EndDate,
+		"amount":          req.Amount,
+		"type":            req.Type,
+		"status":          req.Status,
+	})
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
 		"id":          id,
 		"internal_id": internalID,
@@ -226,7 +239,20 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 		return
 	}
 
-	_, err := h.DB.Exec(`
+	// Fetch previous state for audit
+	var prevTitle, prevStartDate, prevEndDate, prevType, prevStatus string
+	var prevClientID, prevSupplierID int
+	var prevAmount float64
+	var prevDescription *string
+	var prevClientSignerID, prevSupplierSignerID *int
+	err = h.DB.QueryRow(`
+		SELECT title, client_id, supplier_id, client_signer_id, supplier_signer_id,
+		       start_date, end_date, amount, type, status, description
+		FROM contracts WHERE id = ? AND deleted_at IS NULL
+	`, id).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
+		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription)
+
+	_, err = h.DB.Exec(`
 		UPDATE contracts SET title=?, client_id=?, supplier_id=?,
 			client_signer_id=?, supplier_signer_id=?, start_date=?, end_date=?,
 			amount=?, type=?, status=?, description=?, updated_at=CURRENT_TIMESTAMP
@@ -237,14 +263,57 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusInternalServerError, "failed to update contract")
 		return
 	}
+
+	var prevState map[string]interface{}
+	if prevTitle != "" {
+		prevState = map[string]interface{}{
+			"id":                 id,
+			"title":              prevTitle,
+			"client_id":          prevClientID,
+			"supplier_id":        prevSupplierID,
+			"client_signer_id":   prevClientSignerID,
+			"supplier_signer_id": prevSupplierSignerID,
+			"start_date":         prevStartDate,
+			"end_date":           prevEndDate,
+			"amount":             prevAmount,
+			"type":               prevType,
+			"status":             prevStatus,
+			"description":        prevDescription,
+		}
+	}
+	h.auditLog(r, h.getUserID(r), "update", "contract", &id, prevState, map[string]interface{}{
+		"title":              req.Title,
+		"client_id":          req.ClientID,
+		"supplier_id":        req.SupplierID,
+		"client_signer_id":   req.ClientSignerID,
+		"supplier_signer_id": req.SupplierSignerID,
+		"start_date":         req.StartDate,
+		"end_date":           req.EndDate,
+		"amount":             req.Amount,
+		"type":               req.Type,
+		"status":             req.Status,
+		"description":        req.Description,
+	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-func (h *Handler) deleteContract(w http.ResponseWriter, id int) {
-	_, err := h.DB.Exec("UPDATE contracts SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
+func (h *Handler) deleteContract(w http.ResponseWriter, r *http.Request, id int) {
+	var prevTitle, prevStatus string
+	err := h.DB.QueryRow("SELECT title, status FROM contracts WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevTitle, &prevStatus)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		h.Error(w, http.StatusNotFound, "contract not found")
 		return
 	}
+
+	_, err = h.DB.Exec("UPDATE contracts SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to delete contract")
+		return
+	}
+	h.auditLog(r, h.getUserID(r), "delete", "contract", &id, map[string]interface{}{
+		"id":     id,
+		"title":  prevTitle,
+		"status": prevStatus,
+	}, nil)
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

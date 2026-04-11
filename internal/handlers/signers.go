@@ -104,6 +104,15 @@ func (h *Handler) createSigner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := result.LastInsertId()
+	h.auditLog(r, userID, "create", "signer", &id, nil, map[string]interface{}{
+		"id":           id,
+		"company_id":   req.CompanyID,
+		"company_type": req.CompanyType,
+		"first_name":   req.FirstName,
+		"last_name":    req.LastName,
+		"position":     req.Position,
+		"email":        req.Email,
+	})
 	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "status": "created"})
 }
 
@@ -121,7 +130,7 @@ func (h *Handler) HandleSignerByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		h.updateSigner(w, r, id)
 	case http.MethodDelete:
-		h.deleteSigner(w, id)
+		h.deleteSigner(w, r, id)
 	default:
 		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
@@ -184,6 +193,16 @@ func (h *Handler) updateSigner(w http.ResponseWriter, r *http.Request, id int) {
 		}
 	}
 
+	// Fetch previous state
+	var prevFirstName, prevLastName, prevPosition, prevPhone, prevEmail string
+	var prevCompanyID int
+	var prevCompanyType string
+	err := h.DB.QueryRow("SELECT company_id, company_type, first_name, last_name, position, phone, email FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevCompanyID, &prevCompanyType, &prevFirstName, &prevLastName, &prevPosition, &prevPhone, &prevEmail)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "signer not found")
+		return
+	}
+
 	result, err := h.DB.Exec(`
 		UPDATE authorized_signers SET company_id=?, company_type=?, first_name=?, last_name=?, position=?, phone=?, email=?, updated_at=CURRENT_TIMESTAMP
 		WHERE id=? AND deleted_at IS NULL
@@ -197,10 +216,35 @@ func (h *Handler) updateSigner(w http.ResponseWriter, r *http.Request, id int) {
 		h.Error(w, http.StatusNotFound, "signer not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), "update", "signer", &id, map[string]interface{}{
+		"id":           id,
+		"company_id":   prevCompanyID,
+		"company_type": prevCompanyType,
+		"first_name":   prevFirstName,
+		"last_name":    prevLastName,
+		"position":     prevPosition,
+		"phone":        prevPhone,
+		"email":        prevEmail,
+	}, map[string]interface{}{
+		"id":           id,
+		"company_id":   req.CompanyID,
+		"company_type": req.CompanyType,
+		"first_name":   req.FirstName,
+		"last_name":    req.LastName,
+		"position":     req.Position,
+		"phone":        req.Phone,
+		"email":        req.Email,
+	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-func (h *Handler) deleteSigner(w http.ResponseWriter, id int) {
+func (h *Handler) deleteSigner(w http.ResponseWriter, r *http.Request, id int) {
+	var prevFirstName, prevLastName string
+	err := h.DB.QueryRow("SELECT first_name, last_name FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevFirstName, &prevLastName)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "signer not found")
+		return
+	}
 	result, err := h.DB.Exec(
 		"UPDATE authorized_signers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
 		id)
@@ -213,5 +257,10 @@ func (h *Handler) deleteSigner(w http.ResponseWriter, id int) {
 		h.Error(w, http.StatusNotFound, "signer not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), "delete", "signer", &id, map[string]interface{}{
+		"id":         id,
+		"first_name": prevFirstName,
+		"last_name":  prevLastName,
+	}, nil)
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

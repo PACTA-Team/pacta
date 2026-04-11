@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-11
+
+### Added
+- **Audit logging system** -- Automatic recording of all CRUD operations on contracts, clients, suppliers, and signers
+- **Audit log query endpoint** -- `GET /api/audit-logs` with filtering by entity_type, entity_id, user_id, and action
+- **State capture** -- JSON snapshots of previous and new state on update operations for full change history
+- **IP address tracking** -- Each audit log entry records the source IP of the request
+
+### Changed
+- Delete handler signatures updated to accept `*http.Request` for audit context capture (contracts, clients, suppliers, signers)
+
+### Security
+- Immutable audit trail (append-only INSERTs, no UPDATE/DELETE on audit_logs)
+- All state changes captured as JSON for compliance and forensics
+- Audit logging failure is silent — never breaks the primary operation
+
+### Technical Details
+- **Files Created:** 2 (`internal/handlers/audit.go`, `internal/handlers/audit_logs.go`)
+- **Files Modified:** 6 (`internal/models/models.go`, `internal/handlers/contracts.go`, `internal/handlers/clients.go`, `internal/handlers/suppliers.go`, `internal/handlers/signers.go`, `internal/server/server.go`)
+- **Lines Added:** ~230
+
+### Backend Integration
+- GET /api/audit-logs - Query audit logs (supports `?entity_type=`, `?entity_id=`, `?user_id=`, `?action=`)
+
+---
+
 ## [0.7.0] - 2026-04-11
 
 ### Added

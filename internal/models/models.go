@@ -78,3 +78,15 @@ type DashboardStats struct {
 	TotalValue       float64        `json:"total_value"`
 	ByStatus         map[string]int `json:"by_status"`
 }
+
+type AuditLog struct {
+	ID            int       `json:"id"`
+	UserID        *int      `json:"user_id,omitempty"`
+	Action        string    `json:"action"`
+	EntityType    string    `json:"entity_type"`
+	EntityID      *int      `json:"entity_id,omitempty"`
+	PreviousState *string   `json:"previous_state,omitempty"`
+	NewState      *string   `json:"new_state,omitempty"`
+	IPAddress     *string   `json:"ip_address,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+}
