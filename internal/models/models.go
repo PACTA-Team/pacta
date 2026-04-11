@@ -36,6 +36,20 @@ type Supplier struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Signer struct {
+	ID          int       `json:"id"`
+	CompanyID   int       `json:"company_id"`
+	CompanyType string    `json:"company_type"`
+	FirstName   string    `json:"first_name"`
+	LastName    string    `json:"last_name"`
+	Position    *string   `json:"position,omitempty"`
+	Phone       *string   `json:"phone,omitempty"`
+	Email       *string   `json:"email,omitempty"`
+	CreatedBy   *int      `json:"created_by,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type Contract struct {
 	ID               int        `json:"id"`
 	InternalID       string     `json:"internal_id"`
