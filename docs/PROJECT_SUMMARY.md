@@ -98,7 +98,7 @@ pacta/
 │   ├── auth/               # Session management, bcrypt hashing
 │   ├── config/             # Application configuration
 │   ├── db/                 # SQLite setup + embedded SQL migrations
-│   ├── handlers/           # REST API handlers (contracts, clients, suppliers)
+│   ├── handlers/           # REST API handlers (contracts, clients, suppliers, signers)
 │   ├── models/             # Go data structures
 │   └── server/             # HTTP server, chi router, static serving
 ├── pacta_appweb/           # React + TypeScript frontend
@@ -149,7 +149,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Internal Contract IDs | Complete (v0.4.0 -- auto-generated `CNT-YYYY-NNNN`, resets per year) |
 | Client Management | Complete |
 | Supplier Management | Complete |
-| Signer Tracking | Complete |
+| Signer Tracking | Complete (v0.7.0 — CRUD API endpoints with FK validation, soft delete) |
 | Supplement Workflows | Complete |
 | Document Attachments | Complete |
 | Notifications | Complete |
@@ -329,6 +329,15 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ## Progress Tracking
 
+### Completed (v0.7.0)
+
+- [x] Signer CRUD endpoints (`GET/POST/PUT/DELETE /api/signers`)
+- [x] Foreign key validation on signer create/update (pre-INSERT/UPDATE checks for client/supplier existence)
+- [x] Soft delete support for signers
+- [x] `company_type` validation (only `client` or `supplier` accepted)
+- [x] Sanitized error messages on signer handlers (no raw SQLite errors)
+- [x] Signer model struct added to `internal/models/models.go`
+
 ### Completed (v0.6.0)
 
 - [x] Client update and delete endpoints (`GET/PUT/DELETE /api/clients/{id}`)
@@ -383,11 +392,9 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 - [ ] Fix default admin password hash in migration `001_users.sql`
 - [ ] Add input validation for contract creation
-- [ ] Add client/supplier update and delete endpoints
 
 ### Pending — Backend
 
-- [ ] Add signer CRUD endpoints
 - [ ] Add supplement workflow endpoints
 - [ ] Add document attachment endpoints
 - [ ] Add notification endpoints
