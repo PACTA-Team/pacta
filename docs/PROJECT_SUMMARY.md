@@ -329,6 +329,14 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ## Progress Tracking
 
+### Completed (v0.6.0)
+
+- [x] Client update and delete endpoints (`GET/PUT/DELETE /api/clients/{id}`)
+- [x] Supplier update and delete endpoints (`GET/PUT/DELETE /api/suppliers/{id}`)
+- [x] Soft delete support for clients and suppliers
+- [x] Sanitized error messages on client/supplier handlers
+- [x] Full CRUD parity across contracts, clients, and suppliers
+
 ### Completed (v0.5.2)
 
 - [x] M-001: Cookie Secure flag fix (`Secure: true` on login/logout cookies)
@@ -379,7 +387,6 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### Pending — Backend
 
-- [ ] Add client/supplier update and delete endpoints
 - [ ] Add signer CRUD endpoints
 - [ ] Add supplement workflow endpoints
 - [ ] Add document attachment endpoints
