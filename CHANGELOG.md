@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-04-11
+
+### Added
+- **Signer CRUD endpoints** -- `GET/POST/PUT/DELETE /api/signers` for managing authorized signers on behalf of clients and suppliers
+- **Foreign key validation on signer create/update** -- Pre-INSERT/UPDATE checks ensure `company_id` references an existing client or supplier, returning HTTP 400 instead of raw SQLite errors
+- **Soft delete support for signers** -- Deleted signers hidden from list/get endpoints, double-delete returns 404
+- **Signer model struct** -- `Signer` type in `internal/models/models.go` matching `authorized_signers` schema
+
+### Changed
+- Signer error messages sanitized (no raw SQLite errors exposed to clients)
+- Consistent CRUD patterns now across all entities (contracts, clients, suppliers, signers)
+
+### Security
+- `company_type` validation enforced (only `client` or `supplier` accepted)
+- FK validation prevents orphaned signer records
+
+### Technical Details
+- **Files Created:** 1 (`internal/handlers/signers.go`)
+- **Files Modified:** 2 (`internal/models/models.go`, `internal/server/server.go`)
+- **Lines Added:** ~200 lines
+
+### Backend Integration
+- GET /api/signers - List all active signers
+- POST /api/signers - Create signer (validates company exists + company_type)
+- GET /api/signers/{id} - Get signer by ID
+- PUT /api/signers/{id} - Update signer (validates company if changed)
+- DELETE /api/signers/{id} - Soft delete signer
+
+---
+
 ## [0.6.0] - 2026-04-11
 
 ### Added
