@@ -5,6 +5,122 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-04-11
+
+### Added
+- **Documents API client** -- `src/lib/documents-api.ts` with list, upload (multipart), download, and delete methods
+- **Notifications API client** -- `src/lib/notifications-api.ts` with list, count, mark read, mark all read, and delete methods
+- **Notification badge in AppSidebar** -- Live unread count polling every 30s from `/api/notifications/count`
+
+### Changed
+- **DocumentsPage** -- Migrated from localStorage to backend API; upload form now sends multipart to `/api/documents`
+- **NotificationsPage** -- Migrated from localStorage to backend API; removed localStorage settings panel
+- **ContractDetailsPage** -- Document repository section now fetches from `/api/documents` and supports download/delete via API
+- **DashboardPage** -- Removed `generateNotifications()` (backend now handles notification generation)
+- **TypeScript types** -- Updated `Document` and `Notification` interfaces to match backend snake_case format (int IDs, `entity_id`, `created_at`, etc.)
+
+### Removed
+- `generateNotifications()` from `lib/notifications.ts` (no longer needed, backend handles this)
+- localStorage-based document and notification management from frontend pages
+
+### Technical Details
+- **Files Created:** 2 (`pacta_appweb/src/lib/documents-api.ts`, `pacta_appweb/src/lib/notifications-api.ts`)
+- **Files Modified:** 6 (`DocumentsPage.tsx`, `NotificationsPage.tsx`, `ContractDetailsPage.tsx`, `DashboardPage.tsx`, `AppSidebar.tsx`, `types/index.ts`)
+- **Lines Changed:** +430 / -349
+
+---
+
+## [0.11.0] - 2026-04-11
+
+### Added
+- **Notification list endpoint** -- `GET /api/notifications` with `?unread=true` filter, limit 100
+- **Notification create endpoint** -- `POST /api/notifications` with optional `user_id` (defaults to authenticated user)
+- **Notification mark read endpoint** -- `PATCH /api/notifications/{id}/read`
+- **Mark all notifications read** -- `PATCH /api/notifications/mark-all-read`
+- **Notification count endpoint** -- `GET /api/notifications/count` (for badge UI)
+- **Notification get by ID** -- `GET /api/notifications/{id}` (user-scoped)
+- **Notification delete endpoint** -- `DELETE /api/notifications/{id}` (user-scoped)
+
+### Security
+- All notification queries scoped to authenticated user; no cross-user access possible
+
+### Technical Details
+- **Files Created:** 1 (`internal/handlers/notifications.go`)
+- **Files Modified:** 2 (`internal/server/server.go`, `docs/PROJECT_SUMMARY.md`)
+- **Lines Added:** ~233
+
+### Backend Integration
+- GET /api/notifications - List notifications (supports `?unread=true`)
+- POST /api/notifications - Create notification
+- GET /api/notifications/{id} - Get by ID (user-scoped)
+- PATCH /api/notifications/{id}/read - Mark as read
+- PATCH /api/notifications/mark-all-read - Mark all as read
+- GET /api/notifications/count - Unread count
+- DELETE /api/notifications/{id} - Delete (user-scoped)
+
+---
+
+## [0.10.0] - 2026-04-11
+
+### Added
+- **Document upload endpoint** -- `POST /api/documents` with multipart/form-data, 50MB limit, UUID storage filenames
+- **Document list endpoint** -- `GET /api/documents?entity_id=X&entity_type=contract`
+- **Document download endpoint** -- `GET /api/documents/{id}/download` with proper Content-Type and Content-Disposition headers
+- **Document delete endpoint** -- `DELETE /api/documents/{id}` with filesystem cleanup and audit logging
+- **Local filesystem storage** -- Files stored under `{data_dir}/documents/{entity_type}/{entity_id}/{uuid}`
+- **FK validation** -- Contract existence check before upload (returns 400 if not found)
+
+### Security
+- UUID storage filenames prevent path traversal attacks
+- 50MB file size limit prevents disk exhaustion
+- All routes behind AuthMiddleware
+- Audit logging on upload and delete operations
+
+### Technical Details
+- **Files Created:** 1 (`internal/handlers/documents.go`)
+- **Files Modified:** 3 (`internal/handlers/handler.go`, `internal/server/server.go`, `docs/PROJECT_SUMMARY.md`)
+- **Lines Added:** ~270
+
+### Backend Integration
+- POST /api/documents - Upload document (multipart/form-data)
+- GET /api/documents?entity_id=X&entity_type=contract - List documents
+- GET /api/documents/{id}/download - Download file
+- DELETE /api/documents/{id} - Delete document
+
+---
+
+## [0.9.0] - 2026-04-11
+
+### Added
+- **Supplement CRUD endpoints** -- `GET/POST/PUT/DELETE /api/supplements` with internal ID auto-generation (`SPL-YYYY-NNNN`)
+- **Supplement status transition** -- `PATCH /api/supplements/{id}/status` with enforced workflow: draft → approved → active
+- **Supplement internal IDs** -- System-generated unique identifiers, resets per year
+- **FK validation on supplement create/update** -- Contract and signer existence checks (returns 400 if missing)
+- **Audit logging on all supplement operations** -- create, update, delete, status_change with JSON state capture
+- **Frontend API migration** -- SupplementsPage and SupplementForm migrated from localStorage to API
+- **Status workflow UI buttons** -- Approve, activate, return to draft in SupplementForm
+- **Contracts API client** -- `src/lib/contracts-api.ts`
+- **Supplements API client** -- `src/lib/supplements-api.ts`
+
+### Changed
+- Loading and error states now use accessible markup with `role="status"` and `aria-live`
+- All API calls use `AbortController` to prevent memory leaks
+
+### Technical Details
+- **Files Created:** 2 (`internal/handlers/supplements.go`, `pacta_appweb/src/lib/supplements-api.ts`)
+- **Files Modified:** 8 (backend Go files, frontend TypeScript files)
+- **Migration:** `012_supplements_internal_id.sql` -- ALTER TABLE + backfill + unique index
+
+### Backend Integration
+- GET /api/supplements - List all supplements
+- POST /api/supplements - Create supplement (validates contract + signers)
+- GET /api/supplements/{id} - Get supplement by ID
+- PUT /api/supplements/{id} - Update supplement
+- PATCH /api/supplements/{id}/status - Transition status (enforces workflow)
+- DELETE /api/supplements/{id} - Soft delete
+
+---
+
 ## [0.8.0] - 2026-04-11
 
 ### Added

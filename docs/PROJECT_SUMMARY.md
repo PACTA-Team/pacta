@@ -406,6 +406,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.12.0 | - | Frontend API migration (documents & notifications from localStorage to backend API) |
 | v0.11.0 | - | Notification endpoints (list, create, mark read, mark all read, count, delete) |
 | v0.10.0 | - | Document attachments (upload, download, list, delete, audit logging) |
 | v0.9.0 | Latest | Supplement workflow (CRUD, status transitions, internal IDs, frontend API migration) |
@@ -423,6 +424,17 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.12.0)
+
+- [x] Documents API client module (`src/lib/documents-api.ts`)
+- [x] Notifications API client module (`src/lib/notifications-api.ts`)
+- [x] DocumentsPage migrated from localStorage to API
+- [x] NotificationsPage migrated from localStorage to API
+- [x] ContractDetailsPage docs section migrated to API
+- [x] Notification badge count in AppSidebar (polls every 30s)
+- [x] Removed generateNotifications from DashboardPage
+- [x] Updated TypeScript types to match backend snake_case format
 
 ### Completed (v0.11.0)
 
