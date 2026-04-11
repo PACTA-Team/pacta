@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-04-11
+
+### Fixed
+- **H-001: Foreign key validation on contract create/update** -- Added pre-INSERT and pre-UPDATE validation for `client_id` and `supplier_id` to return proper HTTP 400 errors instead of raw SQLite constraint violations
+- **Error message sanitization on update** -- `updateContract` handler no longer exposes internal SQLite error details to clients
+
+### Security
+- Contract creation and update now validate foreign key references before database operations, preventing internal error leakage
+
+---
+
 ## [0.4.0] - 2026-04-10
 
 ### Added
