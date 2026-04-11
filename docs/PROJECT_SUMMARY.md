@@ -153,7 +153,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Supplement Workflows | Complete |
 | Document Attachments | Complete |
 | Notifications | Complete |
-| Audit Logging | Complete |
+| Audit Logging | Complete (v0.8.0 — automatic CRUD logging, query endpoint with filtering, JSON state capture) |
 | Role-Based Access | Complete |
 | CI/CD Pipeline | Complete |
 | Multi-platform Builds | Complete |
@@ -329,6 +329,15 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ## Progress Tracking
 
+### Completed (v0.8.0)
+
+- [x] Audit logging system — automatic recording of all CRUD operations
+- [x] Audit log query endpoint (`GET /api/audit-logs` with filtering)
+- [x] JSON state capture on updates (previous + new state)
+- [x] IP address tracking on all audit entries
+- [x] Silent failure design (audit never breaks primary operation)
+- [x] Delete handler signatures updated to accept `*http.Request`
+
 ### Completed (v0.7.0)
 
 - [x] Signer CRUD endpoints (`GET/POST/PUT/DELETE /api/signers`)
@@ -398,7 +407,6 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 - [ ] Add supplement workflow endpoints
 - [ ] Add document attachment endpoints
 - [ ] Add notification endpoints
-- [ ] Add audit log query endpoint
 - [ ] Add user management endpoints (create, update, delete users)
 - [ ] Add rate limiting on login endpoint
 
