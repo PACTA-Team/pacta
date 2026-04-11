@@ -153,7 +153,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Client Management | Complete (v0.6.0 -- full CRUD with soft delete, error sanitization) |
 | Supplier Management | Complete (v0.6.0 -- full CRUD with soft delete, error sanitization) |
 | Signer Tracking | Complete (v0.7.0 -- CRUD API endpoints with FK validation, soft delete) |
-| Supplement Workflows | **Schema only** -- No API endpoints or routes implemented |
+| Supplement Workflows | Complete (v0.9.0 — CRUD endpoints, status transition workflow, internal IDs, frontend API migration) |
 | Document Attachments | **Schema only** -- No API endpoints or routes implemented |
 | Notifications | **Schema only** -- No API endpoints or routes implemented |
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
@@ -336,7 +336,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.8.0 | Latest | Audit logging system (CRUD logging, query endpoint, JSON state capture) |
+| v0.9.0 | Latest | Supplement workflow (CRUD, status transitions, internal IDs, frontend API migration) |
+| v0.8.0 | - | Audit logging system (CRUD logging, query endpoint, JSON state capture) |
 | v0.7.0 | - | Signer CRUD endpoints with FK validation and soft delete |
 | v0.6.0 | - | Client/Supplier full CRUD with soft delete and error sanitization |
 | v0.5.2 | - | Cookie Secure flag fix (M-001) |
@@ -350,6 +351,20 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.9.0)
+
+- [x] Supplement CRUD endpoints (`GET/POST/PUT/DELETE /api/supplements`)
+- [x] Supplement status transition endpoint (`PATCH /api/supplements/{id}/status`)
+- [x] Supplement internal IDs (auto-generated `SPL-YYYY-NNNN`, resets per year)
+- [x] FK validation on supplement create/update (contract, signers)
+- [x] Audit logging on all supplement operations (create, update, delete, status_change)
+- [x] Frontend migration from localStorage to API (SupplementsPage, SupplementForm)
+- [x] Status workflow UI buttons (approve, activate, return to draft)
+- [x] Contracts API client module (`src/lib/contracts-api.ts`)
+- [x] Supplements API client module (`src/lib/supplements-api.ts`)
+- [x] Loading/error states with accessible markup
+- [x] AbortController on all API calls
 
 ### Completed (v0.8.0)
 
@@ -425,7 +440,6 @@ _No active work in progress._
 
 ### Pending — Backend (Highest Priority)
 
-- [ ] **Supplement workflow endpoints** — Schema exists (`006_supplements.sql`), no handlers or routes
 - [ ] **Document attachment endpoints** — Schema exists (`007_documents.sql`), no handlers or routes
 - [ ] **Notification endpoints** — Schema exists (`008_notifications.sql`), no handlers or routes
 - [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
@@ -433,7 +447,6 @@ _No active work in progress._
 
 ### Pending — Frontend
 
-- [ ] **Supplement approval workflow UI** — Requires backend endpoints first
 - [ ] **Document upload UI** — Requires backend endpoints first
 - [ ] **Notification center UI** — Requires backend endpoints first
 - [ ] **User management page** — Requires backend endpoints first (admin only)
