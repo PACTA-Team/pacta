@@ -86,21 +86,40 @@ export interface Contract {
 }
 
 export interface Supplement {
-  id: string;
-  contractId: string;
-  supplementNumber: string;
-  description: string;
-  effectiveDate: string;
-  modifications: string;
+  id: number;
+  internal_id: string;
+  contract_id: number;
+  supplement_number: string;
+  description: string | null;
+  effective_date: string;
+  modifications: string | null;
   status: SupplementStatus;
-  documentUrl?: string;
-  documentKey?: string;
-  documentName?: string;
-  clientSignerId: string;
-  supplierSignerId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  client_signer_id: number | null;
+  supplier_signer_id: number | null;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSupplementRequest {
+  contract_id: number;
+  supplement_number: string;
+  description?: string;
+  effective_date: string;
+  modifications?: string;
+  client_signer_id?: number;
+  supplier_signer_id?: number;
+}
+
+export interface UpdateSupplementRequest {
+  contract_id?: number;
+  supplement_number?: string;
+  description?: string;
+  effective_date?: string;
+  modifications?: string;
+  status?: SupplementStatus;
+  client_signer_id?: number;
+  supplier_signer_id?: number;
 }
 
 export interface Document {
