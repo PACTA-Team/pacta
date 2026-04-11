@@ -28,7 +28,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		return err
 	}
 
-	h := &handlers.Handler{DB: database}
+	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -80,6 +80,12 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Put("/api/supplements/{id}", h.HandleSupplementByID)
 		r.Patch("/api/supplements/{id}/status", h.HandleSupplementStatus)
 		r.Delete("/api/supplements/{id}", h.HandleSupplementByID)
+
+		// Document routes
+		r.Get("/api/documents", h.HandleDocuments)
+		r.Post("/api/documents", h.HandleDocuments)
+		r.Get("/api/documents/{id}/download", h.HandleDocumentByID)
+		r.Delete("/api/documents/{id}", h.HandleDocumentByID)
 	})
 
 	// Static files (Vite build output) - catch-all

@@ -154,7 +154,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Supplier Management | Complete (v0.6.0 -- full CRUD with soft delete, error sanitization) |
 | Signer Tracking | Complete (v0.7.0 -- CRUD API endpoints with FK validation, soft delete) |
 | Supplement Workflows | Complete (v0.9.0 — CRUD endpoints, status transition workflow, internal IDs, frontend API migration) |
-| Document Attachments | **Schema only** -- No API endpoints or routes implemented |
+| Document Attachments | Complete (v0.10.0 -- upload, download, list, delete with audit logging) |
 | Notifications | **Schema only** -- No API endpoints or routes implemented |
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
 | Role-Based Access | Schema complete -- No enforcement logic implemented |
@@ -275,6 +275,76 @@ Contracts in the real world have **two identifiers**:
 
 ---
 
+## Supplement Internal IDs (v0.9.0)
+
+### Design Rationale
+
+Supplements follow the same dual-identifier pattern as contracts:
+
+1. **Supplement Number** (`supplement_number`) -- The sequential number of the supplement within its parent contract (e.g., "1", "2", "3"). This is user-entered and represents the legal supplement number on the document.
+
+2. **Internal ID** (`internal_id`) -- A system-generated identifier (`SPL-YYYY-NNNN` format) used by PACTA to track supplements internally. Auto-generated on creation, immutable.
+
+### Why Both Are Needed
+
+- The **supplement number** is a simple ordinal within the contract context (Supplement 1, Supplement 2, etc.). Users know which supplement they're working with by this number.
+
+- The **internal ID** provides a globally unique, system-controlled identifier across all supplements in the database. This is essential for audit trails, API references, and avoiding ambiguity when multiple contracts have supplements with the same number.
+
+### Status Workflow
+
+Supplements follow a three-state lifecycle with enforced transitions:
+
+```
+draft ──→ approved ──→ active
+  ↑          │
+  └──────────┘
+```
+
+| Transition | Allowed | Use Case |
+|------------|---------|----------|
+| draft → approved | Yes | Manager approves supplement content |
+| approved → active | Yes | Supplement goes into effect |
+| approved → draft | Yes | Manager returns for revision |
+| active → any | No | Active supplements are immutable |
+
+Transitions are validated at the handler level. Invalid transitions return HTTP 400 with a descriptive message.
+
+### Implementation
+
+| Component | Detail |
+|-----------|--------|
+| Format | `SPL-YYYY-NNNN` (e.g., `SPL-2026-0001`) |
+| Sequence | Increments per supplement within the same year |
+| Year rollover | Resets to `0001` when year changes |
+| Storage | `internal_id TEXT NOT NULL UNIQUE` column (migration 012) |
+| Generation | `SELECT MAX(CAST(SUBSTR(internal_id, 10) AS INTEGER))` filtered by year |
+| Thread safety | SQLite serializes writes by default |
+| Migration | `012_supplements_internal_id.sql` -- `ALTER TABLE` + backfill + `CREATE UNIQUE INDEX` |
+
+### FK Validation
+
+- `contract_id` must reference an existing, non-deleted contract (HTTP 400 if missing)
+- `client_signer_id` and `supplier_signer_id` must reference existing, non-deleted signers (HTTP 400 if missing)
+- All validations run before INSERT/UPDATE to return clean errors
+
+### Audit Logging
+
+Every supplement operation is logged with JSON state capture:
+- **create**: logs new state (id, internal_id, contract_id, supplement_number, status)
+- **update**: logs previous and new state for all changed fields
+- **delete**: logs previous state (supplement_number, status)
+- **status_change**: logs previous and new status values
+
+### Error Handling
+
+- **Invalid status value**: Returns HTTP 400 with `"status must be 'draft', 'approved', or 'active'"`
+- **Invalid transition**: Returns HTTP 400 with `"cannot transition from 'X' to 'Y'"`
+- **Missing FK**: Returns HTTP 400 with `"contract not found"` or `"client/supplier signer not found"`
+- **Sanitized errors**: Internal database errors return generic messages; details logged server-side
+
+---
+
 ## QA Deployment & Testing (v0.3.2 — 2026-04-09)
 
 ### Deployment Procedure
@@ -336,6 +406,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.10.0 | - | Document attachments (upload, download, list, delete, audit logging) |
 | v0.9.0 | Latest | Supplement workflow (CRUD, status transitions, internal IDs, frontend API migration) |
 | v0.8.0 | - | Audit logging system (CRUD logging, query endpoint, JSON state capture) |
 | v0.7.0 | - | Signer CRUD endpoints with FK validation and soft delete |
@@ -351,6 +422,17 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.10.0)
+
+- [x] Document upload endpoint (`POST /api/documents` with multipart/form-data)
+- [x] Document list endpoint (`GET /api/documents?entity_id=X&entity_type=contract`)
+- [x] Document download endpoint (`GET /api/documents/{id}/download`)
+- [x] Document delete endpoint (`DELETE /api/documents/{id}`)
+- [x] Local filesystem storage with UUID filenames (path traversal prevention)
+- [x] 50MB file size limit
+- [x] FK validation (contract existence check)
+- [x] Audit logging on upload and delete
 
 ### Completed (v0.9.0)
 
@@ -440,7 +522,6 @@ _No active work in progress._
 
 ### Pending — Backend (Highest Priority)
 
-- [ ] **Document attachment endpoints** — Schema exists (`007_documents.sql`), no handlers or routes
 - [ ] **Notification endpoints** — Schema exists (`008_notifications.sql`), no handlers or routes
 - [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
 - [ ] **Rate limiting on login endpoint** — Brute force protection
