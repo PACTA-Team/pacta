@@ -297,3 +297,74 @@ func (h *Handler) deleteSupplement(w http.ResponseWriter, r *http.Request, id in
 	}, nil)
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
+
+func (h *Handler) HandleSupplementStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/supplements/")
+	idStr = strings.TrimSuffix(idStr, "/status")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	if req.Status != "draft" && req.Status != "approved" && req.Status != "active" {
+		h.Error(w, http.StatusBadRequest, "status must be 'draft', 'approved', or 'active'")
+		return
+	}
+
+	var currentStatus string
+	err = h.DB.QueryRow("SELECT status FROM supplements WHERE id = ? AND deleted_at IS NULL", id).Scan(&currentStatus)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "supplement not found")
+		return
+	}
+
+	validTransitions := map[string][]string{
+		"draft":    {"approved"},
+		"approved": {"draft", "active"},
+		"active":   {},
+	}
+	allowed := validTransitions[currentStatus]
+	transitionAllowed := false
+	for _, a := range allowed {
+		if a == req.Status {
+			transitionAllowed = true
+			break
+		}
+	}
+	if !transitionAllowed {
+		h.Error(w, http.StatusBadRequest, fmt.Sprintf("cannot transition from '%s' to '%s'", currentStatus, req.Status))
+		return
+	}
+
+	_, err = h.DB.Exec("UPDATE supplements SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL", req.Status, id)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update supplement status")
+		return
+	}
+
+	h.auditLog(r, h.getUserID(r), "status_change", "supplement", &id, map[string]interface{}{
+		"id":     id,
+		"status": currentStatus,
+	}, map[string]interface{}{
+		"id":     id,
+		"status": req.Status,
+	})
+	h.JSON(w, http.StatusOK, map[string]interface{}{
+		"status":          req.Status,
+		"previous_status": currentStatus,
+	})
+}
