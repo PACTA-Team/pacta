@@ -103,11 +103,13 @@ pacta/
 │   └── server/             # HTTP server, chi router, static serving
 ├── pacta_appweb/           # React + TypeScript frontend
 │   ├── src/
-│   │   ├── app/            # Pages and routes
+│   │   ├── pages/          # Page components (15 pages)
 │   │   ├── components/     # React components (shadcn/ui)
 │   │   ├── contexts/       # React context providers
+│   │   ├── hooks/          # Custom React hooks
 │   │   ├── lib/            # Utility functions
-│   │   └── types/          # TypeScript type definitions
+│   │   ├── types/          # TypeScript type definitions
+│   │   └── images/         # Static assets
 │   └── vite.config.ts      # Vite build configuration
 ├── .github/workflows/      # CI/CD (GoReleaser release pipeline)
 ├── .goreleaser.yml         # Release configuration
@@ -145,18 +147,21 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Area | Status |
 |------|--------|
 | Authentication | Complete (login, logout, session management) |
-| Contract CRUD | Complete (create, read, update, soft delete) |
+| First-Run Setup | Complete (v0.5.1 -- setup wizard, atomic admin + client + supplier creation) |
+| Contract CRUD | Complete (create, read, update, soft delete, FK validation, error sanitization) |
 | Internal Contract IDs | Complete (v0.4.0 -- auto-generated `CNT-YYYY-NNNN`, resets per year) |
-| Client Management | Complete |
-| Supplier Management | Complete |
-| Signer Tracking | Complete (v0.7.0 — CRUD API endpoints with FK validation, soft delete) |
-| Supplement Workflows | Complete |
-| Document Attachments | Complete |
-| Notifications | Complete |
-| Audit Logging | Complete (v0.8.0 — automatic CRUD logging, query endpoint with filtering, JSON state capture) |
-| Role-Based Access | Complete |
-| CI/CD Pipeline | Complete |
-| Multi-platform Builds | Complete |
+| Client Management | Complete (v0.6.0 -- full CRUD with soft delete, error sanitization) |
+| Supplier Management | Complete (v0.6.0 -- full CRUD with soft delete, error sanitization) |
+| Signer Tracking | Complete (v0.7.0 -- CRUD API endpoints with FK validation, soft delete) |
+| Supplement Workflows | Complete (v0.9.0 — CRUD endpoints, status transition workflow, internal IDs, frontend API migration) |
+| Document Attachments | **Schema only** -- No API endpoints or routes implemented |
+| Notifications | **Schema only** -- No API endpoints or routes implemented |
+| Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
+| Role-Based Access | Schema complete -- No enforcement logic implemented |
+| User Management | **Schema only** -- No CRUD endpoints (only login/me) |
+| CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
+| Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
+| Frontend Pages | 15 pages created (Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |
 | Frontend Security | Hardened (route guards, XSS prevention, code splitting) |
 | Frontend Accessibility | WCAG 2.2 AA compliant (skip nav, ARIA, keyboard nav) |
 | Frontend Performance | Optimized (lazy loading, memoization, build config) |
@@ -327,7 +332,39 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ---
 
+## Version Summary
+
+| Version | Release | Key Deliverables |
+|---------|---------|------------------|
+| v0.9.0 | Latest | Supplement workflow (CRUD, status transitions, internal IDs, frontend API migration) |
+| v0.8.0 | - | Audit logging system (CRUD logging, query endpoint, JSON state capture) |
+| v0.7.0 | - | Signer CRUD endpoints with FK validation and soft delete |
+| v0.6.0 | - | Client/Supplier full CRUD with soft delete and error sanitization |
+| v0.5.2 | - | Cookie Secure flag fix (M-001) |
+| v0.5.1 | - | First-run setup wizard (replaces hardcoded admin password) |
+| v0.4.1 | - | FK validation on contract create/update (400 Bad Request, error sanitization) |
+| v0.4.0 | - | Internal contract IDs, auth system, contract CRUD, error sanitization |
+| v0.3.x | - | QA deployment, Caddy reverse proxy, systemd service |
+| v0.2.x | - | Frontend security, accessibility, performance hardening |
+| v0.1.x | - | Initial releases, basic contract management |
+
+---
+
 ## Progress Tracking
+
+### Completed (v0.9.0)
+
+- [x] Supplement CRUD endpoints (`GET/POST/PUT/DELETE /api/supplements`)
+- [x] Supplement status transition endpoint (`PATCH /api/supplements/{id}/status`)
+- [x] Supplement internal IDs (auto-generated `SPL-YYYY-NNNN`, resets per year)
+- [x] FK validation on supplement create/update (contract, signers)
+- [x] Audit logging on all supplement operations (create, update, delete, status_change)
+- [x] Frontend migration from localStorage to API (SupplementsPage, SupplementForm)
+- [x] Status workflow UI buttons (approve, activate, return to draft)
+- [x] Contracts API client module (`src/lib/contracts-api.ts`)
+- [x] Supplements API client module (`src/lib/supplements-api.ts`)
+- [x] Loading/error states with accessible markup
+- [x] AbortController on all API calls
 
 ### Completed (v0.8.0)
 
@@ -399,33 +436,30 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### In Progress
 
-- [ ] Fix default admin password hash in migration `001_users.sql`
-- [ ] Add input validation for contract creation
+_No active work in progress._
 
-### Pending — Backend
+### Pending — Backend (Highest Priority)
 
-- [ ] Add supplement workflow endpoints
-- [ ] Add document attachment endpoints
-- [ ] Add notification endpoints
-- [ ] Add user management endpoints (create, update, delete users)
-- [ ] Add rate limiting on login endpoint
+- [ ] **Document attachment endpoints** — Schema exists (`007_documents.sql`), no handlers or routes
+- [ ] **Notification endpoints** — Schema exists (`008_notifications.sql`), no handlers or routes
+- [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
+- [ ] **Rate limiting on login endpoint** — Brute force protection
 
 ### Pending — Frontend
 
+- [ ] **Document upload UI** — Requires backend endpoints first
+- [ ] **Notification center UI** — Requires backend endpoints first
+- [ ] **User management page** — Requires backend endpoints first (admin only)
+- [ ] **Contract creation form with client/supplier dropdowns** — Backend ready, UI incomplete
+- [ ] **Contract detail view with edit functionality** — Backend ready, UI incomplete
+- [ ] **Client/supplier edit/delete flows** — Backend ready, UI incomplete
+- [ ] **Signer management UI** — Backend ready (v0.7.0), UI incomplete
+- [ ] **Settings/profile page** — Not started
 - [ ] Full browser-based QA of all pages (dashboard, contracts, clients, suppliers)
 - [ ] Mobile responsive testing at 375px, 768px, 1280px
 - [ ] Keyboard navigation testing (WCAG 2.1)
 - [ ] Screen reader testing (ARIA landmarks, labels)
 - [ ] Color contrast verification (WCAG AA 4.5:1)
-- [ ] Contract creation form with client/supplier dropdowns
-- [ ] Contract detail view with edit functionality
-- [ ] Client/supplier edit/delete flows
-- [ ] Signer management UI
-- [ ] Supplement approval workflow UI
-- [ ] Document upload UI
-- [ ] Notification center UI
-- [ ] Settings/profile page
-- [ ] User management page (admin only)
 - [ ] CSRF token implementation
 - [ ] Remove password from localStorage
 - [ ] Add Zod validation to all forms
@@ -433,7 +467,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### Pending — Testing
 
-- [ ] Unit tests for Go handlers (auth, contracts, clients, suppliers)
+- [ ] Unit tests for Go handlers (auth, contracts, clients, suppliers, signers, audit)
 - [ ] Integration tests for API endpoints
 - [ ] Frontend unit tests (vitest configured, none exist)
 - [ ] E2E tests with Playwright

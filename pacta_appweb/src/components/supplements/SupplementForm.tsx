@@ -1,91 +1,44 @@
-
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Supplement, SupplementStatus, Contract } from '@/types';
-import { upload } from '@/lib/upload';
-import { toast } from 'sonner';
-import { Upload, FileText, X } from 'lucide-react';
+import { Supplement, CreateSupplementRequest } from '@/types';
 
-type SupplementFormData = {
-  contractId: string;
-  supplementNumber: string;
-  description: string;
-  effectiveDate: string;
-  modifications: string;
-  status: SupplementStatus;
-  documentUrl?: string;
-  documentKey?: string;
-  documentName?: string;
+type ContractSummary = {
+  id: number;
+  internal_id: string;
+  contract_number: string;
+  title: string;
 };
 
 interface SupplementFormProps {
-  onSubmit: (data: Omit<Supplement, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: CreateSupplementRequest) => Promise<void>;
   editingSupplement?: Supplement;
-  contracts: Contract[];
-  formData: SupplementFormData;
-  setFormData: (data: SupplementFormData) => void;
+  contracts: ContractSummary[];
+  onCancel: () => void;
 }
 
 export default function SupplementForm({
   onSubmit,
   editingSupplement,
   contracts,
-  formData,
-  setFormData
+  onCancel,
 }: SupplementFormProps) {
-  const [uploading, setUploading] = useState(false);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const result = await upload.uploadWithPresignedUrl(file, {
-        maxSize: 5 * 1024 * 1024,
-        allowedExtensions: ['.pdf', '.doc', '.docx'],
-      });
-
-      if (result.success && result.url && result.fileKey) {
-        setFormData({
-          ...formData,
-          documentUrl: result.url,
-          documentKey: result.fileKey,
-          documentName: file.name,
-        });
-        toast.success('Document uploaded successfully');
-      } else {
-        toast.error(result.error || 'Upload failed');
-      }
-    } catch (error) {
-      toast.error('Failed to upload document');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleRemoveDocument = () => {
-    setFormData({
-      ...formData,
-      documentUrl: '',
-      documentKey: '',
-      documentName: '',
-    });
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedContract = contracts.find(c => c.id === formData.contractId);
-    const data: Omit<Supplement, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'> = {
-      ...formData,
-      clientSignerId: selectedContract?.clientSignerId || '',
-      supplierSignerId: selectedContract?.supplierSignerId || '',
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    const data: CreateSupplementRequest = {
+      contract_id: Number(formData.get('contract_id')),
+      supplement_number: formData.get('supplement_number') as string,
+      description: formData.get('description') as string,
+      effective_date: formData.get('effective_date') as string,
+      modifications: formData.get('modifications') as string || undefined,
     };
+
     onSubmit(data);
   };
 
@@ -97,19 +50,20 @@ export default function SupplementForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="contractId">Parent Contract *</Label>
+            <Label htmlFor="contract_id">Parent Contract *</Label>
             <Select
-              value={formData.contractId}
-              onValueChange={(value) => setFormData({ ...formData, contractId: value })}
+              name="contract_id"
+              defaultValue={editingSupplement ? String(editingSupplement.contract_id) : ''}
               disabled={!!editingSupplement}
+              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select contract" />
               </SelectTrigger>
               <SelectContent>
                 {contracts.map((contract) => (
-                  <SelectItem key={contract.id} value={contract.id}>
-                    {contract.contractNumber} - {contract.title}
+                  <SelectItem key={contract.id} value={String(contract.id)}>
+                    {contract.contract_number} - {contract.title}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -118,108 +72,52 @@ export default function SupplementForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="supplementNumber">Supplement Number *</Label>
+              <Label htmlFor="supplement_number">Supplement Number *</Label>
               <Input
-                id="supplementNumber"
-                value={formData.supplementNumber}
-                onChange={(e) => setFormData({ ...formData, supplementNumber: e.target.value })}
+                id="supplement_number"
+                name="supplement_number"
+                defaultValue={editingSupplement?.supplement_number ?? ''}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="effectiveDate">Effective Date *</Label>
+              <Label htmlFor="effective_date">Effective Date *</Label>
               <Input
-                id="effectiveDate"
+                id="effective_date"
+                name="effective_date"
                 type="date"
-                value={formData.effectiveDate}
-                onChange={(e) => setFormData({ ...formData, effectiveDate: e.target.value })}
+                defaultValue={editingSupplement?.effective_date ?? ''}
                 required
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status *</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData({ ...formData, status: value as SupplementStatus })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              name="description"
+              defaultValue={editingSupplement?.description ?? ''}
               rows={3}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modifications">Modifications Summary *</Label>
+            <Label htmlFor="modifications">Modifications Summary</Label>
             <Textarea
               id="modifications"
-              value={formData.modifications}
-              onChange={(e) => setFormData({ ...formData, modifications: e.target.value })}
+              name="modifications"
+              defaultValue={editingSupplement?.modifications ?? ''}
               rows={4}
-              required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Supplement Document (PDF, DOC, DOCX)</Label>
-            <p className="text-xs text-muted-foreground">
-              Upload the supplement document
-            </p>
-            {formData.documentUrl ? (
-              <div className="flex items-center gap-2 p-3 border rounded-lg">
-                <FileText className="h-5 w-5 text-green-600" />
-                <span className="flex-1 text-sm">{formData.documentName}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemoveDocument}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                <Input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                  disabled={uploading}
-                  className="hidden"
-                  id="document-upload"
-                />
-                <Label htmlFor="document-upload" className="cursor-pointer">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {uploading ? 'Uploading...' : 'Click to upload supplement document'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PDF, DOC, DOCX (max 5MB)
-                  </p>
-                </Label>
-              </div>
-            )}
-          </div>
-
           <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
             <Button type="submit">
               {editingSupplement ? 'Update Supplement' : 'Create Supplement'}
             </Button>

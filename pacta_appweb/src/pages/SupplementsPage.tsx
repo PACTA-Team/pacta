@@ -1,113 +1,85 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2 } from 'lucide-react';
-import { Supplement, SupplementStatus, Contract } from '@/types';
-import { getSupplements, setSupplements, getContracts, getCurrentUser } from '@/lib/storage';
-import { addAuditLog } from '@/lib/audit';
+import { Plus, Edit, Trash2, CheckCircle, XCircle, ArrowUpCircle } from 'lucide-react';
+import { Supplement, SupplementStatus, CreateSupplementRequest } from '@/types';
+import { supplementsAPI } from '@/lib/supplements-api';
+import { contractsAPI } from '@/lib/contracts-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import SupplementForm from '@/components/supplements/SupplementForm';
 import { Link } from 'react-router-dom';
 
-type SupplementFormData = {
-  contractId: string;
-  supplementNumber: string;
-  description: string;
-  effectiveDate: string;
-  modifications: string;
-  status: SupplementStatus;
-  documentUrl?: string;
-  documentKey?: string;
-  documentName?: string;
+type ContractSummary = {
+  id: number;
+  internal_id: string;
+  contract_number: string;
+  title: string;
 };
 
 export default function SupplementsPage() {
   const [supplements, setSupplementsState] = useState<Supplement[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contracts, setContracts] = useState<ContractSummary[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingSupplement, setEditingSupplement] = useState<Supplement | undefined>();
-  const [formData, setFormData] = useState<SupplementFormData>({
-    contractId: '',
-    supplementNumber: '',
-    description: '',
-    effectiveDate: '',
-    modifications: '',
-    status: 'draft' as SupplementStatus,
-    documentUrl: '',
-    documentKey: '',
-    documentName: '',
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
     const action = searchParams.get('action');
-    const contractId = searchParams.get('contractId');
     if (action === 'create') {
       setShowForm(true);
-      if (contractId) {
-        setFormData(prev => ({ ...prev, contractId }));
-      }
     }
+    return () => controller.abort();
   }, [searchParams]);
 
-  const loadData = () => {
-    setSupplementsState(getSupplements());
-    setContracts(getContracts());
-  };
-
-  const handleSubmit = (data: Omit<Supplement, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
-    const user = getCurrentUser();
-    if (!user) return;
-
-    const allSupplements = getSupplements();
-
-    if (editingSupplement) {
-      const updated: Supplement = {
-        ...editingSupplement,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
-      const newSupplements = allSupplements.map(s => s.id === updated.id ? updated : s);
-      setSupplements(newSupplements);
-      addAuditLog(data.contractId, 'Supplement Updated', `Supplement ${updated.supplementNumber} was updated`);
-      toast.success('Supplement updated successfully');
-    } else {
-      const newSupplement: Supplement = {
-        ...data,
-        id: Date.now().toString(),
-        createdBy: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setSupplements([...allSupplements, newSupplement]);
-      addAuditLog(data.contractId, 'Supplement Created', `Supplement ${newSupplement.supplementNumber} was created`);
-      toast.success('Supplement created successfully');
+  const loadData = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [supps, contrs] = await Promise.all([
+        supplementsAPI.list(signal),
+        contractsAPI.list(signal),
+      ]);
+      setSupplementsState(supps);
+      setContracts(contrs);
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    resetForm();
-    loadData();
+  const handleSubmit = async (data: CreateSupplementRequest) => {
+    try {
+      if (editingSupplement) {
+        await supplementsAPI.update(editingSupplement.id, data);
+        toast.success('Supplement updated successfully');
+      } else {
+        await supplementsAPI.create(data);
+        toast.success('Supplement created successfully');
+      }
+      resetForm();
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Operation failed');
+    }
   };
 
   const resetForm = () => {
     setShowForm(false);
     setEditingSupplement(undefined);
-    setFormData({
-      contractId: '',
-      supplementNumber: '',
-      description: '',
-      effectiveDate: '',
-      modifications: '',
-      status: 'draft',
-      documentUrl: '',
-      documentKey: '',
-      documentName: '',
-    });
+    navigate('/supplements');
   };
 
   const handleEdit = (supplement: Supplement) => {
@@ -116,37 +88,31 @@ export default function SupplementsPage() {
       return;
     }
     setEditingSupplement(supplement);
-    setFormData({
-      contractId: supplement.contractId,
-      supplementNumber: supplement.supplementNumber,
-      description: supplement.description,
-      effectiveDate: supplement.effectiveDate,
-      modifications: supplement.modifications,
-      status: supplement.status,
-      documentUrl: supplement.documentUrl || '',
-      documentKey: supplement.documentKey || '',
-      documentName: supplement.documentName || '',
-    });
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number, supplementNumber: string) => {
     if (!hasPermission('manager')) {
       toast.error('You do not have permission to delete supplements');
       return;
     }
-
-    const allSupplements = getSupplements();
-    const supplement = allSupplements.find(s => s.id === id);
-    const newSupplements = allSupplements.filter(s => s.id !== id);
-    setSupplements(newSupplements);
-
-    if (supplement) {
-      addAuditLog(supplement.contractId, 'Supplement Deleted', `Supplement ${supplement.supplementNumber} was deleted`);
+    try {
+      await supplementsAPI.delete(id);
+      toast.success('Supplement deleted successfully');
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
     }
+  };
 
-    toast.success('Supplement deleted successfully');
-    loadData();
+  const handleStatusChange = async (id: number, status: SupplementStatus) => {
+    try {
+      await supplementsAPI.transitionStatus(id, status);
+      toast.success(`Supplement ${status}`);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Status change failed');
+    }
   };
 
   const getStatusBadge = (status: SupplementStatus) => {
@@ -158,96 +124,131 @@ export default function SupplementsPage() {
     return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
-  const getContractInfo = (contractId: string) => {
+  const getContractInfo = (contractId: number) => {
     const contract = contracts.find(c => c.id === contractId);
-    return contract ? `${contract.contractNumber} - ${contract.title}` : 'Unknown';
+    return contract ? `${contract.contract_number} - ${contract.title}` : `Contract #${contractId}`;
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12" role="status" aria-label="Loading supplements"><p className="text-muted-foreground">Loading supplements...</p></div>;
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-600" role="alert">Error loading supplements: {error}</div>;
+  }
 
   if (showForm) {
     return (
-      
-        <SupplementForm
-          onSubmit={handleSubmit}
-          editingSupplement={editingSupplement}
-          contracts={contracts}
-          formData={formData}
-          setFormData={setFormData}
-        />
-      
+      <SupplementForm
+        onSubmit={handleSubmit}
+        editingSupplement={editingSupplement}
+        contracts={contracts}
+        onCancel={resetForm}
+      />
     );
   }
 
   return (
-    
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">
-            Manage contract supplements
-          </p>
-          {hasPermission('editor') && (
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Supplement
-            </Button>
-          )}
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-muted-foreground">
+          Manage contract supplements
+        </p>
+        {hasPermission('editor') && (
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Add Supplement
+          </Button>
+        )}
+      </div>
 
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Supplement Number</TableHead>
+                <TableHead>Internal ID</TableHead>
+                <TableHead>Parent Contract</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Effective Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {supplements.length === 0 ? (
                 <TableRow>
-                  <TableHead>Supplement Number</TableHead>
-                  <TableHead>Parent Contract</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Effective Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    No supplements found
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {supplements.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No supplements found
+              ) : (
+                supplements.map((supplement) => (
+                  <TableRow key={supplement.id}>
+                    <TableCell className="font-medium" title={supplement.internal_id}>{supplement.supplement_number}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground font-mono">{supplement.internal_id}</TableCell>
+                    <TableCell>
+                      <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline">
+                        {getContractInfo(supplement.contract_id)}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{supplement.description}</TableCell>
+                    <TableCell>{new Date(supplement.effective_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{getStatusBadge(supplement.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {supplement.status === 'draft' && hasPermission('manager') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-600"
+                            onClick={() => handleStatusChange(supplement.id, 'approved')}
+                            aria-label={`Approve supplement ${supplement.supplement_number}`}
+                          >
+                            <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        )}
+                        {supplement.status === 'approved' && hasPermission('manager') && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600"
+                              onClick={() => handleStatusChange(supplement.id, 'active')}
+                              aria-label={`Activate supplement ${supplement.supplement_number}`}
+                            >
+                              <ArrowUpCircle className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleStatusChange(supplement.id, 'draft')}
+                              aria-label={`Return supplement ${supplement.supplement_number} to draft`}
+                            >
+                              <XCircle className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </>
+                        )}
+                        {hasPermission('editor') && (
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(supplement)} aria-label={`Edit supplement ${supplement.supplement_number}`}>
+                            <Edit className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        )}
+                        {hasPermission('manager') && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(supplement.id, supplement.supplement_number)} aria-label={`Delete supplement ${supplement.supplement_number}`}>
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  supplements.map((supplement) => (
-                    <TableRow key={supplement.id}>
-                      <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
-                      <TableCell>
-                        <Link to={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
-                          {getContractInfo(supplement.contractId)}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{supplement.description}</TableCell>
-                      <TableCell>{new Date(supplement.effectiveDate).toLocaleDateString()}</TableCell>
-                      <TableCell>{getStatusBadge(supplement.status)}</TableCell>
-                      <TableCell>{new Date(supplement.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {hasPermission('editor') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(supplement)} aria-label={`Edit supplement ${supplement.supplementNumber}`}>
-                              <Edit className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          )}
-                          {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(supplement.id)} aria-label={`Delete supplement ${supplement.supplementNumber}`}>
-                              <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
