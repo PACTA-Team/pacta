@@ -14,7 +14,8 @@ type ctxKey string
 const ctxUserID ctxKey = "userID"
 
 type Handler struct {
-	DB *sql.DB
+	DB      *sql.DB
+	DataDir string
 }
 
 func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {

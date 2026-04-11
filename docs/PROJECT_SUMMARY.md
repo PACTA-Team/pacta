@@ -154,7 +154,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Supplier Management | Complete (v0.6.0 -- full CRUD with soft delete, error sanitization) |
 | Signer Tracking | Complete (v0.7.0 -- CRUD API endpoints with FK validation, soft delete) |
 | Supplement Workflows | Complete (v0.9.0 — CRUD endpoints, status transition workflow, internal IDs, frontend API migration) |
-| Document Attachments | **Schema only** -- No API endpoints or routes implemented |
+| Document Attachments | Complete (v0.10.0 -- upload, download, list, delete with audit logging) |
 | Notifications | **Schema only** -- No API endpoints or routes implemented |
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
 | Role-Based Access | Schema complete -- No enforcement logic implemented |
@@ -406,6 +406,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.10.0 | - | Document attachments (upload, download, list, delete, audit logging) |
 | v0.9.0 | Latest | Supplement workflow (CRUD, status transitions, internal IDs, frontend API migration) |
 | v0.8.0 | - | Audit logging system (CRUD logging, query endpoint, JSON state capture) |
 | v0.7.0 | - | Signer CRUD endpoints with FK validation and soft delete |
@@ -421,6 +422,17 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.10.0)
+
+- [x] Document upload endpoint (`POST /api/documents` with multipart/form-data)
+- [x] Document list endpoint (`GET /api/documents?entity_id=X&entity_type=contract`)
+- [x] Document download endpoint (`GET /api/documents/{id}/download`)
+- [x] Document delete endpoint (`DELETE /api/documents/{id}`)
+- [x] Local filesystem storage with UUID filenames (path traversal prevention)
+- [x] 50MB file size limit
+- [x] FK validation (contract existence check)
+- [x] Audit logging on upload and delete
 
 ### Completed (v0.9.0)
 
@@ -510,7 +522,6 @@ _No active work in progress._
 
 ### Pending — Backend (Highest Priority)
 
-- [ ] **Document attachment endpoints** — Schema exists (`007_documents.sql`), no handlers or routes
 - [ ] **Notification endpoints** — Schema exists (`008_notifications.sql`), no handlers or routes
 - [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
 - [ ] **Rate limiting on login endpoint** — Brute force protection
