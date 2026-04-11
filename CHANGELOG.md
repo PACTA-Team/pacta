@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-11
+
+### Added
+- **First-run setup wizard** -- Multi-step wizard replaces hardcoded default admin, allowing users to set their own admin credentials + seed first client and supplier on initial launch
+- **Setup status endpoint** -- `GET /api/setup/status` returns whether first-run setup is needed
+- **Atomic setup transaction** -- All setup data (admin, client, supplier) created in single SQLite transaction, ensuring no partial state
+
+### Changed
+- Removed hardcoded default admin from migration `001_users.sql`
+- Setup wizard auto-logins after successful configuration and redirects to dashboard
+
+### Security
+- **C-001: Fixed** -- No more default admin with known bcrypt hash; each installation requires unique admin credentials
+- Password validation enforces minimum 8 chars, uppercase, number, and special character
+
+### Technical Details
+- **Files Created:** 9 (1 Go handler, 7 TypeScript components, 1 TS lib)
+- **Files Modified:** 5 (2 Go files, 3 frontend files)
+
+---
+
 ## [0.4.1] - 2026-04-11
 
 ### Fixed

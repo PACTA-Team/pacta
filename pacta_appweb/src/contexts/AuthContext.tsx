@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@/types';
+import { checkSetupStatus } from '@/lib/setup-api';
 
 interface AuthContextType {
   user: User | null;
@@ -24,7 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetch('/api/auth/me', { signal: controller.signal })
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data) setUser(data); })
-      .catch(() => {})
+      .catch(async () => {
+        const needsSetup = await checkSetupStatus();
+        if (needsSetup) {
+          window.location.href = '/setup';
+        }
+      })
       .finally(() => setIsLoading(false));
 
     return () => controller.abort();

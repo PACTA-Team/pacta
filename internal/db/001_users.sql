@@ -13,7 +13,3 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
-
--- Default admin (password: admin123, bcrypt cost 10)
-INSERT OR IGNORE INTO users (name, email, password_hash, role) VALUES
-('Admin', 'admin@pacta.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin');

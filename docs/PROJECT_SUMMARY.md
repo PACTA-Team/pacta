@@ -313,7 +313,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 | ID | Severity | Issue | Status |
 |----|----------|-------|--------|
 | C-001 | Critical | Default admin password hash doesn't match `admin123` | Fixed in DB, migration needs fix |
-| H-001 | High | Contract creation returns 500 with raw SQLite error on missing FK | Open |
+| H-001 | High | Contract creation returns 500 with raw SQLite error on missing FK | **Fixed v0.4.1** -- pre-INSERT/UPDATE FK validation, returns 400 Bad Request |
 | H-002 | High | Contract number not auto-generated, UNIQUE constraint fails on 2nd contract | **Fixed v0.4.0** -- internal_id auto-generated, user enters legal contract_number |
 | H-003 | High | API error messages expose internal DB details to clients | **Fixed v0.4.0** -- sanitized errors, 409 Conflict on duplicates |
 | M-001 | Medium | Cookie missing `Secure` flag (implicit via HTTPS) | Open |
@@ -328,6 +328,10 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.4.1)
+
+- [x] Fix H-001: FK validation on contract create/update (pre-INSERT/UPDATE checks, 400 Bad Request, error sanitization)
 
 ### Completed (v0.4.0)
 
@@ -362,7 +366,6 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ### Pending — Backend
 
 - [ ] Fix C-001: Replace fake bcrypt hash with real one in `internal/db/001_users.sql`
-- [ ] Fix H-001: Validate `client_id` and `supplier_id` before INSERT, return 400
 - [ ] Fix M-001: Add `Secure: true` to session cookie in `internal/handlers/auth.go`
 - [ ] Add client/supplier update and delete endpoints
 - [ ] Add signer CRUD endpoints
