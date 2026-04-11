@@ -56,9 +56,15 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		r.Get("/api/clients", h.HandleClients)
 		r.Post("/api/clients", h.HandleClients)
+		r.Get("/api/clients/{id}", h.HandleClientByID)
+		r.Put("/api/clients/{id}", h.HandleClientByID)
+		r.Delete("/api/clients/{id}", h.HandleClientByID)
 
 		r.Get("/api/suppliers", h.HandleSuppliers)
 		r.Post("/api/suppliers", h.HandleSuppliers)
+		r.Get("/api/suppliers/{id}", h.HandleSupplierByID)
+		r.Put("/api/suppliers/{id}", h.HandleSupplierByID)
+		r.Delete("/api/suppliers/{id}", h.HandleSupplierByID)
 	})
 
 	// Static files (Vite build output) - catch-all
