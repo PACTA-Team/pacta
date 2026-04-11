@@ -90,3 +90,19 @@ type AuditLog struct {
 	IPAddress     *string   `json:"ip_address,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 }
+
+type Supplement struct {
+	ID               int        `json:"id"`
+	InternalID       string     `json:"internal_id"`
+	ContractID       int        `json:"contract_id"`
+	SupplementNumber string     `json:"supplement_number"`
+	Description      *string    `json:"description,omitempty"`
+	EffectiveDate    string     `json:"effective_date"`
+	Modifications    *string    `json:"modifications,omitempty"`
+	Status           string     `json:"status"`
+	ClientSignerID   *int       `json:"client_signer_id,omitempty"`
+	SupplierSignerID *int       `json:"supplier_signer_id,omitempty"`
+	CreatedBy        *int       `json:"created_by,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
