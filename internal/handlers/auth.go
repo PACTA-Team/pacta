@@ -37,6 +37,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Value:    session.Token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -53,6 +54,7 @@ func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
 		MaxAge:   -1,
 	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "logged out"})
