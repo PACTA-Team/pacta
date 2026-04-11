@@ -406,6 +406,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.14.0 | - | Users frontend API migration (UsersPage from localStorage to backend API) |
+| v0.13.0 | - | User management CRUD endpoints (create, update, delete, password reset, status) |
 | v0.12.0 | - | Frontend API migration (documents & notifications from localStorage to backend API) |
 | v0.11.0 | - | Notification endpoints (list, create, mark read, mark all read, count, delete) |
 | v0.10.0 | - | Document attachments (upload, download, list, delete, audit logging) |
@@ -424,6 +426,29 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.14.0)
+
+- [x] Users API client module (`src/lib/users-api.ts`)
+- [x] UsersPage migrated from localStorage to API
+- [x] Password reset UI with dedicated form
+- [x] Delete user button with self-protection
+- [x] Loading states and error handling
+- [x] Support for locked status
+
+### Completed (v0.13.0)
+
+- [x] User list endpoint (`GET /api/users` — excludes password_hash)
+- [x] User create endpoint (`POST /api/users` — bcrypt password hashing)
+- [x] User get by ID endpoint (`GET /api/users/{id}`)
+- [x] User update endpoint (`PUT /api/users/{id}` — name, email, role)
+- [x] User delete endpoint (`DELETE /api/users/{id}` — soft delete, cannot delete own)
+- [x] Password reset endpoint (`PATCH /api/users/{id}/reset-password`)
+- [x] User status endpoint (`PATCH /api/users/{id}/status` — active/inactive/locked)
+- [x] Self-protection: cannot demote own admin role, delete own account, or change own status
+- [x] Audit logging on all operations (create, update, delete, reset_password, update_status)
+- [x] Duplicate email detection (409 Conflict)
+- [x] Role validation (admin, manager, editor, viewer only)
 
 ### Completed (v0.12.0)
 
