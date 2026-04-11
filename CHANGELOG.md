@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-04-11
+
+### Added
+- **Users API client** -- `src/lib/users-api.ts` with list, create, update, delete, reset-password, and status methods
+- **UsersPage API migration** -- Full migration from localStorage to backend API
+- **Password reset UI** -- Dedicated form for admin password reset
+- **Delete user button** -- With self-protection (cannot delete own account)
+
+### Changed
+- UsersPage now fetches users from `/api/users` instead of localStorage
+- User status toggle now calls backend API (supports active/inactive/locked)
+- Added loading states for user list
+- Email field disabled during edit (cannot change email)
+
+### Technical Details
+- **Files Created:** 1 (`pacta_appweb/src/lib/users-api.ts`)
+- **Files Modified:** 1 (`pacta_appweb/src/pages/UsersPage.tsx`)
+- **Lines Changed:** +397 / -248
+
+---
+
+## [0.13.0] - 2026-04-11
+
+### Added
+- **User list endpoint** -- `GET /api/users` returns all non-deleted users (excludes password_hash)
+- **User create endpoint** -- `POST /api/users` with bcrypt password hashing and role validation
+- **User get by ID** -- `GET /api/users/{id}` (user-scoped)
+- **User update endpoint** -- `PUT /api/users/{id}` (name, email, role)
+- **User delete endpoint** -- `DELETE /api/users/{id}` (soft delete, cannot delete own account)
+- **Password reset endpoint** -- `PATCH /api/users/{id}/reset-password` (admin-only)
+- **User status endpoint** -- `PATCH /api/users/{id}/status` (active/inactive/locked)
+
+### Security
+- Cannot demote own admin role
+- Cannot delete own account
+- Cannot change own status to inactive/locked
+- Password hashing via bcrypt (cost 10)
+- Audit logging on all operations (create, update, delete, reset_password, update_status)
+- Duplicate email detection (409 Conflict)
+
+### Technical Details
+- **Files Created:** 1 (`internal/handlers/users.go`)
+- **Files Modified:** 2 (`internal/server/server.go`, `docs/PROJECT_SUMMARY.md`)
+- **Lines Added:** ~316
+
+### Backend Integration
+- GET /api/users - List all users
+- POST /api/users - Create user (bcrypt hashing, role validation)
+- GET /api/users/{id} - Get user by ID
+- PUT /api/users/{id} - Update user (name, email, role)
+- DELETE /api/users/{id} - Soft delete (cannot delete own)
+- PATCH /api/users/{id}/reset-password - Reset password
+- PATCH /api/users/{id}/status - Update status (active/inactive/locked)
+
+---
+
 ## [0.12.0] - 2026-04-11
 
 ### Added
