@@ -54,6 +54,15 @@ func Migrate(db *sql.DB) error {
 			return fmt.Errorf("begin tx for %s: %w", e.Name(), err)
 		}
 		if _, err := tx.Exec(string(content)); err != nil {
+			// SQLite doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN.
+			// If a column already exists, skip the migration and mark it applied.
+			if strings.Contains(err.Error(), "duplicate column name") {
+				tx.Rollback()
+				if _, err := db.Exec("INSERT INTO schema_migrations (version) VALUES (?)", version); err != nil {
+					return fmt.Errorf("track %s: %w", e.Name(), err)
+				}
+				continue
+			}
 			tx.Rollback()
 			return fmt.Errorf("apply %s: %w", e.Name(), err)
 		}

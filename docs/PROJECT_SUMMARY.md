@@ -161,6 +161,9 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Role-Based Access | Complete (v0.15.0 -- middleware enforcement, 4-tier permission levels, inactive account rejection) |
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
+| Landing Page | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
+| Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
+| Documentation | Complete (v0.18.0 -- README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
 | Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
 | Frontend Pages | 15 pages created (Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |
@@ -408,6 +411,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.18.0 | Latest | Landing page (Framer Motion), theme toggle fix, README redesign, Linux/Windows installation guides, GitHub repo branding |
 | v0.17.0 | Latest | Multi-company setup wizard (company mode selector, company info step, 7-step wizard flow, company data in setup payload) |
 | v0.16.0 | - | Multi-company support (companies table, company_id on all data, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | v0.15.0 | - | Role-based access control enforcement (middleware, 4-tier permissions, inactive account rejection) |
@@ -566,6 +570,23 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 - [x] Zod validation + password strength indicator
 - [x] GoReleaser build fix (unused import removal)
 
+### Completed (v0.18.0)
+
+- [x] Theme toggle fix — `ThemeProvider` from `next-themes` mounted in `main.tsx` (broken since v0.2.0)
+- [x] AnimatedLogo component — reusable animated SVG logo with scale-in + floating animation
+- [x] LandingNavbar — responsive navbar with mobile hamburger menu and `AnimatePresence`
+- [x] HeroSection — full-screen hero with animated geometric shapes, gradient text, CTA buttons
+- [x] FeaturesSection — 3 feature cards with staggered scroll-triggered animations
+- [x] HomePage replaced with full landing page composition (navbar + hero + features)
+- [x] LoginPage enhanced with animated PACTA logo and spring entrance animation
+- [x] Setup redirect preserved in new HomePage (first-run check → `/setup`)
+- [x] Code review completed with two-stage review process (spec compliance + code quality)
+- [x] README.md redesigned with shields.io badges, updated features, changelog table
+- [x] Linux installation guide created (production: .deb/tarball, systemd, Caddy/Nginx, firewall, troubleshooting)
+- [x] Windows installation guide created (local: download, extract, shortcut, auto-start, troubleshooting)
+- [x] GitHub repository description updated with professional tagline
+- [x] 15 topics/tags added to GitHub repository
+
 ### Completed (v0.17.0)
 
 - [x] Multi-company setup wizard (single/multi-company mode selection)
@@ -645,7 +666,6 @@ _No active work in progress._
 
 - [ ] User guide / manual
 - [ ] API documentation (OpenAPI/Swagger)
-- [ ] Deployment guide for different platforms
 - [ ] Backup and restore procedures
 - [ ] Troubleshooting guide
 
