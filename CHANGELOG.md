@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-04-12
+
+### Changed
+- **Database migrations** -- Migrated from custom runner to goose v3. Adds up/down migration support, dirty state tracking, and CLI tooling for database schema management.
+
+### Technical Details
+- **Files Created:** `internal/db/db.go`, `internal/db/migrations/` (19 files with goose Up/Down markers)
+- **Files Deleted:** `internal/db/migrate.go`, 19 old migration files from db root
+- **Dependencies:** Added `github.com/pressly/goose/v3`
+
+---
+
 ## [0.19.0] - 2026-04-12
 
 ### Fixed
