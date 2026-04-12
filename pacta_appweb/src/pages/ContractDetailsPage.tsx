@@ -56,8 +56,12 @@ export default function ContractDetailsPage() {
 
         loadDocuments(contractId);
 
-        const logs = getContractAuditLogs(id);
-        setAuditLogs(logs);
+        try {
+          const logs = await getContractAuditLogs(contractId);
+          setAuditLogs(logs);
+        } catch {
+          setAuditLogs([]);
+        }
       } catch {
         toast.error('Failed to load contract data');
       }
@@ -284,11 +288,11 @@ export default function ContractDetailsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{log.action}</p>
-                        <Badge variant="outline">{log.userName}</Badge>
+                        <Badge variant="outline">{log.user_id ? 'User #' + log.user_id : 'System'}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{log.details}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{log.new_state || log.action}</p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {new Date(log.created_at).toLocaleString()}
                       </p>
                     </div>
                   </div>

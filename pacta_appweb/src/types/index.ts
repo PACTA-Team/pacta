@@ -145,13 +145,15 @@ export interface Notification {
 }
 
 export interface AuditLog {
-  id: string;
-  contractId: string;
-  userId: string;
-  userName: string;
+  id: number;
+  user_id: number | null;
   action: string;
-  details: string;
-  timestamp: string;
+  entity_type: string;
+  entity_id: number | null;
+  previous_state: string | null;
+  new_state: string | null;
+  ip_address: string | null;
+  created_at: string;
 }
 
 export interface NotificationSettings {
