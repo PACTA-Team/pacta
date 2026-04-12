@@ -174,6 +174,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Frontend Accessibility | WCAG 2.2 AA compliant (skip nav, ARIA, keyboard nav) |
 | Frontend Performance | Optimized (lazy loading, memoization, build config) |
 | Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
+| Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 
 ---
 
@@ -446,6 +447,14 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.21.0)
+
+- [x] `ForbiddenPage` component (403 Access Denied page with shield icon, action buttons)
+- [x] Setup route guard in `SetupPage` — checks `/api/setup/status`, redirects to `/403` if `needs_setup === false`
+- [x] HomePage bug fix — `data.firstRun` → `data.needs_setup` for correct API field reading
+- [x] `/403` route added to `App.tsx`
+- [x] AuthContext no longer redirects to `/setup` on 401 (only on network errors)
 
 ### Completed (v0.20.4)
 
