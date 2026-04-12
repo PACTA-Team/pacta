@@ -106,3 +106,23 @@ type Supplement struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 }
+
+type Company struct {
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Address     *string    `json:"address,omitempty"`
+	TaxID       *string    `json:"tax_id,omitempty"`
+	CompanyType string     `json:"company_type"`
+	ParentID    *int       `json:"parent_id,omitempty"`
+	ParentName  *string    `json:"parent_name,omitempty"`
+	CreatedBy   *int       `json:"created_by,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type UserCompany struct {
+	UserID      int    `json:"user_id"`
+	CompanyID   int    `json:"company_id"`
+	CompanyName string `json:"company_name"`
+	IsDefault   bool   `json:"is_default"`
+}
