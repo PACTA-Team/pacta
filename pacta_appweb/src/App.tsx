@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { CompanyProvider } from './contexts/CompanyContext';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -20,6 +21,7 @@ const PendingApprovalPage = lazy(() => import('./pages/PendingApprovalPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const SupplementsPage = lazy(() => import('./pages/SupplementsPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 
 // Loading fallback component
 const PageLoadingFallback = () => (
@@ -34,6 +36,7 @@ const PageLoadingFallback = () => (
 function App() {
   return (
     <AuthProvider>
+      <CompanyProvider>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -125,7 +128,15 @@ function App() {
             </Suspense>
           </ProtectedRoute>
         } />
+        <Route path="/companies" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoadingFallback />}>
+              <AppLayout><CompaniesPage /></AppLayout>
+            </Suspense>
+          </ProtectedRoute>
+        } />
       </Routes>
+      </CompanyProvider>
     </AuthProvider>
   );
 }

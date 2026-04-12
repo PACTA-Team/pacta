@@ -159,3 +159,22 @@ export interface NotificationSettings {
   thresholds: number[];
   recipients: string[];
 }
+
+export interface Company {
+  id: number;
+  name: string;
+  address?: string;
+  tax_id?: string;
+  company_type: 'single' | 'parent' | 'subsidiary';
+  parent_id?: number;
+  parent_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCompany {
+  user_id: number;
+  company_id: number;
+  company_name: string;
+  is_default: boolean;
+}
