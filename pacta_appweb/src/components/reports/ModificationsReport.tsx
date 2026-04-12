@@ -65,7 +65,7 @@ export default function ModificationsReport({
     };
   }, [supplements, contracts]);
 
-  const getContractInfo = (contractId: string) => {
+  const getContractInfo = (contractId: number | string) => {
     const contract = contracts.find((c: any) => c.id === contractId || c.id === Number(contractId));
     return contract ? `${contract.contract_number || contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
   };

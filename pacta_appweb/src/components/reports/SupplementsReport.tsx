@@ -59,7 +59,7 @@ export default function SupplementsReport({
     }));
 
     // By contract
-    const byContract = new Map<string, { contract: any; supplements: Supplement[] }>();
+    const byContract = new Map<number | string, { contract: any; supplements: Supplement[] }>();
     filteredSupplements.forEach(s => {
       const existing = byContract.get(s.contract_id) || {
         contract: contracts.find((c: any) => c.id === Number(s.contract_id)),
@@ -102,7 +102,7 @@ export default function SupplementsReport({
     };
   }, [supplements, contracts, dateFrom, dateTo]);
 
-  const getContractInfo = (contractId: string) => {
+  const getContractInfo = (contractId: number | string) => {
     const contract = contracts.find((c: any) => c.id === contractId || c.id === Number(contractId));
     return contract ? `${contract.contract_number || contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
   };
@@ -303,9 +303,9 @@ export default function SupplementsReport({
                     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                   )[0];
                   return (
-                    <TableRow key={item.contract_id}>
+                    <TableRow key={item.contractId}>
                       <TableCell>
-                      <Link to={`/contracts/${item.contract_id}`} className="text-blue-600 hover:underline">
+                      <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
                         <div className="font-medium">{item.contractNumber}</div>
                         <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
                       </Link>

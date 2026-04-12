@@ -41,7 +41,7 @@ export default function DocumentsPage() {
         setDocuments(docs);
       } else {
         // Load all contracts and fetch docs for each
-        const contracts = await contractsAPI.list();
+        const contracts = await contractsAPI.list() as any[];
         const allDocs: APIDocument[] = [];
         for (const c of contracts) {
           const docs = await documentsAPI.list(c.id, 'contract');

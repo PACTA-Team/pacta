@@ -50,7 +50,7 @@ export default function SupplementsPage() {
         contractsAPI.list(signal),
       ]);
       setSupplementsState(supps);
-      setContracts(contrs);
+      setContracts(contrs as any);
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
         setError(err.message);
@@ -130,11 +130,25 @@ export default function SupplementsPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-12" role="status" aria-label="Loading supplements"><p className="text-muted-foreground">Loading supplements...</p></div>;
+    return (
+      <div className="flex items-center justify-center py-12" role="status" aria-label="Loading supplements">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="mt-4 text-sm text-muted-foreground">Loading supplements...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-4 text-red-600" role="alert">Error loading supplements: {error}</div>;
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400">Error loading supplements: {error}</p>
+        <Button variant="outline" size="sm" className="mt-2" onClick={() => loadData()}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   if (showForm) {
@@ -150,12 +164,12 @@ export default function SupplementsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground">
           Manage contract supplements
         </p>
         {hasPermission('editor') && (
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             Add Supplement
           </Button>
@@ -164,40 +178,41 @@ export default function SupplementsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Supplement Number</TableHead>
-                <TableHead>Internal ID</TableHead>
-                <TableHead>Parent Contract</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Effective Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {supplements.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No supplements found
-                  </TableCell>
+                  <TableHead>Supplement Number</TableHead>
+                  <TableHead className="hidden sm:table-cell">Internal ID</TableHead>
+                  <TableHead className="hidden md:table-cell">Parent Contract</TableHead>
+                  <TableHead className="hidden lg:table-cell">Description</TableHead>
+                  <TableHead>Effective Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                supplements.map((supplement) => (
-                  <TableRow key={supplement.id}>
-                    <TableCell className="font-medium" title={supplement.internal_id}>{supplement.supplement_number}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground font-mono">{supplement.internal_id}</TableCell>
-                    <TableCell>
-                      <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline">
-                        {getContractInfo(supplement.contract_id)}
-                      </Link>
+              </TableHeader>
+              <TableBody>
+                {supplements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No supplements found
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">{supplement.description}</TableCell>
-                    <TableCell>{new Date(supplement.effective_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{getStatusBadge(supplement.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 flex-wrap">
+                  </TableRow>
+                ) : (
+                  supplements.map((supplement) => (
+                    <TableRow key={supplement.id}>
+                      <TableCell className="font-medium" title={supplement.internal_id}>{supplement.supplement_number}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground font-mono">{supplement.internal_id}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline dark:text-blue-400">
+                          {getContractInfo(supplement.contract_id)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell max-w-xs truncate">{supplement.description}</TableCell>
+                      <TableCell>{new Date(supplement.effective_date).toLocaleDateString()}</TableCell>
+                      <TableCell>{getStatusBadge(supplement.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 flex-wrap">
                         {supplement.status === 'draft' && hasPermission('manager') && (
                           <Button
                             variant="ghost"
@@ -247,6 +262,7 @@ export default function SupplementsPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
