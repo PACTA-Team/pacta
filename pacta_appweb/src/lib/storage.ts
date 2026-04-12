@@ -1,12 +1,9 @@
 
-import type { 
-  User, 
-  Contract, 
-  Supplement, 
-  Document, 
-  Notification, 
-  AuditLog, 
-  NotificationSettings,
+import type {
+  User,
+  Contract,
+  Supplement,
+  Document,
   Client,
   Supplier,
   AuthorizedSigner
@@ -17,10 +14,7 @@ const STORAGE_KEYS = {
   CONTRACTS: 'pacta_contracts',
   SUPPLEMENTS: 'pacta_supplements',
   DOCUMENTS: 'pacta_documents',
-  NOTIFICATIONS: 'pacta_notifications',
-  AUDIT_LOGS: 'pacta_audit_logs',
   CURRENT_USER: 'pacta_current_user',
-  NOTIFICATION_SETTINGS: 'pacta_notification_settings',
   CLIENTS: 'pacta_clients',
   SUPPLIERS: 'pacta_suppliers',
   AUTHORIZED_SIGNERS: 'pacta_authorized_signers',
@@ -72,14 +66,6 @@ export const setSupplements = (supplements: Supplement[]): void => storage.set(S
 export const getDocuments = (): Document[] => storage.get<Document>(STORAGE_KEYS.DOCUMENTS);
 export const setDocuments = (documents: Document[]): void => storage.set(STORAGE_KEYS.DOCUMENTS, documents);
 
-// Notifications
-export const getNotifications = (): Notification[] => storage.get<Notification>(STORAGE_KEYS.NOTIFICATIONS);
-export const setNotifications = (notifications: Notification[]): void => storage.set(STORAGE_KEYS.NOTIFICATIONS, notifications);
-
-// Audit Logs
-export const getAuditLogs = (): AuditLog[] => storage.get<AuditLog>(STORAGE_KEYS.AUDIT_LOGS);
-export const setAuditLogs = (logs: AuditLog[]): void => storage.set(STORAGE_KEYS.AUDIT_LOGS, logs);
-
 // Clients
 export const getClients = (): Client[] => storage.get<Client>(STORAGE_KEYS.CLIENTS);
 export const setClients = (clients: Client[]): void => storage.set(STORAGE_KEYS.CLIENTS, clients);
@@ -100,16 +86,6 @@ export const setCurrentUser = (user: User | null): void => {
   } else {
     storage.remove(STORAGE_KEYS.CURRENT_USER);
   }
-};
-
-// Notification Settings
-export const getNotificationSettings = (): NotificationSettings => {
-  const settings = storage.getOne<NotificationSettings>(STORAGE_KEYS.NOTIFICATION_SETTINGS);
-  return settings || { enabled: true, thresholds: [30, 15, 7], recipients: [] };
-};
-
-export const setNotificationSettings = (settings: NotificationSettings): void => {
-  storage.setOne(STORAGE_KEYS.NOTIFICATION_SETTINGS, settings);
 };
 
 // Initialize default admin user if no users exist
