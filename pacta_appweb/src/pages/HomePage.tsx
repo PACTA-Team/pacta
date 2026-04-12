@@ -1,26 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import LoginForm from '@/components/auth/LoginForm';
+import { LandingNavbar } from '@/components/landing/LandingNavbar';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { FeaturesSection } from '@/components/landing/FeaturesSection';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [isFirstRun, setIsFirstRun] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    // Check if this is a first-run setup
-    fetch('/api/setup/status')
-      .then(r => r.json())
-      .then(data => {
-        if (data.firstRun) {
-          navigate('/setup', { replace: true });
-        } else {
-          setIsFirstRun(false);
-        }
-      })
-      .catch(() => setIsFirstRun(false));
-  }, [navigate]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -28,9 +15,15 @@ export default function HomePage() {
     }
   }, [isAuthenticated, navigate]);
 
-  if (isAuthenticated || isFirstRun === null) {
+  if (isAuthenticated) {
     return null;
   }
 
-  return <LoginForm />;
+  return (
+    <div className="relative min-h-screen">
+      <LandingNavbar />
+      <HeroSection />
+      <FeaturesSection />
+    </div>
+  );
 }
