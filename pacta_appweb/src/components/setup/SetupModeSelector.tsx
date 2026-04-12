@@ -1,11 +1,18 @@
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface SetupModeSelectorProps {
   mode: 'single' | 'multi';
   onChange: (mode: 'single' | 'multi') => void;
+  onSelect: () => void;
 }
 
-export default function SetupModeSelector({ mode, onChange }: SetupModeSelectorProps) {
+export default function SetupModeSelector({ mode, onChange, onSelect }: SetupModeSelectorProps) {
+  const handleSelect = (newMode: 'single' | 'multi') => {
+    onChange(newMode);
+    onSelect();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -18,10 +25,10 @@ export default function SetupModeSelector({ mode, onChange }: SetupModeSelectorP
         <div className="grid gap-4 md:grid-cols-2">
           <button
             type="button"
-            onClick={() => onChange('single')}
-            className={`p-6 rounded-lg border-2 text-left transition ${
+            onClick={() => handleSelect('single')}
+            className={`p-6 rounded-lg border-2 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] ${
               mode === 'single'
-                ? 'border-primary bg-primary/5'
+                ? 'border-primary bg-primary/5 shadow-md'
                 : 'border-border hover:border-primary/50'
             }`}
             aria-pressed={mode === 'single'}
@@ -34,10 +41,10 @@ export default function SetupModeSelector({ mode, onChange }: SetupModeSelectorP
           </button>
           <button
             type="button"
-            onClick={() => onChange('multi')}
-            className={`p-6 rounded-lg border-2 text-left transition ${
+            onClick={() => handleSelect('multi')}
+            className={`p-6 rounded-lg border-2 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] ${
               mode === 'multi'
-                ? 'border-primary bg-primary/5'
+                ? 'border-primary bg-primary/5 shadow-md'
                 : 'border-border hover:border-primary/50'
             }`}
             aria-pressed={mode === 'multi'}
@@ -48,6 +55,11 @@ export default function SetupModeSelector({ mode, onChange }: SetupModeSelectorP
               separados. Cada subsidiaria opera de forma aislada.
             </p>
           </button>
+        </div>
+        <div className="flex justify-end pt-2">
+          <Button variant="ghost" size="sm" onClick={() => onChange(mode === 'single' ? 'multi' : 'single')} className="text-muted-foreground">
+            Switch to {mode === 'single' ? 'Multiempresa' : 'Empresa Individual'}
+          </Button>
         </div>
       </CardContent>
     </Card>
