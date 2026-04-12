@@ -62,6 +62,7 @@ PACTA occupies the middle ground: a professional-grade contract management syste
 |-----------|-----------|-----------|
 | Backend runtime | Go 1.25 | Fast startup, small binary, excellent stdlib |
 | Database | SQLite (`modernc.org/sqlite`) | Pure Go, zero-config, perfect for single-user |
+| Migrations | goose v3 (`pressly/goose`) | Up/down support, dirty state tracking, CLI tooling |
 | HTTP router | `go-chi/chi` | Lightweight, idiomatic, middleware support |
 | Frontend framework | React 19 + TypeScript | Type-safe, component-based, large ecosystem |
 | Build tool | Vite | Fast HMR during development, optimized production builds |
@@ -98,7 +99,9 @@ pacta/
 ├── internal/
 │   ├── auth/               # Session management, bcrypt hashing
 │   ├── config/             # Application configuration
-│   ├── db/                 # SQLite setup + embedded SQL migrations
+│   ├── db/                 # SQLite setup + goose migrations
+│   │   ├── db.go           # Open() + Migrate() with goose integration
+│   │   └── migrations/     # 19 SQL migrations (001-019) with Up/Down markers
 │   ├── handlers/           # REST API handlers (contracts, clients, suppliers, signers)
 │   ├── models/             # Go data structures
 │   └── server/             # HTTP server, chi router, static serving
@@ -170,6 +173,8 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Frontend Security | Hardened (route guards, XSS prevention, code splitting) |
 | Frontend Accessibility | WCAG 2.2 AA compliant (skip nav, ARIA, keyboard nav) |
 | Frontend Performance | Optimized (lazy loading, memoization, build config) |
+| Database Migrations | Complete (v0.20.0 -- goose v3, 19 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
+| Migration Idempotency | Complete (v0.19.0 -- duplicate column name error handling for fresh installs) |
 
 ---
 
@@ -411,7 +416,9 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.18.0 | Latest | Landing page (Framer Motion), theme toggle fix, README redesign, Linux/Windows installation guides, GitHub repo branding |
+| v0.20.0 | Latest | Goose database migrations (up/down support, dirty state tracking, CLI tooling), migration idempotency fix, frontend version bump |
+| v0.19.0 | - | Migration idempotency fix (duplicate column name error handling for fresh installs) |
+| v0.18.0 | - | Landing page (Framer Motion), theme toggle fix, README redesign, Linux/Windows installation guides, GitHub repo branding |
 | v0.17.0 | Latest | Multi-company setup wizard (company mode selector, company info step, 7-step wizard flow, company data in setup payload) |
 | v0.16.0 | - | Multi-company support (companies table, company_id on all data, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | v0.15.0 | - | Role-based access control enforcement (middleware, 4-tier permissions, inactive account rejection) |
