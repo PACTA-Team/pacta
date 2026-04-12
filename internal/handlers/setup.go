@@ -11,9 +11,26 @@ import (
 )
 
 type SetupRequest struct {
-	Admin    SetupAdmin    `json:"admin"`
-	Client   SetupParty    `json:"client"`
-	Supplier SetupParty    `json:"supplier"`
+	CompanyMode  string            `json:"company_mode"` // "single" or "multi"
+	Admin        SetupAdmin        `json:"admin"`
+	Company      SetupCompany      `json:"company"`
+	Client       SetupParty        `json:"client"`
+	Supplier     SetupParty        `json:"supplier"`
+	Subsidiaries []SetupSubsidiary `json:"subsidiaries,omitempty"`
+}
+
+type SetupCompany struct {
+	Name    string  `json:"name"`
+	Address *string `json:"address,omitempty"`
+	TaxID   *string `json:"tax_id,omitempty"`
+}
+
+type SetupSubsidiary struct {
+	Name     string     `json:"name"`
+	Address  *string    `json:"address,omitempty"`
+	TaxID    *string    `json:"tax_id,omitempty"`
+	Client   SetupParty `json:"client"`
+	Supplier SetupParty `json:"supplier"`
 }
 
 type SetupAdmin struct {
@@ -42,7 +59,6 @@ func (h *Handler) HandleSetupStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
-	// Check if setup is already done
 	var count int
 	err := h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&count)
 	if err != nil {
@@ -60,9 +76,21 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate company mode
+	if req.CompanyMode != "single" && req.CompanyMode != "multi" {
+		h.Error(w, http.StatusBadRequest, "company_mode must be 'single' or 'multi'")
+		return
+	}
+
 	// Validate admin
 	if err := validateSetupAdmin(req.Admin); err != nil {
 		h.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Validate company name
+	if strings.TrimSpace(req.Company.Name) == "" {
+		h.Error(w, http.StatusBadRequest, "company name is required")
 		return
 	}
 
@@ -84,6 +112,23 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	// Determine company type
+	companyType := "single"
+	if req.CompanyMode == "multi" {
+		companyType = "parent"
+	}
+
+	// Create parent/single company
+	companyResult, err := tx.Exec(
+		"INSERT INTO companies (name, address, tax_id, company_type) VALUES (?, ?, ?, ?)",
+		req.Company.Name, req.Company.Address, req.Company.TaxID, companyType,
+	)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
+		return
+	}
+	companyID, _ := companyResult.LastInsertId()
+
 	// Create admin user
 	hash, err := auth.HashPassword(req.Admin.Password)
 	if err != nil {
@@ -91,8 +136,8 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	adminResult, err := tx.Exec(
-		"INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
-		req.Admin.Name, req.Admin.Email, hash,
+		"INSERT INTO users (name, email, password_hash, role, company_id) VALUES (?, ?, ?, 'admin', ?)",
+		req.Admin.Name, req.Admin.Email, hash, companyID,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -104,39 +149,77 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	adminID, _ := adminResult.LastInsertId()
 
-	// Create client
+	// Link admin to company
+	_, err = tx.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)", adminID, companyID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
+		return
+	}
+
+	// Create default client
 	clientResult, err := tx.Exec(
-		"INSERT INTO clients (name, address, reu_code, contacts, created_by) VALUES (?, ?, ?, ?, ?)",
-		req.Client.Name, req.Client.Address, req.Client.REUCode, req.Client.Contacts, adminID,
+		"INSERT INTO clients (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+		req.Client.Name, req.Client.Address, req.Client.REUCode, req.Client.Contacts, adminID, companyID,
 	)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	clientID, _ := clientResult.LastInsertId()
+	_ = clientResult
 
-	// Create supplier
+	// Create default supplier
 	supplierResult, err := tx.Exec(
-		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by) VALUES (?, ?, ?, ?, ?)",
-		req.Supplier.Name, req.Supplier.Address, req.Supplier.REUCode, req.Supplier.Contacts, adminID,
+		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+		req.Supplier.Name, req.Supplier.Address, req.Supplier.REUCode, req.Supplier.Contacts, adminID, companyID,
 	)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	supplierID, _ := supplierResult.LastInsertId()
+	_ = supplierResult
 
-	// Commit
+	// Create subsidiaries if provided
+	for _, sub := range req.Subsidiaries {
+		if strings.TrimSpace(sub.Name) == "" {
+			continue
+		}
+
+		subResult, err := tx.Exec(
+			"INSERT INTO companies (name, address, tax_id, company_type, parent_id) VALUES (?, ?, ?, 'subsidiary', ?)",
+			sub.Name, sub.Address, sub.TaxID, companyID,
+		)
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
+			return
+		}
+		subID, _ := subResult.LastInsertId()
+
+		// Create subsidiary's default client
+		if strings.TrimSpace(sub.Client.Name) != "" {
+			tx.Exec(
+				"INSERT INTO clients (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+				sub.Client.Name, sub.Client.Address, sub.Client.REUCode, sub.Client.Contacts, adminID, subID,
+			)
+		}
+
+		// Create subsidiary's default supplier
+		if strings.TrimSpace(sub.Supplier.Name) != "" {
+			tx.Exec(
+				"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+				sub.Supplier.Name, sub.Supplier.Address, sub.Supplier.REUCode, sub.Supplier.Contacts, adminID, subID,
+			)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
 
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
-		"status":      "setup_complete",
-		"admin_id":    adminID,
-		"client_id":   clientID,
-		"supplier_id": supplierID,
+		"status":     "setup_complete",
+		"company_id": companyID,
+		"admin_id":   adminID,
 	})
 }
 
