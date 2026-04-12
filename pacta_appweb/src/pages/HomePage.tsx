@@ -21,7 +21,7 @@ export default function HomePage() {
     fetch('/api/setup/status')
       .then((r) => r.json())
       .then((data) => {
-        if (data.firstRun) {
+        if (data.needs_setup) {
           navigate('/setup', { replace: true });
         } else {
           setIsSetup(true);

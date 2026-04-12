@@ -7,6 +7,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import SetupPage from './pages/SetupPage';
+import ForbiddenPage from './pages/ForbiddenPage';
 
 // Lazy-loaded page components for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -41,6 +42,7 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/setup" element={<SetupPage />} />
+        <Route path="/403" element={<ForbiddenPage />} />
         <Route path="/" element={<HomePage />} />
 
         {/* Protected routes with authentication guards */}
