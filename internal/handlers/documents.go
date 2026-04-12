@@ -81,6 +81,8 @@ func (h *Handler) listDocuments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
+
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		if strings.Contains(err.Error(), "request body too large") {
 			h.Error(w, http.StatusRequestEntityTooLarge, "file size exceeds 50MB limit")

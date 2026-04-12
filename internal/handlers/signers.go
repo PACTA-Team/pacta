@@ -248,6 +248,7 @@ func (h *Handler) updateSigner(w http.ResponseWriter, r *http.Request, id int) {
 }
 
 func (h *Handler) deleteSigner(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var prevFirstName, prevLastName string
 	err := h.DB.QueryRow("SELECT first_name, last_name FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevFirstName, &prevLastName)
 	if err != nil {

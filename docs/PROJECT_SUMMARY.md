@@ -42,6 +42,7 @@ PACTA occupies the middle ground: a professional-grade contract management syste
 | Audit Logging | Immutable record of every create, update, and delete operation |
 | Role-Based Access | Four roles (admin, manager, editor, viewer) with granular permissions |
 | Session Management | Secure cookie-based authentication with server-side invalidation |
+| Multi-Company Setup | First-run wizard supports single-company and multi-company deployment modes |
 
 ---
 
@@ -407,7 +408,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.16.0 | Latest | Multi-company support (companies table, company_id on all data, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
+| v0.17.0 | Latest | Multi-company setup wizard (company mode selector, company info step, 7-step wizard flow, company data in setup payload) |
+| v0.16.0 | - | Multi-company support (companies table, company_id on all data, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | v0.15.0 | - | Role-based access control enforcement (middleware, 4-tier permissions, inactive account rejection) |
 | v0.14.0 | - | Users frontend API migration (UsersPage from localStorage to backend API) |
 | v0.13.0 | - | User management CRUD endpoints (create, update, delete, password reset, status) |
@@ -560,9 +562,19 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 - [x] Setup status endpoint (`GET /api/setup/status`)
 - [x] Atomic setup transaction (admin + client + supplier)
 - [x] Auto-redirect to setup on first run
-- [x] Multi-step wizard: Welcome → Admin → Client → Supplier → Review
+- [x] Multi-step wizard: Welcome → Admin → Client → Supplier → Review (extended to 7 steps in v0.17.0)
 - [x] Zod validation + password strength indicator
 - [x] GoReleaser build fix (unused import removal)
+
+### Completed (v0.17.0)
+
+- [x] Multi-company setup wizard (single/multi-company mode selection)
+- [x] Company mode selector component (`SetupModeSelector.tsx`)
+- [x] Company info step component (`StepCompany.tsx`) — captures name, address, tax_id
+- [x] Extended wizard flow from 5 to 7 steps (Welcome → Company Mode → Company Info → Admin → Client → Supplier → Review)
+- [x] Updated setup API payload to include `company_mode` and `company` fields
+- [x] Review screen updated to display company information and mode
+- [x] Backend `setup.go` updated to accept and process company data
 
 ### Completed (v0.4.1)
 
@@ -599,6 +611,7 @@ _No active work in progress._
 ### Pending — Backend (Highest Priority)
 
 - [ ] **Rate limiting on login endpoint** — Brute force protection
+- [ ] **Company data initialization during setup** — Store company info from setup wizard into companies table
 
 ### Pending — Frontend
 

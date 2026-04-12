@@ -8,8 +8,6 @@ import (
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
 
-type ctxKey string
-
 const ctxCompanyID ctxKey = "companyID"
 
 // CompanyMiddleware resolves the active company from session or X-Company-ID header.
