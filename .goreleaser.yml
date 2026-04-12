@@ -1,6 +1,10 @@
 version: 2
 project_name: pacta
 
+before:
+  hooks:
+    - go mod tidy
+
 builds:
   - id: pacta
     main: ./cmd/pacta

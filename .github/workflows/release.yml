@@ -36,9 +36,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: pacta_appweb/package-lock.json
 
-      - name: Tidy Go modules
-        run: go mod tidy
-
       - name: Build frontend
         working-directory: pacta_appweb
         run: npm ci && npm run build
@@ -50,6 +47,6 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean --dirty
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
