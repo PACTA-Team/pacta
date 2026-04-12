@@ -9,7 +9,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 dark:from-gray-900 dark:to-gray-800">
+    <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
       {/* Logo */}
       <motion.div
         className="mb-6 cursor-pointer"
@@ -22,7 +22,7 @@ export default function LoginPage() {
         <AnimatedLogo size="lg" />
       </motion.div>
 
-      {/* Login form */}
+      {/* Login form (includes its own background gradient) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

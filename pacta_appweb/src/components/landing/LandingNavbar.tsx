@@ -24,7 +24,11 @@ export function LandingNavbar() {
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2"
+            aria-label="Go to home"
+          >
             <AnimatedLogo size="sm" animate={false} />
             <span className="text-lg font-bold tracking-tight">PACTA</span>
           </button>

@@ -17,11 +17,10 @@ const fadeUpVariants = {
 };
 
 const shapeVariants = {
-  hidden: { opacity: 0, y: -100, rotate: -15 },
+  hidden: { opacity: 0, y: -100 },
   visible: {
     opacity: 1,
     y: 0,
-    rotate: 0,
     transition: { duration: 2, ease: [0.23, 0.86, 0.39, 0.96] },
   },
 };
@@ -36,13 +35,11 @@ function ElegantShape({
   delay = 0,
   width = 400,
   height = 100,
-  rotate = 0,
 }: {
   className: string;
   delay?: number;
   width?: number;
   height?: number;
-  rotate?: number;
 }) {
   return (
     <motion.div
@@ -71,10 +68,10 @@ export function HeroSection() {
 
       {/* Animated geometric shapes */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <ElegantShape delay={0.3} width={500} height={120} rotate={12} className="left-[-10%] top-[15%]" />
-        <ElegantShape delay={0.5} width={400} height={100} rotate={-15} className="right-[-5%] top-[70%]" />
-        <ElegantShape delay={0.4} width={250} height={70} rotate={-8} className="left-[5%] bottom-[5%]" />
-        <ElegantShape delay={0.6} width={180} height={50} rotate={20} className="right-[15%] top-[10%]" />
+        <ElegantShape delay={0.3} width={500} height={120} className="left-[-10%] top-[15%]" />
+        <ElegantShape delay={0.5} width={400} height={100} className="right-[-5%] top-[70%]" />
+        <ElegantShape delay={0.4} width={250} height={70} className="left-[5%] bottom-[5%]" />
+        <ElegantShape delay={0.6} width={180} height={50} className="right-[15%] top-[10%]" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
