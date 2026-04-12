@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS companies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -24,3 +25,7 @@ CREATE TABLE IF NOT EXISTS user_companies (
 
 CREATE INDEX IF NOT EXISTS idx_user_companies_user ON user_companies(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_companies_company ON user_companies(company_id);
+
+-- +goose Down
+DROP TABLE IF EXISTS user_companies;
+DROP TABLE IF EXISTS companies;

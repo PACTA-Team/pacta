@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS supplements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     contract_id INTEGER NOT NULL REFERENCES contracts(id),
@@ -15,3 +16,6 @@ CREATE TABLE IF NOT EXISTS supplements (
 
 CREATE INDEX IF NOT EXISTS idx_supplements_contract ON supplements(contract_id);
 CREATE INDEX IF NOT EXISTS idx_supplements_status ON supplements(status);
+
+-- +goose Down
+DROP TABLE IF EXISTS supplements;

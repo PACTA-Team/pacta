@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS contracts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     contract_number TEXT NOT NULL UNIQUE,
@@ -23,3 +24,6 @@ CREATE INDEX IF NOT EXISTS idx_contracts_client ON contracts(client_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_supplier ON contracts(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_end_date ON contracts(end_date);
 CREATE INDEX IF NOT EXISTS idx_contracts_number ON contracts(contract_number);
+
+-- +goose Down
+DROP TABLE IF EXISTS contracts;

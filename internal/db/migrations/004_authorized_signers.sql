@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS authorized_signers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_id INTEGER NOT NULL,
@@ -14,3 +15,6 @@ CREATE TABLE IF NOT EXISTS authorized_signers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_signers_company ON authorized_signers(company_id, company_type);
+
+-- +goose Down
+DROP TABLE IF EXISTS authorized_signers;

@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS suppliers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -11,3 +12,6 @@ CREATE TABLE IF NOT EXISTS suppliers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name);
+
+-- +goose Down
+DROP TABLE IF EXISTS suppliers;
