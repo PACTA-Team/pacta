@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AuthorizedSigner, Client, Supplier } from '@/types';
+import { AuthorizedSigner } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getClients, getSuppliers } from '@/lib/storage';
+import { clientsAPI } from '@/lib/clients-api';
+import { suppliersAPI } from '@/lib/suppliers-api';
 import { upload } from '@/lib/upload';
 import { toast } from 'sonner';
 import { Upload, FileText, X } from 'lucide-react';
@@ -19,8 +20,8 @@ interface AuthorizedSignerFormProps {
 }
 
 export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: AuthorizedSignerFormProps) {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     companyId: signer?.companyId || '',
     companyType: signer?.companyType || 'client' as 'client' | 'supplier',
@@ -36,8 +37,19 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    setClients(getClients());
-    setSuppliers(getSuppliers());
+    const loadData = async () => {
+      try {
+        const [clientsData, suppliersData] = await Promise.all([
+          clientsAPI.list(),
+          suppliersAPI.list(),
+        ]);
+        setClients(clientsData as any[]);
+        setSuppliers(suppliersData as any[]);
+      } catch {
+        toast.error('Failed to load form data');
+      }
+    };
+    loadData();
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +132,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
                 </SelectTrigger>
                 <SelectContent>
                   {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
+                    <SelectItem key={company.id} value={company.id.toString()}>
                       {company.name}
                     </SelectItem>
                   ))}

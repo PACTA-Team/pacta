@@ -2,33 +2,34 @@
 import { Contract, Notification } from '@/types';
 import { getNotifications, setNotifications, getNotificationSettings } from './storage';
 
-export const generateNotifications = (contracts: Contract[]): void => {
+export const generateNotifications = (contracts: any[]): void => {
   const settings = getNotificationSettings();
   if (!settings.enabled) return;
 
   const notifications = getNotifications();
   const now = new Date();
 
-  contracts.forEach(contract => {
+  contracts.forEach((contract: any) => {
     if (contract.status !== 'active') return;
 
-    const endDate = new Date(contract.endDate);
+    const endDate = new Date(contract.end_date || contract.endDate);
     const daysUntilExpiration = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     settings.thresholds.forEach(threshold => {
       if (daysUntilExpiration === threshold) {
+        const contractId = String(contract.id);
         const existingNotification = notifications.find(
-          n => n.contractId === contract.id && n.type === `expiration_${threshold}` as Notification['type']
+          n => n.contractId === contractId && n.type === `expiration_${threshold}` as Notification['type']
         );
 
         if (!existingNotification) {
           const newNotification: Notification = {
             id: Date.now().toString() + Math.random(),
-            contractId: contract.id,
-            contractNumber: contract.contractNumber,
+            contractId: contractId,
+            contractNumber: contract.contract_number || contract.contractNumber,
             contractTitle: contract.title,
             type: `expiration_${threshold}` as Notification['type'],
-            message: `Contract "${contract.title}" (${contract.contractNumber}) will expire in ${threshold} days`,
+            message: `Contract "${contract.title}" (${contract.contract_number || contract.contractNumber}) will expire in ${threshold} days`,
             status: 'unread',
             createdAt: new Date().toISOString(),
           };

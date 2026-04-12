@@ -13,7 +13,7 @@ import { FileEdit, History } from 'lucide-react';
 
 interface ModificationsReportProps {
   supplements: Supplement[];
-  contracts: Contract[];
+  contracts: any[];
   title?: string;
 }
 
@@ -25,24 +25,24 @@ export default function ModificationsReport({
   const reportData = useMemo(() => {
     // Sort by date (most recent first)
     const sortedSupplements = [...supplements].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     );
 
     // Group modifications by contract
-    const byContract = new Map<string, { contract: Contract | undefined; modifications: Supplement[] }>();
+    const byContract = new Map<number, { contract: any; modifications: Supplement[] }>();
     sortedSupplements.forEach(s => {
-      const existing = byContract.get(s.contractId) || { 
-        contract: contracts.find(c => c.id === s.contractId), 
-        modifications: [] 
+      const existing = byContract.get(s.contract_id) || {
+        contract: contracts.find((c: any) => c.id === s.contract_id || c.id === Number(s.contract_id)),
+        modifications: []
       };
       existing.modifications.push(s);
-      byContract.set(s.contractId, existing);
+      byContract.set(s.contract_id, existing);
     });
 
     const contractModifications = Array.from(byContract.entries())
       .map(([contractId, data]) => ({
-        contractId,
-        contractNumber: data.contract?.contractNumber || 'Unknown',
+        contractId: String(contractId),
+        contractNumber: data.contract?.contract_number || data.contract?.contractNumber || 'Unknown',
         contractTitle: data.contract?.title || 'Unknown',
         modificationCount: data.modifications.length,
         modifications: data.modifications,
@@ -66,8 +66,8 @@ export default function ModificationsReport({
   }, [supplements, contracts]);
 
   const getContractInfo = (contractId: string) => {
-    const contract = contracts.find(c => c.id === contractId);
-    return contract ? `${contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
+    const contract = contracts.find((c: any) => c.id === contractId || c.id === Number(contractId));
+    return contract ? `${contract.contract_number || contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
   };
 
   const columns: ExportColumn[] = [
@@ -80,12 +80,12 @@ export default function ModificationsReport({
   ];
 
   const exportData = reportData.sortedSupplements.map(s => ({
-    supplementNumber: s.supplementNumber,
-    contractInfo: getContractInfo(s.contractId),
+    supplementNumber: s.supplement_number,
+    contractInfo: getContractInfo(s.contract_id),
     modifications: s.modifications,
-    effectiveDate: formatDate(s.effectiveDate),
+    effectiveDate: formatDate(s.effective_date),
     status: formatStatus(s.status),
-    updatedAt: formatDate(s.updatedAt),
+    updatedAt: formatDate(s.updated_at),
   }));
 
   const summary = [
@@ -215,9 +215,9 @@ export default function ModificationsReport({
                       <Badge variant="secondary">{item.modificationCount}</Badge>
                     </TableCell>
                     <TableCell>
-                      <div>{item.latestModification?.supplementNumber}</div>
+                      <div>{item.latestModification?.supplement_number}</div>
                       <div className="text-sm text-muted-foreground">
-                        {formatDate(item.latestModification?.updatedAt || '')}
+                        {formatDate(item.latestModification?.updated_at || '')}
                       </div>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
@@ -257,17 +257,17 @@ export default function ModificationsReport({
               ) : (
                 reportData.sortedSupplements.map((supplement) => (
                   <TableRow key={supplement.id}>
-                    <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
+                    <TableCell className="font-medium">{supplement.supplement_number}</TableCell>
                     <TableCell>
-                      <Link to={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
-                        {getContractInfo(supplement.contractId)}
+                      <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline">
+                        {getContractInfo(supplement.contract_id)}
                       </Link>
                     </TableCell>
                     <TableCell className="max-w-md">
                       <p className="line-clamp-2">{supplement.modifications}</p>
                     </TableCell>
-                    <TableCell>{formatDate(supplement.effectiveDate)}</TableCell>
-                    <TableCell>{formatDate(supplement.updatedAt)}</TableCell>
+                    <TableCell>{formatDate(supplement.effective_date)}</TableCell>
+                    <TableCell>{formatDate(supplement.updated_at)}</TableCell>
                   </TableRow>
                 ))
               )}

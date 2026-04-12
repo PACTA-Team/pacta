@@ -13,7 +13,7 @@ import { FilePlus, FileCheck, FileEdit, Calendar } from 'lucide-react';
 
 interface SupplementsReportProps {
   supplements: Supplement[];
-  contracts: Contract[];
+  contracts: any[];
   title?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -36,10 +36,10 @@ export default function SupplementsReport({
     // Filter by date range if provided
     let filteredSupplements = [...supplements];
     if (dateFrom) {
-      filteredSupplements = filteredSupplements.filter(s => new Date(s.createdAt) >= new Date(dateFrom));
+      filteredSupplements = filteredSupplements.filter(s => new Date(s.created_at) >= new Date(dateFrom));
     }
     if (dateTo) {
-      filteredSupplements = filteredSupplements.filter(s => new Date(s.createdAt) <= new Date(dateTo));
+      filteredSupplements = filteredSupplements.filter(s => new Date(s.created_at) <= new Date(dateTo));
     }
 
     // Status distribution
@@ -59,20 +59,20 @@ export default function SupplementsReport({
     }));
 
     // By contract
-    const byContract = new Map<string, { contract: Contract | undefined; supplements: Supplement[] }>();
+    const byContract = new Map<string, { contract: any; supplements: Supplement[] }>();
     filteredSupplements.forEach(s => {
-      const existing = byContract.get(s.contractId) || { 
-        contract: contracts.find(c => c.id === s.contractId), 
-        supplements: [] 
+      const existing = byContract.get(s.contract_id) || {
+        contract: contracts.find((c: any) => c.id === Number(s.contract_id)),
+        supplements: []
       };
       existing.supplements.push(s);
-      byContract.set(s.contractId, existing);
+      byContract.set(s.contract_id, existing);
     });
 
     const contractData = Array.from(byContract.entries())
       .map(([contractId, data]) => ({
         contractId,
-        contractNumber: data.contract?.contractNumber || 'Unknown',
+        contractNumber: data.contract?.contract_number || data.contract?.contractNumber || 'Unknown',
         contractTitle: data.contract?.title || 'Unknown',
         count: data.supplements.length,
         supplements: data.supplements,
@@ -82,7 +82,7 @@ export default function SupplementsReport({
     // Monthly trend
     const monthlyData: Record<string, number> = {};
     filteredSupplements.forEach(s => {
-      const month = new Date(s.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      const month = new Date(s.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
       monthlyData[month] = (monthlyData[month] || 0) + 1;
     });
 
@@ -103,8 +103,8 @@ export default function SupplementsReport({
   }, [supplements, contracts, dateFrom, dateTo]);
 
   const getContractInfo = (contractId: string) => {
-    const contract = contracts.find(c => c.id === contractId);
-    return contract ? `${contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
+    const contract = contracts.find((c: any) => c.id === contractId || c.id === Number(contractId));
+    return contract ? `${contract.contract_number || contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
   };
 
   const getStatusBadge = (status: SupplementStatus) => {
@@ -131,12 +131,12 @@ export default function SupplementsReport({
   ];
 
   const exportData = reportData.filteredSupplements.map(s => ({
-    supplementNumber: s.supplementNumber,
-    contractInfo: getContractInfo(s.contractId),
+    supplementNumber: s.supplement_number,
+    contractInfo: getContractInfo(s.contract_id),
     description: s.description,
-    effectiveDate: formatDate(s.effectiveDate),
+    effectiveDate: formatDate(s.effective_date),
     status: formatStatus(s.status),
-    createdAt: formatDate(s.createdAt),
+    createdAt: formatDate(s.created_at),
   }));
 
   const summary = [
@@ -300,21 +300,21 @@ export default function SupplementsReport({
               ) : (
                 reportData.contractData.map((item) => {
                   const latestSupplement = item.supplements.sort(
-                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                   )[0];
                   return (
-                    <TableRow key={item.contractId}>
+                    <TableRow key={item.contract_id}>
                       <TableCell>
-                      <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                      <Link to={`/contracts/${item.contract_id}`} className="text-blue-600 hover:underline">
                         <div className="font-medium">{item.contractNumber}</div>
                         <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
                       </Link>
                       </TableCell>
                       <TableCell className="text-center font-bold">{item.count}</TableCell>
                       <TableCell>
-                        <div>{latestSupplement?.supplementNumber}</div>
+                        <div>{latestSupplement?.supplement_number}</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatDate(latestSupplement?.createdAt || '')}
+                          {formatDate(latestSupplement?.created_at || '')}
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(latestSupplement?.status || 'draft')}</TableCell>
@@ -354,16 +354,16 @@ export default function SupplementsReport({
               ) : (
                 reportData.filteredSupplements.map((supplement) => (
                   <TableRow key={supplement.id}>
-                    <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
+                    <TableCell className="font-medium">{supplement.supplement_number}</TableCell>
                     <TableCell>
-                      <Link to={`/contracts/${supplement.contractId}`} className="text-blue-600 hover:underline">
-                        {getContractInfo(supplement.contractId)}
+                      <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline">
+                        {getContractInfo(supplement.contract_id)}
                       </Link>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{supplement.description}</TableCell>
-                    <TableCell>{formatDate(supplement.effectiveDate)}</TableCell>
+                    <TableCell>{formatDate(supplement.effective_date)}</TableCell>
                     <TableCell>{getStatusBadge(supplement.status)}</TableCell>
-                    <TableCell>{formatDate(supplement.createdAt)}</TableCell>
+                    <TableCell>{formatDate(supplement.created_at)}</TableCell>
                   </TableRow>
                 ))
               )}
