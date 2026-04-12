@@ -4,13 +4,24 @@ import { toast } from 'sonner';
 import { runSetup } from '@/lib/setup-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { StepWelcome } from './StepWelcome';
+import SetupModeSelector from './SetupModeSelector';
+import StepCompany from './StepCompany';
+import type { CompanyFormData } from './StepCompany';
 import { StepAdmin } from './StepAdmin';
 import { StepClient } from './StepClient';
 import { StepSupplier } from './StepSupplier';
 import { StepReview } from './StepReview';
 import type { AdminFormData, PartyFormData } from '@/lib/setup-validation';
 
-const STEPS = ['Welcome', 'Admin Account', 'First Client', 'First Supplier', 'Review'] as const;
+const STEPS = [
+  'Welcome',
+  'Company Mode',
+  'Company Info',
+  'Admin Account',
+  'First Client',
+  'First Supplier',
+  'Review',
+] as const;
 
 export default function SetupWizard() {
   const [step, setStep] = useState(0);
@@ -18,6 +29,8 @@ export default function SetupWizard() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const [companyMode, setCompanyMode] = useState<'single' | 'multi'>('single');
+  const [company, setCompany] = useState<CompanyFormData>({ name: '', address: '', tax_id: '' });
   const [admin, setAdmin] = useState<AdminFormData>({
     name: '', email: '', password: '', confirmPassword: '',
   });
@@ -31,6 +44,12 @@ export default function SetupWizard() {
     setLoading(true);
     try {
       await runSetup({
+        company_mode: companyMode,
+        company: {
+          name: company.name,
+          address: company.address || undefined,
+          tax_id: company.tax_id || undefined,
+        },
         admin: { name: admin.name, email: admin.email, password: admin.password },
         client: {
           name: client.name,
@@ -58,15 +77,28 @@ export default function SetupWizard() {
     } finally {
       setLoading(false);
     }
-  }, [admin, client, supplier, login, navigate]);
+  }, [companyMode, company, admin, client, supplier, login, navigate]);
 
   const renderStep = () => {
     switch (step) {
       case 0: return <StepWelcome onNext={next} />;
-      case 1: return <StepAdmin data={admin} onChange={setAdmin} onNext={next} onPrev={prev} />;
-      case 2: return <StepClient data={client} onChange={setClient} onNext={next} onPrev={prev} />;
-      case 3: return <StepSupplier data={supplier} onChange={setSupplier} onNext={next} onPrev={prev} />;
-      case 4: return <StepReview admin={admin} client={client} supplier={supplier} onPrev={prev} onSubmit={handleSubmit} loading={loading} />;
+      case 1: return <SetupModeSelector mode={companyMode} onChange={setCompanyMode} />;
+      case 2: return <StepCompany data={company} onChange={setCompany} onNext={next} onPrev={prev} companyMode={companyMode} />;
+      case 3: return <StepAdmin data={admin} onChange={setAdmin} onNext={next} onPrev={prev} />;
+      case 4: return <StepClient data={client} onChange={setClient} onNext={next} onPrev={prev} />;
+      case 5: return <StepSupplier data={supplier} onChange={setSupplier} onNext={next} onPrev={prev} />;
+      case 6: return (
+        <StepReview
+          companyMode={companyMode}
+          company={company}
+          admin={admin}
+          client={client}
+          supplier={supplier}
+          onPrev={prev}
+          onSubmit={handleSubmit}
+          loading={loading}
+        />
+      );
       default: return null;
     }
   };

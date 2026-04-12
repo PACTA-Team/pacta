@@ -1,4 +1,30 @@
+export interface SetupCompanyData {
+  name: string;
+  address?: string;
+  tax_id?: string;
+}
+
+export interface SetupSubsidiaryData {
+  name: string;
+  address?: string;
+  tax_id?: string;
+  client: {
+    name: string;
+    address?: string;
+    reu_code?: string;
+    contacts?: string;
+  };
+  supplier: {
+    name: string;
+    address?: string;
+    reu_code?: string;
+    contacts?: string;
+  };
+}
+
 export interface SetupRequest {
+  company_mode: 'single' | 'multi';
+  company: SetupCompanyData;
   admin: {
     name: string;
     email: string;
@@ -16,13 +42,13 @@ export interface SetupRequest {
     reu_code?: string;
     contacts?: string;
   };
+  subsidiaries?: SetupSubsidiaryData[];
 }
 
 export interface SetupResponse {
   status: string;
+  company_id: number;
   admin_id: number;
-  client_id: number;
-  supplier_id: number;
 }
 
 export interface SetupStatusResponse {

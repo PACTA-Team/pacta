@@ -1,8 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AdminFormData, PartyFormData } from '@/lib/setup-validation';
+import type { CompanyFormData } from './StepCompany';
 
 interface StepReviewProps {
+  companyMode: 'single' | 'multi';
+  company: CompanyFormData;
   admin: AdminFormData;
   client: PartyFormData;
   supplier: PartyFormData;
@@ -11,7 +14,7 @@ interface StepReviewProps {
   loading: boolean;
 }
 
-export function StepReview({ admin, client, supplier, onPrev, onSubmit, loading }: StepReviewProps) {
+export function StepReview({ companyMode, company, admin, client, supplier, onPrev, onSubmit, loading }: StepReviewProps) {
   return (
     <Card>
       <CardHeader>
@@ -19,6 +22,17 @@ export function StepReview({ admin, client, supplier, onPrev, onSubmit, loading 
         <CardDescription>Verify your setup details before submitting</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+            {companyMode === 'multi' ? 'Empresa Matriz' : 'Empresa'}
+          </h3>
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between"><dt className="text-muted-foreground">Name:</dt><dd>{company.name}</dd></div>
+            {company.address && <div className="flex justify-between"><dt className="text-muted-foreground">Address:</dt><dd>{company.address}</dd></div>}
+            {company.tax_id && <div className="flex justify-between"><dt className="text-muted-foreground">Tax ID:</dt><dd>{company.tax_id}</dd></div>}
+            <div className="flex justify-between"><dt className="text-muted-foreground">Mode:</dt><dd className="capitalize">{companyMode === 'single' ? 'Single Company' : 'Multi-Company'}</dd></div>
+          </dl>
+        </div>
         <div className="space-y-2">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Admin Account</h3>
           <dl className="space-y-1 text-sm">
