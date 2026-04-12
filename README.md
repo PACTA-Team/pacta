@@ -137,11 +137,11 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Version | Date | Type | Highlights |
 |---------|------|------|------------|
-| [v0.18.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.18.0) | 2026-04-11 | ✨ Feature | Landing page, theme toggle fix, Framer Motion animations |
-| [v0.17.1](https://github.com/PACTA-Team/pacta/releases/tag/v0.17.1) | 2026-04-11 | 🐛 Fix | Setup wizard improvements |
+| [v0.22.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.22.0) | 2026-04-12 | ✨ Feature | Setup mode auto-advance, tactile card feedback |
+| [v0.21.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.21.0) | 2026-04-12 | 🔒 Security | Setup flow security, ForbiddenPage component |
+| [v0.20.4](https://github.com/PACTA-Team/pacta/releases/tag/v0.20.4) | 2026-04-12 | 🐛 Fix | Migration ordering, goose database migrations |
+| [v0.18.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.18.0) | 2026-04-11 | ✨ Feature | Landing page, theme toggle, Framer Motion animations |
 | [v0.17.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.17.0) | 2026-04-11 | ✨ Feature | Multi-company support, setup wizard |
-| [v0.16.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.16.0) | 2026-04-11 | ✨ Feature | Company CRUD, database migrations 013-018 |
-| [v0.15.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.15.0) | 2026-04-10 | ✨ Feature | Notifications system, email alerts |
 
 [View full changelog →](CHANGELOG.md)
 
