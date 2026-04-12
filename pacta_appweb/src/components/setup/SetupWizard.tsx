@@ -82,7 +82,7 @@ export default function SetupWizard() {
   const renderStep = () => {
     switch (step) {
       case 0: return <StepWelcome onNext={next} />;
-      case 1: return <SetupModeSelector mode={companyMode} onChange={setCompanyMode} />;
+      case 1: return <SetupModeSelector mode={companyMode} onChange={setCompanyMode} onSelect={next} />;
       case 2: return <StepCompany data={company} onChange={setCompany} onNext={next} onPrev={prev} companyMode={companyMode} />;
       case 3: return <StepAdmin data={admin} onChange={setAdmin} onNext={next} onPrev={prev} />;
       case 4: return <StepClient data={client} onChange={setClient} onNext={next} onPrev={prev} />;

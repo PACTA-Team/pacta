@@ -175,6 +175,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Frontend Performance | Optimized (lazy loading, memoization, build config) |
 | Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
 | Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
+| Setup Mode Auto-Advance | Complete (v0.22.0 -- click mode card to auto-advance, tactile card feedback, focus-visible accessibility, "Cambiar a..." toggle button) |
 
 ---
 
@@ -416,6 +417,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.22.0 | Latest | Setup mode auto-advance (click card to advance, tactile feedback, focus-visible styles, "Cambiar a..." toggle) |
 | v0.21.0 | Latest | Setup flow security (fresh install redirect to /setup, /setup guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | v0.20.4 | - | Fix missing migration 016 (documents/notifications/audit_logs company_id), correct migration ordering |
 | v0.20.3 | - | Fix backfill migration referencing non-existent `deleted_at` column on supplements table |
