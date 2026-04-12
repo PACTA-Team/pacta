@@ -45,6 +45,13 @@ export const notificationsAPI = {
       signal,
     }),
 
+  create: (data: { type: string; title: string; message?: string; entity_id?: number; entity_type?: string }, signal?: AbortSignal) =>
+    fetchJSON(`${BASE}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      signal,
+    }),
+
   delete: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, {
       method: 'DELETE',
