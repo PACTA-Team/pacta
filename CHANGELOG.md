@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-04-11
+
+### Added
+- **Multi-company setup wizard** -- Users can now configure deployment as single-company or multi-company mode during initial setup
+- **Company mode selector** -- UI component for choosing between single and multi-company modes
+- **Company info step** -- Captures company name, address, and tax ID during setup flow
+- **Company data in setup payload** -- Backend now accepts and stores company information from setup wizard
+
+### Changed
+- **Setup wizard flow extended** -- Now 7 steps instead of 5 (Welcome → Company Mode → Company Info → Admin → Client → Supplier → Review)
+- **Setup API payload** -- Now includes `company_mode` and `company` fields alongside admin, client, and supplier data
+- **Review screen** -- Displays company information and mode before final submission
+
+### Technical Details
+- **Files Created:** 2 (`SetupModeSelector.tsx`, `StepCompany.tsx`)
+- **Files Modified:** 4 (`SetupWizard.tsx`, `StepReview.tsx`, `setup-api.ts`, `setup.go`)
+- **Lines Added:** ~310
+
+---
+
 ## [0.16.0] - 2026-04-11
 
 ### Added
