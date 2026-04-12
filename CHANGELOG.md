@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-04-12
+
+### Added
+- **Setup mode auto-advance** — Clicking a company mode card in the setup wizard now automatically advances to the next step, fixing the missing "Next" button on step 1
+- **Mode toggle button** — "Cambiar a..." ghost button for quick mode switching without re-clicking cards
+- **Tactile card feedback** — Hover/active scale transforms (`hover:scale-[1.02] active:scale-[0.98]`) and shadow emphasis on selected mode card
+- **Keyboard accessibility** — Focus-visible ring styles on mode selection cards
+
+### Changed
+- **SetupModeSelector** — `onSelect` callback prop (optional) fires on card click, enabling auto-advance
+- **SetupWizard** — Wired `onSelect={next}` to mode selector for seamless flow
+- **Language consistency** — Ghost button text localized to Spanish ("Cambiar a Multiempresa" / "Cambiar a Empresa Individual")
+
+### Technical Details
+- **Files Modified:** 2 (`SetupModeSelector.tsx`, `SetupWizard.tsx`)
+- **Lines Added:** ~15
+- **Design doc:** `docs/plans/2026-04-12-setup-mode-auto-advance-design.md`
+
+---
+
 ## [0.21.0] - 2026-04-12
 
 ### Added
