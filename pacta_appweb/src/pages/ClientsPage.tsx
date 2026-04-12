@@ -104,7 +104,7 @@ export default function ClientsPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     if (!hasPermission('manager')) {
       toast.error('You do not have permission to delete clients');
       return;
