@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye, FileText } from 'lucide-react';
-import { AuthorizedSigner, Client, Supplier } from '@/types';
-import { getAuthorizedSigners, setAuthorizedSigners, getCurrentUser, getClients, getSuppliers } from '@/lib/storage';
+import { signersAPI } from '@/lib/signers-api';
+import { clientsAPI } from '@/lib/clients-api';
+import { suppliersAPI } from '@/lib/suppliers-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import AuthorizedSignerForm from '@/components/authorized-signers/AuthorizedSignerForm';
@@ -28,16 +29,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 export default function AuthorizedSignersPage() {
-  const [signers, setSignersState] = useState<AuthorizedSigner[]>([]);
-  const [filteredSigners, setFilteredSigners] = useState<AuthorizedSigner[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [signers, setSignersState] = useState<any[]>([]);
+  const [filteredSigners, setFilteredSigners] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingSigner, setEditingSigner] = useState<AuthorizedSigner | undefined>();
+  const [editingSigner, setEditingSigner] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [signerToDelete, setSignerToDelete] = useState<string | null>(null);
-  const [viewingSigner, setViewingSigner] = useState<AuthorizedSigner | null>(null);
+  const [signerToDelete, setSignerToDelete] = useState<number | null>(null);
+  const [viewingSigner, setViewingSigner] = useState<any | null>(null);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
@@ -48,11 +49,20 @@ export default function AuthorizedSignersPage() {
     filterSigners();
   }, [signers, searchTerm]);
 
-  const loadData = () => {
-    setSignersState(getAuthorizedSigners());
-    setClients(getClients());
-    setSuppliers(getSuppliers());
-  };
+  const loadData = useCallback(async () => {
+    try {
+      const [signersData, clientsData, suppliersData] = await Promise.all([
+        signersAPI.list(),
+        clientsAPI.list(),
+        suppliersAPI.list(),
+      ]);
+      setSignersState(signersData as any[]);
+      setClients(clientsData as any[]);
+      setSuppliers(suppliersData as any[]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load data');
+    }
+  }, []);
 
   const filterSigners = () => {
     let filtered = [...signers];
@@ -69,39 +79,40 @@ export default function AuthorizedSignersPage() {
     setFilteredSigners(filtered);
   };
 
-  const handleCreateOrUpdate = (data: Omit<AuthorizedSigner, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
-    const user = getCurrentUser();
-    if (!user) return;
-
-    const allSigners = getAuthorizedSigners();
-
-    if (editingSigner) {
-      const updated: AuthorizedSigner = {
-        ...editingSigner,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
-      const newSigners = allSigners.map(s => s.id === updated.id ? updated : s);
-      setAuthorizedSigners(newSigners);
-      toast.success('Authorized signer updated successfully');
-    } else {
-      const newSigner: AuthorizedSigner = {
-        ...data,
-        id: Date.now().toString(),
-        createdBy: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setAuthorizedSigners([...allSigners, newSigner]);
-      toast.success('Authorized signer created successfully');
+  const handleCreateOrUpdate = async (data: any) => {
+    try {
+      if (editingSigner) {
+        await signersAPI.update(editingSigner.id, {
+          company_id: parseInt(data.companyId),
+          company_type: data.companyType,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          position: data.position,
+          phone: data.phone,
+          email: data.email,
+        });
+        toast.success('Authorized signer updated successfully');
+      } else {
+        await signersAPI.create({
+          company_id: parseInt(data.companyId),
+          company_type: data.companyType,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          position: data.position,
+          phone: data.phone,
+          email: data.email,
+        });
+        toast.success('Authorized signer created successfully');
+      }
+      setShowForm(false);
+      setEditingSigner(undefined);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Operation failed');
     }
-
-    setShowForm(false);
-    setEditingSigner(undefined);
-    loadData();
   };
 
-  const handleEdit = (signer: AuthorizedSigner) => {
+  const handleEdit = (signer: any) => {
     if (!hasPermission('editor')) {
       toast.error('You do not have permission to edit authorized signers');
       return;
@@ -110,7 +121,7 @@ export default function AuthorizedSignersPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     if (!hasPermission('manager')) {
       toast.error('You do not have permission to delete authorized signers');
       return;
@@ -119,25 +130,25 @@ export default function AuthorizedSignersPage() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!signerToDelete) return;
-
-    const allSigners = getAuthorizedSigners();
-    const newSigners = allSigners.filter(s => s.id !== signerToDelete);
-    setAuthorizedSigners(newSigners);
-
-    toast.success('Authorized signer deleted successfully');
-    setDeleteDialogOpen(false);
-    setSignerToDelete(null);
-    loadData();
+    try {
+      await signersAPI.delete(signerToDelete);
+      toast.success('Authorized signer deleted successfully');
+      setDeleteDialogOpen(false);
+      setSignerToDelete(null);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
   };
 
-  const getCompanyName = (signer: AuthorizedSigner) => {
-    if (signer.companyType === 'client') {
-      const client = clients.find(c => c.id === signer.companyId);
+  const getCompanyName = (signer: any) => {
+    if (signer.company_type === 'client') {
+      const client = clients.find((c: any) => c.id === signer.company_id);
       return client?.name || 'Unknown Client';
     } else {
-      const supplier = suppliers.find(s => s.id === signer.companyId);
+      const supplier = suppliers.find((s: any) => s.id === signer.company_id);
       return supplier?.name || 'Unknown Supplier';
     }
   };
@@ -203,12 +214,12 @@ export default function AuthorizedSignersPage() {
                   filteredSigners.map((signer) => (
                     <TableRow key={signer.id}>
                       <TableCell className="font-medium">
-                        {signer.firstName} {signer.lastName}
+                        {signer.first_name} {signer.last_name}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Badge variant={signer.companyType === 'client' ? 'default' : 'secondary'}>
-                            {signer.companyType}
+                          <Badge variant={signer.company_type === 'client' ? 'default' : 'secondary'}>
+                            {signer.company_type}
                           </Badge>
                           <span>{getCompanyName(signer)}</span>
                         </div>
@@ -217,7 +228,7 @@ export default function AuthorizedSignersPage() {
                       <TableCell>{signer.email}</TableCell>
                       <TableCell>{signer.phone}</TableCell>
                       <TableCell>
-                        {signer.documentUrl ? (
+                        {signer.document_url ? (
                           <FileText className="h-4 w-4 text-green-600" />
                         ) : (
                           <span className="text-muted-foreground text-sm">No document</span>
@@ -274,7 +285,7 @@ export default function AuthorizedSignersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Full Name</p>
-                  <p className="font-medium">{viewingSigner.firstName} {viewingSigner.lastName}</p>
+                  <p className="font-medium">{viewingSigner.first_name} {viewingSigner.last_name}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Position</p>
@@ -283,8 +294,8 @@ export default function AuthorizedSignersPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Company</p>
                   <div className="flex items-center gap-2">
-                    <Badge variant={viewingSigner.companyType === 'client' ? 'default' : 'secondary'}>
-                      {viewingSigner.companyType}
+                    <Badge variant={viewingSigner.company_type === 'client' ? 'default' : 'secondary'}>
+                      {viewingSigner.company_type}
                     </Badge>
                     <span className="font-medium">{getCompanyName(viewingSigner)}</span>
                   </div>
@@ -297,18 +308,18 @@ export default function AuthorizedSignersPage() {
                   <p className="text-sm text-muted-foreground">Phone</p>
                   <p className="font-medium">{viewingSigner.phone}</p>
                 </div>
-                {viewingSigner.documentUrl && (
+                {viewingSigner.document_url && (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground mb-2">Authorization Document</p>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       <a
-                        href={viewingSigner.documentUrl}
+                        href={viewingSigner.document_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        {viewingSigner.documentName || 'View Document'}
+                        {viewingSigner.document_name || 'View Document'}
                       </a>
                     </div>
                   </div>

@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, AlertTriangle, FilePlus, DollarSign, BarChart3 } from 'lucide-react';
-import { getContracts, getSupplements } from '@/lib/storage';
+import { contractsAPI } from '@/lib/contracts-api';
+import { supplementsAPI } from '@/lib/supplements-api';
 import { Contract, ContractStatus } from '@/types';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
   active: '#22c55e',
@@ -16,7 +18,7 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
 };
 
 export default function DashboardPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalActive: 0,
     expiringSoon: 0,
@@ -31,55 +33,64 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    const contractsData = getContracts();
-    setContracts(contractsData);
+    const loadDashboard = async () => {
+      try {
+        const [contractsData, supplementsData] = await Promise.all([
+          contractsAPI.list(),
+          supplementsAPI.list(),
+        ]);
+        const contractsList = contractsData as any[];
+        const supplementsList = supplementsData as any[];
+        setContracts(contractsList);
 
-    // Calculate stats
-    const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const now = new Date();
+        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const activeContracts = contractsData.filter(c => c.status === 'active');
-    const expiringSoon = activeContracts.filter(c => {
-      const endDate = new Date(c.endDate);
-      return endDate <= thirtyDaysFromNow && endDate >= now;
-    });
+        const activeContracts = contractsList.filter((c: any) => c.status === 'active');
+        const expiringSoon = activeContracts.filter((c: any) => {
+          const endDate = new Date(c.end_date);
+          return endDate <= thirtyDaysFromNow && endDate >= now;
+        });
 
-    const supplements = getSupplements();
-    const pendingSupplements = supplements.filter(s => s.status === 'draft' || s.status === 'approved');
+        const pendingSupplements = supplementsList.filter((s: any) => s.status === 'draft' || s.status === 'approved');
 
-    const totalValue = contractsData
-      .filter(c => c.status === 'active')
-      .reduce((sum, c) => sum + c.amount, 0);
+        const totalValue = contractsList
+          .filter((c: any) => c.status === 'active')
+          .reduce((sum: number, c: any) => sum + c.amount, 0);
 
-    setStats({
-      totalActive: activeContracts.length,
-      expiringSoon: expiringSoon.length,
-      pendingSupplements: pendingSupplements.length,
-      totalValue,
-    });
+        setStats({
+          totalActive: activeContracts.length,
+          expiringSoon: expiringSoon.length,
+          pendingSupplements: pendingSupplements.length,
+          totalValue,
+        });
 
-    // Calculate status distribution
-    const distribution: Record<ContractStatus, number> = {
-      active: 0,
-      expired: 0,
-      pending: 0,
-      cancelled: 0,
+        const distribution: Record<ContractStatus, number> = {
+          active: 0,
+          expired: 0,
+          pending: 0,
+          cancelled: 0,
+        };
+        contractsList.forEach((c: any) => {
+          distribution[c.status as ContractStatus] = (distribution[c.status as ContractStatus] || 0) + 1;
+        });
+        setStatusDistribution(distribution);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      }
     };
-    contractsData.forEach(c => {
-      distribution[c.status]++;
-    });
-    setStatusDistribution(distribution);
+    loadDashboard();
   }, []);
 
   const expiringContracts = contracts
-    .filter(c => {
+    .filter((c: any) => {
       if (c.status !== 'active') return false;
       const now = new Date();
-      const endDate = new Date(c.endDate);
+      const endDate = new Date(c.end_date);
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       return endDate <= thirtyDaysFromNow && endDate >= now;
     })
-    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
+    .sort((a: any, b: any) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
     .slice(0, 5);
 
   const chartData = Object.entries(statusDistribution)
@@ -153,20 +164,20 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 {expiringContracts.map(contract => {
                   const daysUntilExpiration = Math.ceil(
-                    (new Date(contract.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                    (new Date(contract.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                   );
                   return (
                     <div key={contract.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg">
                       <div>
                         <p className="font-medium">{contract.title}</p>
-                        <p className="text-sm text-muted-foreground">{contract.contractNumber}</p>
+                        <p className="text-sm text-muted-foreground">{contract.contract_number}</p>
                       </div>
                       <div className="text-right">
                         <Badge variant={daysUntilExpiration <= 7 ? 'destructive' : 'default'}>
                           {daysUntilExpiration} days left
                         </Badge>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(contract.endDate).toLocaleDateString()}
+                          {new Date(contract.end_date).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
