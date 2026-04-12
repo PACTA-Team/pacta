@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -26,7 +27,26 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := auth.CreateSession(h.DB, user.ID)
+	if user.Status != "active" {
+		h.Error(w, http.StatusForbidden, "account is "+user.Status)
+		return
+	}
+
+	// Resolve user's default company
+	var companyID int
+	err = h.DB.QueryRow(`
+		SELECT company_id FROM user_companies
+		WHERE user_id = ? AND is_default = 1
+	`, user.ID).Scan(&companyID)
+	if err == sql.ErrNoRows {
+		err = h.DB.QueryRow("SELECT company_id FROM users WHERE id = ?", user.ID).Scan(&companyID)
+	}
+	if err != nil {
+		h.Error(w, http.StatusForbidden, "no company assigned. Contact administrator.")
+		return
+	}
+
+	session, err := auth.CreateSession(h.DB, user.ID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
