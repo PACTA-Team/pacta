@@ -101,7 +101,7 @@ pacta/
 │   ├── config/             # Application configuration
 │   ├── db/                 # SQLite setup + goose migrations
 │   │   ├── db.go           # Open() + Migrate() with goose integration
-│   │   └── migrations/     # 19 SQL migrations (001-019) with Up/Down markers
+│   │   └── migrations/     # 20 SQL migrations (001-020) with Up/Down markers
 │   ├── handlers/           # REST API handlers (contracts, clients, suppliers, signers)
 │   ├── models/             # Go data structures
 │   └── server/             # HTTP server, chi router, static serving
@@ -173,8 +173,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Frontend Security | Hardened (route guards, XSS prevention, code splitting) |
 | Frontend Accessibility | WCAG 2.2 AA compliant (skip nav, ARIA, keyboard nav) |
 | Frontend Performance | Optimized (lazy loading, memoization, build config) |
-| Database Migrations | Complete (v0.20.0 -- goose v3, 19 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
-| Migration Idempotency | Complete (v0.19.0 -- duplicate column name error handling for fresh installs) |
+| Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
 
 ---
 
@@ -416,7 +415,11 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.20.0 | Latest | Goose database migrations (up/down support, dirty state tracking, CLI tooling), migration idempotency fix, frontend version bump |
+| v0.20.4 | Latest | Fix missing migration 016 (documents/notifications/audit_logs company_id), correct migration ordering |
+| v0.20.3 | - | Fix backfill migration referencing non-existent `deleted_at` column on supplements table |
+| v0.20.2 | - | Fix migration ordering (backfill runs after all ALTER TABLE migrations) |
+| v0.20.1 | - | Remove redundant migration 015 (company_id already in authorized_signers CREATE TABLE) |
+| v0.20.0 | - | Goose database migrations (up/down support, dirty state tracking, CLI tooling), GoReleaser `before.hooks` for `go mod tidy` |
 | v0.19.0 | - | Migration idempotency fix (duplicate column name error handling for fresh installs) |
 | v0.18.0 | - | Landing page (Framer Motion), theme toggle fix, README redesign, Linux/Windows installation guides, GitHub repo branding |
 | v0.17.0 | Latest | Multi-company setup wizard (company mode selector, company info step, 7-step wizard flow, company data in setup payload) |
@@ -443,14 +446,19 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ## Progress Tracking
 
-### Completed (v0.16.0)
+### Completed (v0.20.4)
 
+- [x] Migrated from custom `migrate.go` to goose v3 (`internal/db/db.go`)
+- [x] 20 goose migrations with `-- +goose Up` / `-- +goose Down` markers
+- [x] `goose_db_version` table replaces old `schema_migrations`
+- [x] GoReleaser `before.hooks: go mod tidy` (no dirty state in CI)
 - [x] Migration 013: `companies` + `user_companies` tables
 - [x] Migration 014: `company_id` on users, clients, suppliers
-- [x] Migration 015: `company_id` on signers, contracts, supplements
 - [x] Migration 016: `company_id` on documents, notifications, audit_logs
-- [x] Migration 017: Backfill existing data to default company
-- [x] Migration 018: `company_id` on sessions table
+- [x] Migration 017: `company_id` on contracts
+- [x] Migration 018: `company_id` on supplements
+- [x] Migration 019: `company_id` on sessions
+- [x] Migration 020: Backfill existing data to default company
 - [x] `CompanyMiddleware` — company scoping with context injection
 - [x] Company CRUD endpoints (list, create, get, update, delete)
 - [x] User company membership endpoints (list, switch)
