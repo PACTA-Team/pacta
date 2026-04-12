@@ -157,7 +157,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Document Attachments | Complete (v0.10.0 -- upload, download, list, delete with audit logging) |
 | Notifications | Complete (v0.11.0 -- list, create, mark read, mark all read, count, delete) |
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
-| Role-Based Access | Schema complete -- No enforcement logic implemented |
+| Role-Based Access | Complete (v0.15.0 -- middleware enforcement, 4-tier permission levels, inactive account rejection) |
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
 | Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
