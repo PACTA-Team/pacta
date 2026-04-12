@@ -45,13 +45,18 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// Authenticated API routes
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
+		r.Use(h.CompanyMiddleware)
 
+		// Auth routes (no auth required)
 		r.Get("/api/auth/me", h.HandleMe)
 
 		// Viewer+ (read-only)
 		r.Group(func(r chi.Router) {
 			r.Use(h.RequireRole(1))
 
+			r.Get("/api/companies", h.HandleCompanies)
+			r.Get("/api/companies/{id}", h.HandleCompanyByID)
+			r.Get("/api/users/me/companies", h.HandleUserCompanies)
 			r.Get("/api/contracts", h.HandleContracts)
 			r.Get("/api/contracts/{id}", h.HandleContractByID)
 			r.Get("/api/clients", h.HandleClients)
@@ -74,6 +79,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Group(func(r chi.Router) {
 			r.Use(h.RequireRole(2))
 
+			r.Post("/api/companies", h.HandleCompanies)
+			r.Put("/api/companies/{id}", h.HandleCompanyByID)
+			r.Patch("/api/users/me/company/{id}", h.HandleSwitchCompany)
 			r.Post("/api/contracts", h.HandleContracts)
 			r.Put("/api/contracts/{id}", h.HandleContractByID)
 			r.Post("/api/clients", h.HandleClients)
@@ -95,6 +103,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Group(func(r chi.Router) {
 			r.Use(h.RequireRole(3))
 
+			r.Delete("/api/companies/{id}", h.HandleCompanyByID)
 			r.Delete("/api/contracts/{id}", h.HandleContractByID)
 			r.Delete("/api/clients/{id}", h.HandleClientByID)
 			r.Delete("/api/suppliers/{id}", h.HandleSupplierByID)

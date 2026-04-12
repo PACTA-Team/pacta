@@ -8,6 +8,8 @@ import (
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/models"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func (h *Handler) HandleUsers(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +142,7 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 	id64, _ := result.LastInsertId()
 	id := int(id64)
 
-	h.auditLog(r, userID, "create", "user", &id, nil, map[string]interface{}{
+	h.auditLog(r, userID, 0, "create", "user", &id, nil, map[string]interface{}{
 		"id":    id,
 		"name":  req.Name,
 		"email": req.Email,
@@ -204,7 +206,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 		return
 	}
 
-	h.auditLog(r, currentUserID, "update", "user", &id, map[string]interface{}{
+	h.auditLog(r, currentUserID, 0, "update", "user", &id, map[string]interface{}{
 		"name":  prevName,
 		"email": prevEmail,
 		"role":  prevRole,
@@ -237,7 +239,7 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 		return
 	}
 
-	h.auditLog(r, currentUserID, "delete", "user", &id, map[string]interface{}{
+	h.auditLog(r, currentUserID, 0, "delete", "user", &id, map[string]interface{}{
 		"id":    id,
 		"name":  prevName,
 		"email": prevEmail,
@@ -274,7 +276,7 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request, id int) 
 		return
 	}
 
-	h.auditLog(r, h.getUserID(r), "reset_password", "user", &id, nil, nil)
+	h.auditLog(r, h.getUserID(r), 0, "reset_password", "user", &id, nil, nil)
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "password reset"})
 }
@@ -306,10 +308,75 @@ func (h *Handler) updateUserStatus(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
-	h.auditLog(r, currentUserID, "update_status", "user", &id, nil, map[string]interface{}{
+	h.auditLog(r, currentUserID, 0, "update_status", "user", &id, nil, map[string]interface{}{
 		"id":     id,
 		"status": req.Status,
 	})
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (h *Handler) HandleUserCompanies(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	userID := h.getUserID(r)
+	rows, err := h.DB.Query(`
+		SELECT uc.user_id, uc.company_id, c.name, uc.is_default
+		FROM user_companies uc
+		JOIN companies c ON c.id = uc.company_id
+		WHERE uc.user_id = ? AND c.deleted_at IS NULL
+		ORDER BY uc.is_default DESC, c.name
+	`, userID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list user companies")
+		return
+	}
+	defer rows.Close()
+
+	var companies []models.UserCompany
+	for rows.Next() {
+		var uc models.UserCompany
+		rows.Scan(&uc.UserID, &uc.CompanyID, &uc.CompanyName, &uc.IsDefault)
+		companies = append(companies, uc)
+	}
+	if companies == nil {
+		companies = []models.UserCompany{}
+	}
+
+	h.JSON(w, http.StatusOK, companies)
+}
+
+func (h *Handler) HandleSwitchCompany(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	userID := h.getUserID(r)
+	idStr := chi.URLParam(r, "id")
+	companyID, err := strconv.Atoi(idStr)
+	if err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid company ID")
+		return
+	}
+
+	var exists int
+	h.DB.QueryRow("SELECT COUNT(*) FROM user_companies WHERE user_id = ? AND company_id = ?", userID, companyID).Scan(&exists)
+	if exists == 0 {
+		h.Error(w, http.StatusForbidden, "access denied to this company")
+		return
+	}
+
+	cookie, err := r.Cookie("session")
+	if err == nil {
+		h.DB.Exec("UPDATE sessions SET company_id = ? WHERE token = ?", companyID, cookie.Value)
+	}
+
+	h.DB.Exec("UPDATE user_companies SET is_default = 0 WHERE user_id = ?", userID)
+	h.DB.Exec("UPDATE user_companies SET is_default = 1 WHERE user_id = ? AND company_id = ?", userID, companyID)
+
+	h.JSON(w, http.StatusOK, map[string]interface{}{"company_id": companyID})
 }

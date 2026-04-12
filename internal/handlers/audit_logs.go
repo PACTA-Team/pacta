@@ -24,14 +24,15 @@ func (h *Handler) HandleAuditLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	companyID := h.GetCompanyID(r)
 	query := r.URL.Query()
 
 	// Build dynamic query with filters
 	sql := `
 		SELECT id, user_id, action, entity_type, entity_id, previous_state, new_state, ip_address, created_at
-		FROM audit_logs WHERE 1=1
+		FROM audit_logs WHERE company_id = ?
 	`
-	args := []interface{}{}
+	args := []interface{}{companyID}
 
 	if entityType := query.Get("entity_type"); entityType != "" {
 		sql += " AND entity_type = ?"

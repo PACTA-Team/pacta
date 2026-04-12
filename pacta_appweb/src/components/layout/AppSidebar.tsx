@@ -15,7 +15,8 @@ import {
   Truck,
   UserCheck,
   Menu,
-  X
+  X,
+  Building
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { notificationsAPI } from '@/lib/notifications-api';
+import CompanySelector from '@/components/CompanySelector';
 
 const TABLET_BREAKPOINT = 1024;
 
@@ -52,6 +54,7 @@ const navigation = [
   { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { name: 'Users & Roles', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
+  { name: 'Companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
 ];
 
 export default function AppSidebar() {
@@ -128,6 +131,8 @@ export default function AppSidebar() {
               </div>
 
               <Separator />
+
+              <CompanySelector />
 
               <ScrollArea className="flex-1 px-3 py-4">
                 <nav role="navigation" aria-label="Main navigation" className="space-y-1">

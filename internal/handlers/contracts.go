@@ -31,7 +31,7 @@ func (h *Handler) HandleContractByID(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		h.getContract(w, id)
+		h.getContract(w, r, id)
 	case http.MethodPut:
 		h.updateContract(w, r, id)
 	case http.MethodDelete:
@@ -58,11 +58,12 @@ type contractRow struct {
 }
 
 func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
 	rows, err := h.DB.Query(`
 		SELECT id, internal_id, contract_number, title, client_id, supplier_id,
 		       start_date, end_date, amount, type, status, created_at, updated_at
-		FROM contracts WHERE deleted_at IS NULL ORDER BY created_at DESC
-	`)
+		FROM contracts WHERE deleted_at IS NULL AND company_id = ? ORDER BY created_at DESC
+	`, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -100,14 +101,14 @@ type createContractRequest struct {
 	Description      *string `json:"description"`
 }
 
-func (h *Handler) generateInternalID() (string, error) {
+func (h *Handler) generateInternalID(companyID int) (string, error) {
 	year := time.Now().Year()
 	var maxNum sql.NullInt64
 	err := h.DB.QueryRow(`
 		SELECT MAX(CAST(SUBSTR(internal_id, 10) AS INTEGER))
 		FROM contracts
-		WHERE internal_id LIKE 'CNT-' || ? || '-%'
-	`, year).Scan(&maxNum)
+		WHERE internal_id LIKE 'CNT-' || ? || '-%' AND company_id = ?
+	`, year, companyID).Scan(&maxNum)
 	if err != nil {
 		return "", err
 	}
@@ -119,6 +120,7 @@ func (h *Handler) generateInternalID() (string, error) {
 }
 
 func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
 	var req createContractRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Error(w, http.StatusBadRequest, "invalid request")
@@ -152,7 +154,7 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	internalID, err := h.generateInternalID()
+	internalID, err := h.generateInternalID(companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to generate internal ID")
 		return
@@ -162,11 +164,11 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 	result, err := h.DB.Exec(`
 		INSERT INTO contracts (internal_id, contract_number, title, client_id, supplier_id,
 			client_signer_id, supplier_signer_id, start_date, end_date, amount,
-			type, status, description, created_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			type, status, description, created_by, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, internalID, req.ContractNumber, req.Title, req.ClientID, req.SupplierID,
 		req.ClientSignerID, req.SupplierSignerID, req.StartDate, req.EndDate,
-		req.Amount, req.Type, req.Status, req.Description, userID)
+		req.Amount, req.Type, req.Status, req.Description, userID, companyID)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: contracts.contract_number") {
 			h.Error(w, http.StatusConflict, "contract number '"+req.ContractNumber+"' already exists")
@@ -177,7 +179,7 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 	}
 	id64, _ := result.LastInsertId()
 	id := int(id64)
-	h.auditLog(r, userID, "create", "contract", &id, nil, map[string]interface{}{
+	h.auditLog(r, userID, companyID, "create", "contract", &id, nil, map[string]interface{}{
 		"id":              id,
 		"internal_id":     internalID,
 		"contract_number": req.ContractNumber,
@@ -197,13 +199,14 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) getContract(w http.ResponseWriter, id int) {
+func (h *Handler) getContract(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var c contractRow
 	err := h.DB.QueryRow(`
 		SELECT id, internal_id, contract_number, title, client_id, supplier_id,
 		       start_date, end_date, amount, type, status, created_at, updated_at
-		FROM contracts WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
+		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+	`, id, companyID).Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
 		&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "contract not found")
@@ -213,6 +216,7 @@ func (h *Handler) getContract(w http.ResponseWriter, id int) {
 }
 
 func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var req createContractRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Error(w, http.StatusBadRequest, "invalid request")
@@ -249,17 +253,17 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 	err := h.DB.QueryRow(`
 		SELECT title, client_id, supplier_id, client_signer_id, supplier_signer_id,
 		       start_date, end_date, amount, type, status, description
-		FROM contracts WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
+		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+	`, id, companyID).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
 		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription)
 
 	_, err = h.DB.Exec(`
 		UPDATE contracts SET title=?, client_id=?, supplier_id=?,
 			client_signer_id=?, supplier_signer_id=?, start_date=?, end_date=?,
 			amount=?, type=?, status=?, description=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
+		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.Title, req.ClientID, req.SupplierID, req.ClientSignerID, req.SupplierSignerID,
-		req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description, id)
+		req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update contract")
 		return
@@ -282,7 +286,7 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 			"description":        prevDescription,
 		}
 	}
-	h.auditLog(r, h.getUserID(r), "update", "contract", &id, prevState, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "update", "contract", &id, prevState, map[string]interface{}{
 		"title":              req.Title,
 		"client_id":          req.ClientID,
 		"supplier_id":        req.SupplierID,
@@ -299,19 +303,20 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 }
 
 func (h *Handler) deleteContract(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var prevTitle, prevStatus string
-	err := h.DB.QueryRow("SELECT title, status FROM contracts WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevTitle, &prevStatus)
+	err := h.DB.QueryRow("SELECT title, status FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&prevTitle, &prevStatus)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "contract not found")
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE contracts SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
+	_, err = h.DB.Exec("UPDATE contracts SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL AND company_id = ?", id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete contract")
 		return
 	}
-	h.auditLog(r, h.getUserID(r), "delete", "contract", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "delete", "contract", &id, map[string]interface{}{
 		"id":     id,
 		"title":  prevTitle,
 		"status": prevStatus,

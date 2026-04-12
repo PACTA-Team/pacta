@@ -10,6 +10,7 @@ import (
 type Session struct {
 	Token     string
 	UserID    int
+	CompanyID int
 	ExpiresAt time.Time
 }
 
@@ -22,28 +23,28 @@ func generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func CreateSession(db *sql.DB, userID int) (*Session, error) {
+func CreateSession(db *sql.DB, userID int, companyID int) (*Session, error) {
 	token, err := generateToken()
 	if err != nil {
 		return nil, err
 	}
 	expiresAt := time.Now().Add(24 * time.Hour)
 	_, err = db.Exec(
-		"INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
-		token, userID, expiresAt,
+		"INSERT INTO sessions (token, user_id, company_id, expires_at) VALUES (?, ?, ?, ?)",
+		token, userID, companyID, expiresAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &Session{Token: token, UserID: userID, ExpiresAt: expiresAt}, nil
+	return &Session{Token: token, UserID: userID, CompanyID: companyID, ExpiresAt: expiresAt}, nil
 }
 
 func GetSession(db *sql.DB, token string) (*Session, error) {
 	var s Session
 	err := db.QueryRow(
-		"SELECT token, user_id, expires_at FROM sessions WHERE token = ? AND expires_at > ?",
+		"SELECT token, user_id, company_id, expires_at FROM sessions WHERE token = ? AND expires_at > ?",
 		token, time.Now(),
-	).Scan(&s.Token, &s.UserID, &s.ExpiresAt)
+	).Scan(&s.Token, &s.UserID, &s.CompanyID, &s.ExpiresAt)
 	if err != nil {
 		return nil, err
 	}
