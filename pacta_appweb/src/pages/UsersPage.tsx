@@ -342,7 +342,7 @@ export default function UsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleToggleStatus(user.id)}
-                            disabled={currentUser && parseInt(currentUser.id) === user.id}
+                            disabled={currentUser ? parseInt(currentUser.id) === user.id : false}
                             aria-label={`Toggle status for ${user.name}`}
                           >
                             <UserX className="h-4 w-4" />
@@ -359,7 +359,7 @@ export default function UsersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(user.id)}
-                            disabled={currentUser && parseInt(currentUser.id) === user.id}
+                            disabled={currentUser ? parseInt(currentUser.id) === user.id : false}
                             aria-label={`Delete ${user.name}`}
                           >
                             <UserX className="h-4 w-4 text-red-500" />

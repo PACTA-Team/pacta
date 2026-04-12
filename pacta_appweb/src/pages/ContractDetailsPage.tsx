@@ -5,24 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Download, FilePlus, Upload, Eye, Trash2 } from 'lucide-react';
-import { Contract, Supplement, Client, Supplier } from '@/types';
-import { getContracts, getClients, getSuppliers } from '@/lib/storage';
 import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { documentsAPI, APIDocument } from '@/lib/documents-api';
+import { clientsAPI } from '@/lib/clients-api';
+import { suppliersAPI } from '@/lib/suppliers-api';
 import { getContractAuditLogs } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { AuditLog } from '@/types';
 
 export default function ContractDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [contract, setContract] = useState<Contract | null>(null);
-  const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [contract, setContract] = useState<any | null>(null);
+  const [supplements, setSupplements] = useState<any[]>([]);
   const [documents, setDocuments] = useState<APIDocument[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const { hasPermission } = useAuth();
 
   const contractId = id ? parseInt(id) : 0;
@@ -39,36 +40,44 @@ export default function ContractDetailsPage() {
 
   useEffect(() => {
     if (!id) return;
-    const contracts = getContracts();
-    const found = contracts.find((c) => c.id === id);
+    const loadContract = async () => {
+      try {
+        const contractData = await contractsAPI.getById(contractId);
+        setContract(contractData);
 
-    if (found) {
-      setContract(found);
+        const [allSupplements, clientsData, suppliersData] = await Promise.all([
+          supplementsAPI.list(),
+          clientsAPI.list(),
+          suppliersAPI.list(),
+        ]);
+        setSupplements((allSupplements as any[]).filter((s: any) => s.contract_id === contractId));
+        setClients(clientsData as any[]);
+        setSuppliers(suppliersData as any[]);
 
-      const allSupplements = getSupplements();
-      setSupplements(allSupplements.filter((s) => s.contractId === id));
+        loadDocuments(contractId);
 
-      loadDocuments(contractId);
-
-      const logs = getContractAuditLogs(id);
-      setAuditLogs(logs);
-    }
-
-    const storedClients = getClients();
-    const storedSuppliers = getSuppliers();
-    setClients(storedClients);
-    setSuppliers(storedSuppliers);
+        try {
+          const logs = await getContractAuditLogs(contractId);
+          setAuditLogs(logs);
+        } catch {
+          setAuditLogs([]);
+        }
+      } catch {
+        toast.error('Failed to load contract data');
+      }
+    };
+    loadContract();
   }, [id, contractId, loadDocuments]);
 
   const clientName = useMemo(() => {
     if (!contract) return '';
-    const foundClient = clients.find((c) => c.id === contract.clientId);
+    const foundClient = clients.find((c: any) => c.id === contract.client_id);
     return foundClient?.name || '';
   }, [clients, contract]);
 
   const supplierName = useMemo(() => {
     if (!contract) return '';
-    const foundSupplier = suppliers.find((s) => s.id === contract.supplierId);
+    const foundSupplier = suppliers.find((s: any) => s.id === contract.supplier_id);
     return foundSupplier?.name || '';
   }, [suppliers, contract]);
 
@@ -103,7 +112,7 @@ export default function ContractDetailsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">{contract.title}</h1>
-            <p className="text-muted-foreground">{contract.contractNumber}</p>
+            <p className="text-muted-foreground">{contract.contract_number}</p>
           </div>
           <div className="flex gap-2">
             {hasPermission('editor') && (
@@ -137,7 +146,7 @@ export default function ContractDetailsPage() {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-muted-foreground">Contract Number</p>
-                <p className="font-medium">{contract.contractNumber}</p>
+                <p className="font-medium">{contract.contract_number}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
@@ -161,11 +170,11 @@ export default function ContractDetailsPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Start Date</p>
-                <p className="font-medium">{new Date(contract.startDate).toLocaleDateString()}</p>
+                <p className="font-medium">{new Date(contract.start_date).toLocaleDateString()}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">End Date</p>
-                <p className="font-medium">{new Date(contract.endDate).toLocaleDateString()}</p>
+                <p className="font-medium">{new Date(contract.end_date).toLocaleDateString()}</p>
               </div>
               <div className="col-span-2">
                 <p className="text-sm text-muted-foreground">Description</p>
@@ -196,11 +205,11 @@ export default function ContractDetailsPage() {
                 <TableBody>
                   {supplements.map((supplement) => (
                     <TableRow key={supplement.id}>
-                      <TableCell className="font-medium">{supplement.supplementNumber}</TableCell>
+                      <TableCell className="font-medium">{supplement.supplement_number}</TableCell>
                       <TableCell>{supplement.description}</TableCell>
-                      <TableCell>{new Date(supplement.effectiveDate).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(supplement.effective_date).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatusBadge(supplement.status)}</TableCell>
-                      <TableCell>{new Date(supplement.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(supplement.created_at).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -279,11 +288,11 @@ export default function ContractDetailsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{log.action}</p>
-                        <Badge variant="outline">{log.userName}</Badge>
+                        <Badge variant="outline">{log.user_id ? 'User #' + log.user_id : 'System'}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{log.details}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{log.new_state || log.action}</p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {new Date(log.created_at).toLocaleString()}
                       </p>
                     </div>
                   </div>

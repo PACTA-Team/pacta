@@ -12,7 +12,7 @@ const fadeUpVariants = {
     opacity: 1,
     y: 0,
     filter: 'blur(0px)',
-    transition: { duration: 0.8, ease: [0.25, 0.4, 0.25, 1] },
+    transition: { duration: 0.8, ease: [0.25, 0.4, 0.25, 1] as [number, number, number, number] },
   },
 };
 
@@ -21,13 +21,13 @@ const shapeVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 2, ease: [0.23, 0.86, 0.39, 0.96] },
+    transition: { duration: 2, ease: [0.23, 0.86, 0.39, 0.96] as [number, number, number, number] },
   },
 };
 
 const floatAnimation = {
   y: [0, 12, 0],
-  transition: { duration: 10, repeat: Infinity, ease: 'easeInOut' },
+  transition: { duration: 10, repeat: Infinity, ease: 'easeInOut' as const },
 };
 
 function ElegantShape({

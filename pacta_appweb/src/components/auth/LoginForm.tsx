@@ -42,17 +42,17 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">
-            {showRegister ? 'Register' : 'PACTA Web'}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4 sm:p-6 lg:p-8">
+      <Card className="w-full max-w-md shadow-lg dark:shadow-2xl">
+        <CardHeader className="space-y-3 pb-6">
+          <CardTitle className="text-2xl font-bold text-center sm:text-3xl">
+            {showRegister ? 'Create Account' : 'PACTA Web'}
           </CardTitle>
-          <CardDescription className="text-center">
-            {showRegister ? 'Create a new account' : 'Contract Management System'}
+          <CardDescription className="text-center text-sm sm:text-base">
+            {showRegister ? 'Set up your account to get started' : 'Contract Management System'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 sm:px-8">
           {showRegister ? (
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
@@ -126,17 +126,19 @@ export default function LoginForm() {
               </div>
               <div className="text-sm text-muted-foreground">
               </div>
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowRegister(true)}
-              >
-                Create Account
-              </Button>
+              <div className="space-y-3">
+                <Button type="submit" className="w-full">
+                  Login
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowRegister(true)}
+                >
+                  Create Account
+                </Button>
+              </div>
             </form>
           )}
         </CardContent>

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye, FileText } from 'lucide-react';
 import { Supplier } from '@/types';
-import { getSuppliers, setSuppliers, getCurrentUser } from '@/lib/storage';
+import { suppliersAPI } from '@/lib/suppliers-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import SupplierForm from '@/components/suppliers/SupplierForm';
@@ -27,14 +27,14 @@ import {
 } from '@/components/ui/dialog';
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliersState] = useState<Supplier[]>([]);
-  const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliersState] = useState<any[]>([]);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>();
+  const [editingSupplier, setEditingSupplier] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
-  const [viewingSupplier, setViewingSupplier] = useState<Supplier | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<number | null>(null);
+  const [viewingSupplier, setViewingSupplier] = useState<any | null>(null);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
@@ -45,10 +45,14 @@ export default function SuppliersPage() {
     filterSuppliers();
   }, [suppliers, searchTerm]);
 
-  const loadSuppliers = () => {
-    const data = getSuppliers();
-    setSuppliersState(data);
-  };
+  const loadSuppliers = useCallback(async () => {
+    try {
+      const data = await suppliersAPI.list();
+      setSuppliersState(data as any[]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load data');
+    }
+  }, []);
 
   const filterSuppliers = () => {
     let filtered = [...suppliers];
@@ -56,7 +60,7 @@ export default function SuppliersPage() {
     if (searchTerm) {
       filtered = filtered.filter(s =>
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.reuCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.reu_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.address.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -64,36 +68,31 @@ export default function SuppliersPage() {
     setFilteredSuppliers(filtered);
   };
 
-  const handleCreateOrUpdate = (data: Omit<Supplier, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
-    const user = getCurrentUser();
-    if (!user) return;
-
-    const allSuppliers = getSuppliers();
-
-    if (editingSupplier) {
-      const updated: Supplier = {
-        ...editingSupplier,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
-      const newSuppliers = allSuppliers.map(s => s.id === updated.id ? updated : s);
-      setSuppliers(newSuppliers);
-      toast.success('Supplier updated successfully');
-    } else {
-      const newSupplier: Supplier = {
-        ...data,
-        id: Date.now().toString(),
-        createdBy: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setSuppliers([...allSuppliers, newSupplier]);
-      toast.success('Supplier created successfully');
+  const handleCreateOrUpdate = async (data: Omit<Supplier, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      if (editingSupplier) {
+        await suppliersAPI.update(editingSupplier.id, {
+          name: data.name,
+          address: data.address,
+          reu_code: data.reuCode,
+          contacts: data.contacts,
+        });
+        toast.success('Supplier updated successfully');
+      } else {
+        await suppliersAPI.create({
+          name: data.name,
+          address: data.address,
+          reu_code: data.reuCode,
+          contacts: data.contacts,
+        });
+        toast.success('Supplier created successfully');
+      }
+      setShowForm(false);
+      setEditingSupplier(undefined);
+      loadSuppliers();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Operation failed');
     }
-
-    setShowForm(false);
-    setEditingSupplier(undefined);
-    loadSuppliers();
   };
 
   const handleEdit = (supplier: Supplier) => {
@@ -105,7 +104,7 @@ export default function SuppliersPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     if (!hasPermission('manager')) {
       toast.error('You do not have permission to delete suppliers');
       return;
@@ -114,17 +113,17 @@ export default function SuppliersPage() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!supplierToDelete) return;
-
-    const allSuppliers = getSuppliers();
-    const newSuppliers = allSuppliers.filter(s => s.id !== supplierToDelete);
-    setSuppliers(newSuppliers);
-
-    toast.success('Supplier deleted successfully');
-    setDeleteDialogOpen(false);
-    setSupplierToDelete(null);
-    loadSuppliers();
+    try {
+      await suppliersAPI.delete(supplierToDelete);
+      toast.success('Supplier deleted successfully');
+      setDeleteDialogOpen(false);
+      setSupplierToDelete(null);
+      loadSuppliers();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
   };
 
   if (showForm) {
@@ -187,11 +186,11 @@ export default function SuppliersPage() {
                   filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id}>
                       <TableCell className="font-medium">{supplier.name}</TableCell>
-                      <TableCell>{supplier.reuCode}</TableCell>
+                      <TableCell>{supplier.reu_code}</TableCell>
                       <TableCell>{supplier.address}</TableCell>
                       <TableCell>{supplier.contacts}</TableCell>
                       <TableCell>
-                        {supplier.documentUrl ? (
+                        {supplier.document_url ? (
                           <FileText className="h-4 w-4 text-green-600" />
                         ) : (
                           <span className="text-muted-foreground text-sm">No document</span>
@@ -252,7 +251,7 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">REU Code</p>
-                  <p className="font-medium">{viewingSupplier.reuCode}</p>
+                  <p className="font-medium">{viewingSupplier.reu_code}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Address</p>
@@ -262,18 +261,18 @@ export default function SuppliersPage() {
                   <p className="text-sm text-muted-foreground">Contacts</p>
                   <p className="font-medium">{viewingSupplier.contacts}</p>
                 </div>
-                {viewingSupplier.documentUrl && (
+                {viewingSupplier.document_url && (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground mb-2">Official Document</p>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       <a
-                        href={viewingSupplier.documentUrl}
+                        href={viewingSupplier.document_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        {viewingSupplier.documentName || 'View Document'}
+                        {viewingSupplier.document_name || 'View Document'}
                       </a>
                     </div>
                   </div>

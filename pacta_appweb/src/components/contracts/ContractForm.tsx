@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Contract, ContractType, ContractStatus, Client, Supplier, AuthorizedSigner } from '@/types';
+import { Contract, ContractType, ContractStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getClients, getSuppliers, getAuthorizedSigners } from '@/lib/storage';
+import { clientsAPI } from '@/lib/clients-api';
+import { suppliersAPI } from '@/lib/suppliers-api';
+import { signersAPI } from '@/lib/signers-api';
 import { toast } from 'sonner';
 
 interface ContractFormProps {
@@ -18,20 +20,20 @@ interface ContractFormProps {
 }
 
 export default function ContractForm({ contract, onSubmit, onCancel }: ContractFormProps) {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [clientSigners, setClientSigners] = useState<AuthorizedSigner[]>([]);
-  const [supplierSigners, setSupplierSigners] = useState<AuthorizedSigner[]>([]);
-  
+  const [clients, setClients] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [clientSigners, setClientSigners] = useState<any[]>([]);
+  const [supplierSigners, setSupplierSigners] = useState<any[]>([]);
+
   const [formData, setFormData] = useState({
-    contractNumber: contract?.contractNumber || '',
+    contractNumber: (contract as any)?.contract_number || contract?.contractNumber || '',
     title: contract?.title || '',
-    clientId: contract?.clientId || '',
-    supplierId: contract?.supplierId || '',
-    clientSignerId: contract?.clientSignerId || '',
-    supplierSignerId: contract?.supplierSignerId || '',
-    startDate: contract?.startDate || '',
-    endDate: contract?.endDate || '',
+    clientId: ((contract as any)?.client_id ?? contract?.clientId)?.toString() || '',
+    supplierId: ((contract as any)?.supplier_id ?? contract?.supplierId)?.toString() || '',
+    clientSignerId: ((contract as any)?.client_signer_id ?? contract?.clientSignerId)?.toString() || '',
+    supplierSignerId: ((contract as any)?.supplier_signer_id ?? contract?.supplierSignerId)?.toString() || '',
+    startDate: (contract as any)?.start_date || contract?.startDate || '',
+    endDate: (contract as any)?.end_date || contract?.endDate || '',
     amount: contract?.amount || 0,
     type: contract?.type || 'service' as ContractType,
     status: contract?.status || 'pending' as ContractStatus,
@@ -39,31 +41,58 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   });
 
   useEffect(() => {
-    const loadedClients = getClients();
-    const loadedSuppliers = getSuppliers();
-    const allSigners = getAuthorizedSigners();
-    
-    setClients(loadedClients);
-    setSuppliers(loadedSuppliers);
-    
-    if (formData.clientId) {
-      setClientSigners(allSigners.filter(s => s.companyId === formData.clientId && s.companyType === 'client'));
-    }
-    
-    if (formData.supplierId) {
-      setSupplierSigners(allSigners.filter(s => s.companyId === formData.supplierId && s.companyType === 'supplier'));
-    }
+    const loadData = async () => {
+      try {
+        const [clientsData, suppliersData, allSigners] = await Promise.all([
+          clientsAPI.list(),
+          suppliersAPI.list(),
+          signersAPI.list(),
+        ]);
+        setClients(clientsData as any[]);
+        setSuppliers(suppliersData as any[]);
+
+        if (formData.clientId) {
+          setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.clientId) && s.company_type === 'client'));
+        }
+
+        if (formData.supplierId) {
+          setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplierId) && s.company_type === 'supplier'));
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to load form data');
+      }
+    };
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    const loadSigners = async () => {
+      const allSigners = await signersAPI.list();
+      if (formData.clientId) {
+        setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.clientId) && s.company_type === 'client'));
+      }
+      if (formData.supplierId) {
+        setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplierId) && s.company_type === 'supplier'));
+      }
+    };
+    loadSigners();
   }, [formData.clientId, formData.supplierId]);
 
   const handleClientChange = (clientId: string) => {
-    const allSigners = getAuthorizedSigners();
-    setClientSigners(allSigners.filter(s => s.companyId === clientId && s.companyType === 'client'));
+    const fetchSigners = async () => {
+      const signers = await signersAPI.list();
+      setClientSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(clientId) && s.company_type === 'client'));
+    };
+    fetchSigners();
     setFormData({ ...formData, clientId, clientSignerId: '' });
   };
 
   const handleSupplierChange = (supplierId: string) => {
-    const allSigners = getAuthorizedSigners();
-    setSupplierSigners(allSigners.filter(s => s.companyId === supplierId && s.companyType === 'supplier'));
+    const fetchSigners = async () => {
+      const signers = await signersAPI.list();
+      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(supplierId) && s.company_type === 'supplier'));
+    };
+    fetchSigners();
     setFormData({ ...formData, supplierId, supplierSignerId: '' });
   };
 
@@ -151,7 +180,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 </SelectTrigger>
                 <SelectContent>
                   {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
+                    <SelectItem key={client.id} value={client.id.toString()}>
                       {client.name}
                     </SelectItem>
                   ))}
@@ -189,7 +218,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
+                    <SelectItem key={supplier.id} value={supplier.id.toString()}>
                       {supplier.name}
                     </SelectItem>
                   ))}

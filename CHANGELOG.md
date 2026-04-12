@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2026-04-12
+
+### Added
+- **Audit Logs API module** — New `audit-api.ts` frontend module with `list()`, `listByContract()`, and `listByEntityType()` methods calling existing `GET /api/audit-logs` backend endpoint
+- **Notification Settings API** — Backend `GET/PUT /api/notification-settings` endpoints with SQLite table, upsert logic, and default fallback; frontend `notification-settings-api.ts` module
+- **Notification creation via API** — `notificationsAPI.create()` method for generating expiration alerts through the backend instead of localStorage
+- **Comprehensive test coverage** — 5 new test files (audit-api, notification-settings-api) with 5 new tests; total test suite: 41 tests across 7 files
+
+### Changed
+- **Complete localStorage elimination** — All remaining localStorage dependencies migrated to backend API:
+  - **Audit logs** — `audit.ts` now reads from `GET /api/audit-logs`; `addAuditLog()` removed (backend auto-logs all CRUD operations)
+  - **Notifications** — `generateNotifications()` now POSTs to API instead of writing localStorage; `markNotificationAsRead`/`markNotificationAsAcknowledged` call PATCH API
+  - **Notification settings** — `getNotificationSettings`/`setNotificationSettings` replaced with `notificationSettingsAPI.get()`/`update()`
+  - **GlobalClientEffects** — Async notification generation via API
+  - **ContractDetailsPage** — Audit logs loaded from API with proper error handling
+  - **AuthorizedSignerForm** — Client/supplier dropdowns populated from API
+- **TypeScript error resolution** — All 24 remaining TypeScript errors fixed:
+  - **motion-dom variants** (11 errors) — Proper `Variants` type annotations with `as const` literals in `ForbiddenPage.tsx` and `NotFoundPage.tsx`
+  - **number/string mismatches** (7 errors) — `getContractInfo()` accepts `number | string`; `contractId` vs `contract_id` fixed in report components; Map type updated to `number | string`
+  - **unknown type casts** (2 errors) — Explicit `as any[]` casts on `contractsAPI.list()` results in `DocumentsPage.tsx` and `SupplementsPage.tsx`
+  - **Event target** (1 error) — `e.target as HTMLFormElement` in `SupplementForm.tsx`
+  - **Disabled prop** (2 errors) — Ternary expression instead of `&&` short-circuit in `UsersPage.tsx`
+- **storage.ts cleanup** — Removed 6 unused functions (`getNotifications`, `setNotifications`, `getAuditLogs`, `setAuditLogs`, `getNotificationSettings`, `setNotificationSettings`) and 3 STORAGE_KEYS entries
+- **AuditLog type** — Updated to match backend format (snake_case: `user_id`, `entity_type`, `entity_id`, `created_at`)
+
+### Technical Details
+- **Files Modified:** 22 (8 backend, 14 frontend)
+- **New Files:** 6 (2 API modules, 2 test files, 1 migration, 1 handler)
+- **Tests:** 41 passing (7 test files)
+- **TypeScript:** 0 errors (clean `tsc --noEmit` build)
+- **localStorage:** 0 remaining dependencies for audit, notifications, settings
+
+---
+
 ## [0.22.0] - 2026-04-12
 
 ### Added

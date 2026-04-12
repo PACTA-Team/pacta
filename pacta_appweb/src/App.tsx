@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import SetupPage from './pages/SetupPage';
 import ForbiddenPage from './pages/ForbiddenPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 // Lazy-loaded page components for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -137,6 +138,9 @@ function App() {
             </Suspense>
           </ProtectedRoute>
         } />
+        
+        {/* 404 Catch-all route - must be last */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       </CompanyProvider>
     </AuthProvider>

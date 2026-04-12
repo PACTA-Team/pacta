@@ -9,8 +9,8 @@ import {
   DollarSign,
   FileEdit
 } from 'lucide-react';
-import { Contract, Supplement } from '@/types';
-import { getContracts, getSupplements } from '@/lib/storage';
+import { contractsAPI } from '@/lib/contracts-api';
+import { supplementsAPI } from '@/lib/supplements-api';
 import ReportFiltersComponent, { ReportFilters, defaultFilters } from '@/components/reports/ReportFilters';
 import ContractStatusReport from '@/components/reports/ContractStatusReport';
 import FinancialReport from '@/components/reports/FinancialReport';
@@ -18,6 +18,7 @@ import ExpirationReport from '@/components/reports/ExpirationReport';
 import ClientSupplierReport from '@/components/reports/ClientSupplierReport';
 import SupplementsReport from '@/components/reports/SupplementsReport';
 import ModificationsReport from '@/components/reports/ModificationsReport';
+import { toast } from 'sonner';
 
 type ReportType =
   | 'status'
@@ -33,8 +34,8 @@ interface SavedPreset {
 }
 
 export default function ReportsPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [supplements, setSupplements] = useState<any[]>([]);
   const [activeReport, setActiveReport] = useState<ReportType>('status');
   const [filters, setFilters] = useState<ReportFilters>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters);
@@ -42,8 +43,19 @@ export default function ReportsPage() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
-    setContracts(getContracts());
-    setSupplements(getSupplements());
+    const loadData = async () => {
+      try {
+        const [contractsData, supplementsData] = await Promise.all([
+          contractsAPI.list(),
+          supplementsAPI.list(),
+        ]);
+        setContracts(contractsData as any[]);
+        setSupplements(supplementsData as any[]);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to load data');
+      }
+    };
+    loadData();
 
     // Load saved presets from localStorage
     const saved = localStorage.getItem('pacta_report_presets');
@@ -57,32 +69,32 @@ export default function ReportsPage() {
     let result = [...contracts];
 
     if (appliedFilters.dateFrom) {
-      result = result.filter(c => new Date(c.startDate) >= new Date(appliedFilters.dateFrom));
+      result = result.filter((c: any) => new Date(c.start_date) >= new Date(appliedFilters.dateFrom));
     }
     if (appliedFilters.dateTo) {
-      result = result.filter(c => new Date(c.endDate) <= new Date(appliedFilters.dateTo));
+      result = result.filter((c: any) => new Date(c.end_date) <= new Date(appliedFilters.dateTo));
     }
     if (appliedFilters.status !== 'all') {
-      result = result.filter(c => c.status === appliedFilters.status);
+      result = result.filter((c: any) => c.status === appliedFilters.status);
     }
     if (appliedFilters.type !== 'all') {
-      result = result.filter(c => c.type === appliedFilters.type);
+      result = result.filter((c: any) => c.type === appliedFilters.type);
     }
     if (appliedFilters.client) {
-      result = result.filter(c =>
+      result = result.filter((c: any) =>
         c.client?.toLowerCase().includes(appliedFilters.client?.toLowerCase())
       );
     }
     if (appliedFilters.supplier) {
-      result = result.filter(c =>
+      result = result.filter((c: any) =>
         c.supplier?.toLowerCase().includes(appliedFilters.supplier?.toLowerCase())
       );
     }
     if (appliedFilters.amountMin) {
-      result = result.filter(c => c.amount >= parseFloat(appliedFilters.amountMin));
+      result = result.filter((c: any) => c.amount >= parseFloat(appliedFilters.amountMin));
     }
     if (appliedFilters.amountMax) {
-      result = result.filter(c => c.amount <= parseFloat(appliedFilters.amountMax));
+      result = result.filter((c: any) => c.amount <= parseFloat(appliedFilters.amountMax));
     }
 
     return result;
@@ -93,10 +105,10 @@ export default function ReportsPage() {
     let result = [...supplements];
 
     if (appliedFilters.dateFrom) {
-      result = result.filter(s => new Date(s.createdAt) >= new Date(appliedFilters.dateFrom));
+      result = result.filter((s: any) => new Date(s.created_at) >= new Date(appliedFilters.dateFrom));
     }
     if (appliedFilters.dateTo) {
-      result = result.filter(s => new Date(s.createdAt) <= new Date(appliedFilters.dateTo));
+      result = result.filter((s: any) => new Date(s.created_at) <= new Date(appliedFilters.dateTo));
     }
 
     return result;

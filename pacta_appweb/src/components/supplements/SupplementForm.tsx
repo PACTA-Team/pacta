@@ -28,7 +28,7 @@ export default function SupplementForm({
 }: SupplementFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const form = e.currentTarget;
+    const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
 
     const data: CreateSupplementRequest = {

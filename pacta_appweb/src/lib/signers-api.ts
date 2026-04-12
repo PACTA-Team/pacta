@@ -1,4 +1,4 @@
-const BASE = '/api/contracts';
+const BASE = '/api/signers';
 
 async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
@@ -14,50 +14,41 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
   return res.json();
 }
 
-export interface CreateContractRequest {
-  contract_number: string;
-  title: string;
-  client_id: number;
-  supplier_id: number;
-  client_signer_id?: number;
-  supplier_signer_id?: number;
-  start_date: string;
-  end_date: string;
-  amount: number;
-  type?: string;
-  status?: string;
-  description?: string;
+export interface CreateSignerRequest {
+  company_id: number;
+  company_type: 'client' | 'supplier';
+  first_name: string;
+  last_name: string;
+  position: string;
+  phone: string;
+  email: string;
 }
 
-export interface UpdateContractRequest {
-  title: string;
-  client_id: number;
-  supplier_id: number;
-  client_signer_id?: number;
-  supplier_signer_id?: number;
-  start_date: string;
-  end_date: string;
-  amount: number;
-  type: string;
-  status: string;
-  description?: string;
+export interface UpdateSignerRequest {
+  company_id?: number;
+  company_type?: 'client' | 'supplier';
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  phone?: string;
+  email?: string;
 }
 
-export const contractsAPI = {
+export const signersAPI = {
   list: (signal?: AbortSignal) =>
     fetchJSON(BASE, { signal }),
 
   getById: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, { signal }),
 
-  create: (data: CreateContractRequest, signal?: AbortSignal) =>
+  create: (data: CreateSignerRequest, signal?: AbortSignal) =>
     fetchJSON(BASE, {
       method: 'POST',
       body: JSON.stringify(data),
       signal,
     }),
 
-  update: (id: number, data: UpdateContractRequest, signal?: AbortSignal) =>
+  update: (id: number, data: UpdateSignerRequest, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

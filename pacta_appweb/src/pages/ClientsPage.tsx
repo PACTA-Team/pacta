@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye, FileText } from 'lucide-react';
 import { Client } from '@/types';
-import { getClients, setClients, getCurrentUser } from '@/lib/storage';
+import { clientsAPI } from '@/lib/clients-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import ClientForm from '@/components/clients/ClientForm';
@@ -27,14 +27,14 @@ import {
 } from '@/components/ui/dialog';
 
 export default function ClientsPage() {
-  const [clients, setClientsState] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [clients, setClientsState] = useState<any[]>([]);
+  const [filteredClients, setFilteredClients] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | undefined>();
+  const [editingClient, setEditingClient] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
-  const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<number | null>(null);
+  const [viewingClient, setViewingClient] = useState<any | null>(null);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
@@ -45,10 +45,14 @@ export default function ClientsPage() {
     filterClients();
   }, [clients, searchTerm]);
 
-  const loadClients = () => {
-    const data = getClients();
-    setClientsState(data);
-  };
+  const loadClients = useCallback(async () => {
+    try {
+      const data = await clientsAPI.list();
+      setClientsState(data as any[]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load data');
+    }
+  }, []);
 
   const filterClients = () => {
     let filtered = [...clients];
@@ -56,7 +60,7 @@ export default function ClientsPage() {
     if (searchTerm) {
       filtered = filtered.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.reuCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.reu_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.address.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -64,36 +68,31 @@ export default function ClientsPage() {
     setFilteredClients(filtered);
   };
 
-  const handleCreateOrUpdate = (data: Omit<Client, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
-    const user = getCurrentUser();
-    if (!user) return;
-
-    const allClients = getClients();
-
-    if (editingClient) {
-      const updated: Client = {
-        ...editingClient,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
-      const newClients = allClients.map(c => c.id === updated.id ? updated : c);
-      setClients(newClients);
-      toast.success('Client updated successfully');
-    } else {
-      const newClient: Client = {
-        ...data,
-        id: Date.now().toString(),
-        createdBy: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setClients([...allClients, newClient]);
-      toast.success('Client created successfully');
+  const handleCreateOrUpdate = async (data: Omit<Client, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      if (editingClient) {
+        await clientsAPI.update(editingClient.id, {
+          name: data.name,
+          address: data.address,
+          reu_code: data.reuCode,
+          contacts: data.contacts,
+        });
+        toast.success('Client updated successfully');
+      } else {
+        await clientsAPI.create({
+          name: data.name,
+          address: data.address,
+          reu_code: data.reuCode,
+          contacts: data.contacts,
+        });
+        toast.success('Client created successfully');
+      }
+      setShowForm(false);
+      setEditingClient(undefined);
+      loadClients();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Operation failed');
     }
-
-    setShowForm(false);
-    setEditingClient(undefined);
-    loadClients();
   };
 
   const handleEdit = (client: Client) => {
@@ -105,7 +104,7 @@ export default function ClientsPage() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     if (!hasPermission('manager')) {
       toast.error('You do not have permission to delete clients');
       return;
@@ -114,17 +113,17 @@ export default function ClientsPage() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!clientToDelete) return;
-
-    const allClients = getClients();
-    const newClients = allClients.filter(c => c.id !== clientToDelete);
-    setClients(newClients);
-
-    toast.success('Client deleted successfully');
-    setDeleteDialogOpen(false);
-    setClientToDelete(null);
-    loadClients();
+    try {
+      await clientsAPI.delete(clientToDelete);
+      toast.success('Client deleted successfully');
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
+      loadClients();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    }
   };
 
   if (showForm) {
@@ -187,11 +186,11 @@ export default function ClientsPage() {
                   filteredClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.name}</TableCell>
-                      <TableCell>{client.reuCode}</TableCell>
+                      <TableCell>{client.reu_code}</TableCell>
                       <TableCell>{client.address}</TableCell>
                       <TableCell>{client.contacts}</TableCell>
                       <TableCell>
-                        {client.documentUrl ? (
+                        {client.document_url ? (
                           <FileText className="h-4 w-4 text-green-600" />
                         ) : (
                           <span className="text-muted-foreground text-sm">No document</span>
@@ -252,7 +251,7 @@ export default function ClientsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">REU Code</p>
-                  <p className="font-medium">{viewingClient.reuCode}</p>
+                  <p className="font-medium">{viewingClient.reu_code}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Address</p>
@@ -262,18 +261,18 @@ export default function ClientsPage() {
                   <p className="text-sm text-muted-foreground">Contacts</p>
                   <p className="font-medium">{viewingClient.contacts}</p>
                 </div>
-                {viewingClient.documentUrl && (
+                {viewingClient.document_url && (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground mb-2">Official Document</p>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       <a
-                        href={viewingClient.documentUrl}
+                        href={viewingClient.document_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        {viewingClient.documentName || 'View Document'}
+                        {viewingClient.document_name || 'View Document'}
                       </a>
                     </div>
                   </div>

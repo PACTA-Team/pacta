@@ -417,6 +417,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.23.0 | Latest | Complete localStorage elimination (audit logs, notifications, settings), notification settings backend API, all 24 TypeScript errors fixed, 41 tests passing, clean `tsc --noEmit` build |
 | v0.22.0 | Latest | Setup mode auto-advance (click card to advance, tactile feedback, focus-visible styles, "Cambiar a..." toggle) |
 | v0.21.0 | Latest | Setup flow security (fresh install redirect to /setup, /setup guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | v0.20.4 | - | Fix missing migration 016 (documents/notifications/audit_logs company_id), correct migration ordering |
@@ -449,6 +450,36 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.23.0)
+
+**localStorage Elimination:**
+- [x] `audit-api.ts` module — `list()`, `listByContract()`, `listByEntityType()` calling `GET /api/audit-logs`
+- [x] `audit.ts` refactored — `addAuditLog()` removed, `getContractAuditLogs()` reads from API
+- [x] `notifications.ts` migrated — `generateNotifications()` POSTs to API, `markNotificationAsRead`/`markNotificationAsAcknowledged` call PATCH API
+- [x] `notification-settings-api.ts` module — `get()`, `update()` calling `GET/PUT /api/notification-settings`
+- [x] Backend notification settings — migration 021, `notification_settings.go` handler, routes registered
+- [x] `notifications-api.ts` — `create()` method added
+- [x] `GlobalClientEffects.tsx` — async notification generation via API
+- [x] `ContractDetailsPage.tsx` — audit logs from API with error handling
+- [x] `AuthorizedSignerForm.tsx` — client/supplier dropdowns from API
+- [x] `storage.ts` cleanup — 6 functions removed, 3 STORAGE_KEYS entries removed
+- [x] `AuditLog` type updated to match backend format (snake_case)
+
+**TypeScript Error Resolution (24 errors fixed):**
+- [x] `ForbiddenPage.tsx` — 5 motion-dom variant errors fixed with `Variants` type + `as const`
+- [x] `NotFoundPage.tsx` — 6 motion-dom variant errors fixed with `Variants` type + `as const`
+- [x] `ModificationsReport.tsx` — 2 number/string mismatch errors fixed (`getContractInfo` accepts `number | string`)
+- [x] `SupplementsReport.tsx` — 5 errors fixed (signature, `contractId` vs `contract_id`, Map type)
+- [x] `DocumentsPage.tsx` — 1 unknown type error fixed (`as any[]` cast)
+- [x] `SupplementsPage.tsx` — 1 unknown type error fixed (`as any` cast)
+- [x] `SupplementForm.tsx` — 1 event target error fixed (`e.target as HTMLFormElement`)
+- [x] `UsersPage.tsx` — 2 disabled prop errors fixed (ternary instead of `&&`)
+
+**Verification:**
+- [x] 0 TypeScript errors (`tsc --noEmit` clean)
+- [x] 41/41 tests passing (7 test files)
+- [x] 0 localStorage dependencies for audit, notifications, settings
 
 ### Completed (v0.21.0)
 
