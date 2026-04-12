@@ -28,16 +28,16 @@ UPDATE authorized_signers SET company_id = 1 WHERE company_id IS NULL AND delete
 UPDATE contracts SET company_id = 1 WHERE company_id IS NULL AND deleted_at IS NULL;
 
 -- Link all supplements to default company
-UPDATE supplements SET company_id = 1 WHERE company_id IS NULL AND deleted_at IS NULL;
+UPDATE supplements SET company_id = 1 WHERE company_id IS NULL;
 
 -- Link all documents to default company
-UPDATE documents SET company_id = 1 WHERE company_id IS NULL AND deleted_at IS NULL;
+UPDATE documents SET company_id = 1 WHERE company_id IS NULL;
 
 -- Link all notifications to default company
-UPDATE notifications SET company_id = 1 WHERE company_id IS NULL AND deleted_at IS NULL;
+UPDATE notifications SET company_id = 1 WHERE company_id IS NULL;
 
 -- Link all audit logs to default company
-UPDATE audit_logs SET company_id = 1 WHERE company_id IS NULL AND deleted_at IS NULL;
+UPDATE audit_logs SET company_id = 1 WHERE company_id IS NULL;
 
 -- Create user_companies entries for all existing users
 INSERT OR IGNORE INTO user_companies (user_id, company_id, is_default)
