@@ -415,7 +415,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.20.4 | Latest | Fix missing migration 016 (documents/notifications/audit_logs company_id), correct migration ordering |
+| v0.21.0 | Latest | Setup flow security (fresh install redirect to /setup, /setup guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
+| v0.20.4 | - | Fix missing migration 016 (documents/notifications/audit_logs company_id), correct migration ordering |
 | v0.20.3 | - | Fix backfill migration referencing non-existent `deleted_at` column on supplements table |
 | v0.20.2 | - | Fix migration ordering (backfill runs after all ALTER TABLE migrations) |
 | v0.20.1 | - | Remove redundant migration 015 (company_id already in authorized_signers CREATE TABLE) |

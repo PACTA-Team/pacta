@@ -5,10 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.20.2] - 2026-04-12
+## [0.21.0] - 2026-04-12
+
+### Added
+- **ForbiddenPage (403)** — Access denied page for users attempting to reach `/setup` after configuration is complete
+- **Setup route guard** — SetupPage checks `/api/setup/status` and redirects to `/403` if setup already completed
 
 ### Fixed
-- **Migration ordering** -- Backfill migration (019) was running before `company_id` columns were added to `supplements` (017) and `sessions` (018). Renumbered so all ALTER TABLE migrations complete before backfill.
+- **HomePage setup redirect bug** — Fixed reading `data.firstRun` (always undefined) to `data.needs_setup` (correct API field), enabling fresh installs to redirect to `/setup`
+- **AuthContext no longer redirects to /setup on 401** — Only redirects on network errors, not on authentication failures
+
+### Technical Details
+- **Files Created:** 1 (`ForbiddenPage.tsx`)
+- **Files Modified:** 3 (`HomePage.tsx`, `SetupPage.tsx`, `App.tsx`)
+- **Lines Added:** ~60
+
+---
+
+## [0.20.4] - 2026-04-12
+
+### Fixed
+- **Missing migration 016** — Added `company_id` columns for documents, notifications, audit_logs that were lost during goose migration conversion
+- **Migration ordering** — Backfill (020) now runs after all ALTER TABLE migrations
 
 ---
 
