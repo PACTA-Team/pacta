@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-04-11
+
+### Added
+- **Landing page** -- Modern landing page with Framer Motion animations, animated geometric shapes, and PACTA branding
+- **AnimatedLogo component** -- Reusable animated SVG logo with scale-in entrance and continuous floating effect
+- **HeroSection** -- Full-screen hero with animated geometric shapes, gradient text, and "Start Now" CTA button
+- **FeaturesSection** -- Three feature cards with staggered scroll-triggered animations and hover effects
+- **LoginPage branding** -- Animated PACTA logo on login page with spring animation and hover effect
+
+### Changed
+- **HomePage** -- Replaced direct login form with full landing page composition (navbar + hero + features)
+- **LoginPage** -- Removed duplicate gradient background (LoginForm already provides it)
+
+### Fixed
+- **Theme toggle broken since v0.2.0** -- Root cause: `ThemeProvider` from `next-themes` was never mounted in `main.tsx`. Fixed by wrapping `<App />` with `<ThemeProvider defaultTheme="system" storageKey="pacta-theme">`
+- **Setup redirect preserved** -- Landing page retains first-run setup check and redirect to `/setup`
+
+### Technical Details
+- **Files Created:** 4 (`AnimatedLogo.tsx`, `LandingNavbar.tsx`, `HeroSection.tsx`, `FeaturesSection.tsx`)
+- **Files Modified:** 3 (`main.tsx`, `HomePage.tsx`, `LoginPage.tsx`)
+- **Dependencies:** Framer Motion (already in package.json)
+
+---
+
 ## [0.17.0] - 2026-04-11
 
 ### Added
