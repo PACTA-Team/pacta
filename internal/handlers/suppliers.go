@@ -29,10 +29,11 @@ func (h *Handler) HandleSuppliers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
 	rows, err := h.DB.Query(`
 		SELECT id, name, address, reu_code, contacts, created_at, updated_at
-		FROM suppliers WHERE deleted_at IS NULL ORDER BY name
-	`)
+		FROM suppliers WHERE deleted_at IS NULL AND company_id = ? ORDER BY name
+	`, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -59,6 +60,7 @@ type createSupplierRequest struct {
 }
 
 func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
 	var req createSupplierRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Error(w, http.StatusBadRequest, "invalid request")
@@ -66,15 +68,15 @@ func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := h.getUserID(r)
 	result, err := h.DB.Exec(
-		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by) VALUES (?, ?, ?, ?, ?)",
-		req.Name, req.Address, req.REUCode, req.Contacts, userID)
+		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
+		req.Name, req.Address, req.REUCode, req.Contacts, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	id64, _ := result.LastInsertId()
 	id := int(id64)
-	h.auditLog(r, userID, "create", "supplier", &id, nil, map[string]interface{}{
+	h.auditLog(r, userID, companyID, "create", "supplier", &id, nil, map[string]interface{}{
 		"id":       id,
 		"name":     req.Name,
 		"address":  req.Address,
@@ -94,7 +96,7 @@ func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		h.getSupplier(w, id)
+		h.getSupplier(w, r, id)
 	case http.MethodPut:
 		h.updateSupplier(w, r, id)
 	case http.MethodDelete:
@@ -104,12 +106,13 @@ func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getSupplier(w http.ResponseWriter, id int) {
+func (h *Handler) getSupplier(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var s supplierRow
 	err := h.DB.QueryRow(`
 		SELECT id, name, address, reu_code, contacts, created_at, updated_at
-		FROM suppliers WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&s.ID, &s.Name, &s.Address, &s.REUCode, &s.Contacts, &s.CreatedAt, &s.UpdatedAt)
+		FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+	`, id, companyID).Scan(&s.ID, &s.Name, &s.Address, &s.REUCode, &s.Contacts, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
@@ -118,6 +121,7 @@ func (h *Handler) getSupplier(w http.ResponseWriter, id int) {
 }
 
 func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var req createSupplierRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Error(w, http.StatusBadRequest, "invalid request")
@@ -125,7 +129,7 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 	}
 	// Fetch previous state
 	var prevName, prevAddress, prevREUCode, prevContacts string
-	err := h.DB.QueryRow("SELECT name, address, reu_code, contacts FROM suppliers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName, &prevAddress, &prevREUCode, &prevContacts)
+	err := h.DB.QueryRow("SELECT name, address, reu_code, contacts FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&prevName, &prevAddress, &prevREUCode, &prevContacts)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
@@ -133,8 +137,8 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 
 	result, err := h.DB.Exec(`
 		UPDATE suppliers SET name=?, address=?, reu_code=?, contacts=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
-	`, req.Name, req.Address, req.REUCode, req.Contacts, id)
+		WHERE id=? AND deleted_at IS NULL AND company_id = ?
+	`, req.Name, req.Address, req.REUCode, req.Contacts, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplier")
 		return
@@ -144,7 +148,7 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
-	h.auditLog(r, h.getUserID(r), "update", "supplier", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "update", "supplier", &id, map[string]interface{}{
 		"id":       id,
 		"name":     prevName,
 		"address":  prevAddress,
@@ -161,15 +165,16 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 }
 
 func (h *Handler) deleteSupplier(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var prevName string
-	err := h.DB.QueryRow("SELECT name FROM suppliers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName)
+	err := h.DB.QueryRow("SELECT name FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&prevName)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
 	result, err := h.DB.Exec(
-		"UPDATE suppliers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
-		id)
+		"UPDATE suppliers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL AND company_id = ?",
+		id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete supplier")
 		return
@@ -179,7 +184,7 @@ func (h *Handler) deleteSupplier(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
-	h.auditLog(r, h.getUserID(r), "delete", "supplier", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "delete", "supplier", &id, map[string]interface{}{
 		"id":   id,
 		"name": prevName,
 	}, nil)

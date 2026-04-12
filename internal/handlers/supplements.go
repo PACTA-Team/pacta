@@ -37,12 +37,13 @@ func (h *Handler) HandleSupplements(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listSupplements(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
 	rows, err := h.DB.Query(`
 		SELECT id, internal_id, contract_id, supplement_number, description,
 		       effective_date, modifications, status, client_signer_id, supplier_signer_id,
 		       created_at, updated_at
-		FROM supplements WHERE deleted_at IS NULL ORDER BY created_at DESC
-	`)
+		FROM supplements WHERE deleted_at IS NULL AND company_id = ? ORDER BY created_at DESC
+	`, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list supplements")
 		return
@@ -66,14 +67,14 @@ func (h *Handler) listSupplements(w http.ResponseWriter, r *http.Request) {
 	h.JSON(w, http.StatusOK, supplements)
 }
 
-func (h *Handler) generateSupplementInternalID() (string, error) {
+func (h *Handler) generateSupplementInternalID(companyID int) (string, error) {
 	year := time.Now().Year()
 	var maxNum sql.NullInt64
 	err := h.DB.QueryRow(`
 		SELECT MAX(CAST(SUBSTR(internal_id, 10) AS INTEGER))
 		FROM supplements
-		WHERE internal_id LIKE 'SPL-' || ? || '-%'
-	`, year).Scan(&maxNum)
+		WHERE internal_id LIKE 'SPL-' || ? || '-%' AND company_id = ?
+	`, year, companyID).Scan(&maxNum)
 	if err != nil {
 		return "", err
 	}
@@ -101,9 +102,11 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate contract exists
+	companyID := h.GetCompanyID(r)
+
+	// Validate contract exists and belongs to this company
 	var contractExists int
-	if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL", req.ContractID).Scan(&contractExists); err != nil {
+	if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?", req.ContractID, companyID).Scan(&contractExists); err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create supplement")
 		return
 	}
@@ -115,7 +118,7 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 	// Validate signers if provided
 	if req.ClientSignerID != nil {
 		var signerExists int
-		if err := h.DB.QueryRow("SELECT COUNT(*) FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", *req.ClientSignerID).Scan(&signerExists); err != nil {
+		if err := h.DB.QueryRow("SELECT COUNT(*) FROM authorized_signers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", *req.ClientSignerID, companyID).Scan(&signerExists); err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to create supplement")
 			return
 		}
@@ -126,7 +129,7 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.SupplierSignerID != nil {
 		var signerExists int
-		if err := h.DB.QueryRow("SELECT COUNT(*) FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", *req.SupplierSignerID).Scan(&signerExists); err != nil {
+		if err := h.DB.QueryRow("SELECT COUNT(*) FROM authorized_signers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", *req.SupplierSignerID, companyID).Scan(&signerExists); err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to create supplement")
 			return
 		}
@@ -136,7 +139,7 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	internalID, err := h.generateSupplementInternalID()
+	internalID, err := h.generateSupplementInternalID(companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to generate internal ID")
 		return
@@ -145,18 +148,18 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
 	result, err := h.DB.Exec(`
 		INSERT INTO supplements (internal_id, contract_id, supplement_number, description,
-			effective_date, modifications, status, client_signer_id, supplier_signer_id, created_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			effective_date, modifications, status, client_signer_id, supplier_signer_id, created_by, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, internalID, req.ContractID, req.SupplementNumber, req.Description,
 		req.EffectiveDate, req.Modifications, "draft",
-		req.ClientSignerID, req.SupplierSignerID, userID)
+		req.ClientSignerID, req.SupplierSignerID, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create supplement")
 		return
 	}
 	id64, _ := result.LastInsertId()
 	id := int(id64)
-	h.auditLog(r, userID, "create", "supplement", &id, nil, map[string]interface{}{
+	h.auditLog(r, userID, companyID, "create", "supplement", &id, nil, map[string]interface{}{
 		"id":                id,
 		"internal_id":       internalID,
 		"contract_id":       req.ContractID,
@@ -180,7 +183,7 @@ func (h *Handler) HandleSupplementByID(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		h.getSupplement(w, id)
+		h.getSupplement(w, r, id)
 	case http.MethodPut:
 		h.updateSupplement(w, r, id)
 	case http.MethodDelete:
@@ -190,14 +193,15 @@ func (h *Handler) HandleSupplementByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getSupplement(w http.ResponseWriter, id int) {
+func (h *Handler) getSupplement(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var s supplementRow
 	err := h.DB.QueryRow(`
 		SELECT id, internal_id, contract_id, supplement_number, description,
 		       effective_date, modifications, status, client_signer_id, supplier_signer_id,
 		       created_at, updated_at
-		FROM supplements WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&s.ID, &s.InternalID, &s.ContractID, &s.SupplementNumber,
+		FROM supplements WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+	`, id, companyID).Scan(&s.ID, &s.InternalID, &s.ContractID, &s.SupplementNumber,
 		&s.Description, &s.EffectiveDate, &s.Modifications, &s.Status,
 		&s.ClientSignerID, &s.SupplierSignerID, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
@@ -214,10 +218,12 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
+	companyID := h.GetCompanyID(r)
+
 	// Validate contract exists if contract_id is provided
 	if req.ContractID > 0 {
 		var contractExists int
-		if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL", req.ContractID).Scan(&contractExists); err != nil {
+		if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?", req.ContractID, companyID).Scan(&contractExists); err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to update supplement")
 			return
 		}
@@ -235,8 +241,8 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 	err := h.DB.QueryRow(`
 		SELECT contract_id, supplement_number, description, effective_date,
 		       modifications, status, client_signer_id, supplier_signer_id
-		FROM supplements WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&prevContractID, &prevSupplementNumber, &prevDescription,
+		FROM supplements WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+	`, id, companyID).Scan(&prevContractID, &prevSupplementNumber, &prevDescription,
 		&prevEffectiveDate, &prevModifications, &prevStatus,
 		&prevClientSignerID, &prevSupplierSignerID)
 	if err != nil {
@@ -248,16 +254,16 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 		UPDATE supplements SET contract_id=?, supplement_number=?, description=?,
 			effective_date=?, modifications=?, status=?, client_signer_id=?, supplier_signer_id=?,
 			updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
+		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.ContractID, req.SupplementNumber, req.Description,
 		req.EffectiveDate, req.Modifications, "draft",
-		req.ClientSignerID, req.SupplierSignerID, id)
+		req.ClientSignerID, req.SupplierSignerID, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplement")
 		return
 	}
 
-	h.auditLog(r, h.getUserID(r), "update", "supplement", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "update", "supplement", &id, map[string]interface{}{
 		"id":                id,
 		"contract_id":       prevContractID,
 		"supplement_number": prevSupplementNumber,
@@ -278,19 +284,20 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 }
 
 func (h *Handler) deleteSupplement(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var prevSupplementNumber, prevStatus string
-	err := h.DB.QueryRow("SELECT supplement_number, status FROM supplements WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevSupplementNumber, &prevStatus)
+	err := h.DB.QueryRow("SELECT supplement_number, status FROM supplements WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&prevSupplementNumber, &prevStatus)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplement not found")
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE supplements SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
+	_, err = h.DB.Exec("UPDATE supplements SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL AND company_id = ?", id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete supplement")
 		return
 	}
-	h.auditLog(r, h.getUserID(r), "delete", "supplement", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "delete", "supplement", &id, map[string]interface{}{
 		"id":                id,
 		"supplement_number": prevSupplementNumber,
 		"status":            prevStatus,
@@ -312,6 +319,8 @@ func (h *Handler) HandleSupplementStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	companyID := h.GetCompanyID(r)
+
 	var req struct {
 		Status string `json:"status"`
 	}
@@ -326,7 +335,7 @@ func (h *Handler) HandleSupplementStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	var currentStatus string
-	err = h.DB.QueryRow("SELECT status FROM supplements WHERE id = ? AND deleted_at IS NULL", id).Scan(&currentStatus)
+	err = h.DB.QueryRow("SELECT status FROM supplements WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&currentStatus)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplement not found")
 		return
@@ -350,13 +359,13 @@ func (h *Handler) HandleSupplementStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE supplements SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL", req.Status, id)
+	_, err = h.DB.Exec("UPDATE supplements SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL AND company_id = ?", req.Status, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplement status")
 		return
 	}
 
-	h.auditLog(r, h.getUserID(r), "status_change", "supplement", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "status_change", "supplement", &id, map[string]interface{}{
 		"id":     id,
 		"status": currentStatus,
 	}, map[string]interface{}{

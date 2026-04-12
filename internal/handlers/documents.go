@@ -38,6 +38,7 @@ func (h *Handler) HandleDocuments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listDocuments(w http.ResponseWriter, r *http.Request) {
+	companyID := h.GetCompanyID(r)
 	entityIDStr := r.URL.Query().Get("entity_id")
 	entityType := r.URL.Query().Get("entity_type")
 
@@ -54,9 +55,9 @@ func (h *Handler) listDocuments(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.Query(`
 		SELECT id, entity_id, entity_type, filename, mime_type, size_bytes, created_at
-		FROM documents WHERE entity_id = ? AND entity_type = ?
+		FROM documents WHERE entity_id = ? AND entity_type = ? AND company_id = ?
 		ORDER BY created_at DESC
-	`, entityID, entityType)
+	`, entityID, entityType, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list documents")
 		return
@@ -119,7 +120,7 @@ func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var contractExists int
-	if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL", entityID).Scan(&contractExists); err != nil {
+	if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?", entityID, companyID).Scan(&contractExists); err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to upload document")
 		return
 	}
@@ -162,9 +163,9 @@ func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
 
 	userID := h.getUserID(r)
 	result, err := h.DB.Exec(`
-		INSERT INTO documents (entity_id, entity_type, filename, storage_path, mime_type, size_bytes, uploaded_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, entityID, entityType, header.Filename, storagePath, mimeType, size, userID)
+		INSERT INTO documents (entity_id, entity_type, filename, storage_path, mime_type, size_bytes, uploaded_by, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, entityID, entityType, header.Filename, storagePath, mimeType, size, userID, companyID)
 	if err != nil {
 		os.Remove(storagePath)
 		h.Error(w, http.StatusInternalServerError, "failed to save document")
@@ -174,7 +175,7 @@ func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
 	id64, _ := result.LastInsertId()
 	id := int(id64)
 
-	h.auditLog(r, userID, "create", "document", &id, nil, map[string]interface{}{
+	h.auditLog(r, userID, companyID, "create", "document", &id, nil, map[string]interface{}{
 		"id":          id,
 		"entity_id":   entityID,
 		"entity_type": entityType,
@@ -212,7 +213,7 @@ func (h *Handler) HandleDocumentByID(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		h.downloadDocument(w, id)
+		h.downloadDocument(w, r, id)
 	case http.MethodDelete:
 		h.deleteDocument(w, r, id)
 	default:
@@ -220,14 +221,15 @@ func (h *Handler) HandleDocumentByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) downloadDocument(w http.ResponseWriter, id int) {
+func (h *Handler) downloadDocument(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var filename, storagePath, mimeType string
 	var sizeBytes int64
 
 	err := h.DB.QueryRow(`
 		SELECT filename, storage_path, mime_type, size_bytes
-		FROM documents WHERE id = ?
-	`, id).Scan(&filename, &storagePath, &mimeType, &sizeBytes)
+		FROM documents WHERE id = ? AND company_id = ?
+	`, id, companyID).Scan(&filename, &storagePath, &mimeType, &sizeBytes)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "document not found")
 		return
@@ -246,14 +248,15 @@ func (h *Handler) downloadDocument(w http.ResponseWriter, id int) {
 }
 
 func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int) {
+	companyID := h.GetCompanyID(r)
 	var storagePath, filename string
-	err := h.DB.QueryRow("SELECT storage_path, filename FROM documents WHERE id = ?", id).Scan(&storagePath, &filename)
+	err := h.DB.QueryRow("SELECT storage_path, filename FROM documents WHERE id = ? AND company_id = ?", id, companyID).Scan(&storagePath, &filename)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "document not found")
 		return
 	}
 
-	_, err = h.DB.Exec("DELETE FROM documents WHERE id = ?", id)
+	_, err = h.DB.Exec("DELETE FROM documents WHERE id = ? AND company_id = ?", id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete document")
 		return
@@ -261,7 +264,7 @@ func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int)
 
 	os.Remove(storagePath)
 
-	h.auditLog(r, h.getUserID(r), "delete", "document", &id, map[string]interface{}{
+	h.auditLog(r, h.getUserID(r), companyID, "delete", "document", &id, map[string]interface{}{
 		"id":       id,
 		"filename": filename,
 	}, nil)

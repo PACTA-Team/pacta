@@ -16,6 +16,7 @@ type User struct {
 
 type Client struct {
 	ID        int       `json:"id"`
+	CompanyID int       `json:"company_id"`
 	Name      string    `json:"name"`
 	Address   *string   `json:"address,omitempty"`
 	REUCode   *string   `json:"reu_code,omitempty"`
@@ -27,6 +28,7 @@ type Client struct {
 
 type Supplier struct {
 	ID        int       `json:"id"`
+	CompanyID int       `json:"company_id"`
 	Name      string    `json:"name"`
 	Address   *string   `json:"address,omitempty"`
 	REUCode   *string   `json:"reu_code,omitempty"`
@@ -52,6 +54,7 @@ type Signer struct {
 
 type Contract struct {
 	ID               int        `json:"id"`
+	CompanyID        int        `json:"company_id"`
 	InternalID       string     `json:"internal_id"`
 	ContractNumber   string     `json:"contract_number"`
 	Title            string     `json:"title"`
@@ -81,6 +84,7 @@ type DashboardStats struct {
 
 type AuditLog struct {
 	ID            int       `json:"id"`
+	CompanyID     int       `json:"company_id"`
 	UserID        *int      `json:"user_id,omitempty"`
 	Action        string    `json:"action"`
 	EntityType    string    `json:"entity_type"`
@@ -93,6 +97,7 @@ type AuditLog struct {
 
 type Supplement struct {
 	ID               int        `json:"id"`
+	CompanyID        int        `json:"company_id"`
 	InternalID       string     `json:"internal_id"`
 	ContractID       int        `json:"contract_id"`
 	SupplementNumber string     `json:"supplement_number"`

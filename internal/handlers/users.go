@@ -142,7 +142,7 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 	id64, _ := result.LastInsertId()
 	id := int(id64)
 
-	h.auditLog(r, userID, "create", "user", &id, nil, map[string]interface{}{
+	h.auditLog(r, userID, 0, "create", "user", &id, nil, map[string]interface{}{
 		"id":    id,
 		"name":  req.Name,
 		"email": req.Email,
@@ -206,7 +206,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 		return
 	}
 
-	h.auditLog(r, currentUserID, "update", "user", &id, map[string]interface{}{
+	h.auditLog(r, currentUserID, 0, "update", "user", &id, map[string]interface{}{
 		"name":  prevName,
 		"email": prevEmail,
 		"role":  prevRole,
@@ -239,7 +239,7 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 		return
 	}
 
-	h.auditLog(r, currentUserID, "delete", "user", &id, map[string]interface{}{
+	h.auditLog(r, currentUserID, 0, "delete", "user", &id, map[string]interface{}{
 		"id":    id,
 		"name":  prevName,
 		"email": prevEmail,
@@ -276,7 +276,7 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request, id int) 
 		return
 	}
 
-	h.auditLog(r, h.getUserID(r), "reset_password", "user", &id, nil, nil)
+	h.auditLog(r, h.getUserID(r), 0, "reset_password", "user", &id, nil, nil)
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "password reset"})
 }
@@ -308,7 +308,7 @@ func (h *Handler) updateUserStatus(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
-	h.auditLog(r, currentUserID, "update_status", "user", &id, nil, map[string]interface{}{
+	h.auditLog(r, currentUserID, 0, "update_status", "user", &id, nil, map[string]interface{}{
 		"id":     id,
 		"status": req.Status,
 	})

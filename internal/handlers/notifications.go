@@ -33,6 +33,7 @@ func (h *Handler) HandleNotifications(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) listNotifications(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
+	companyID := h.GetCompanyID(r)
 
 	unreadOnly := r.URL.Query().Get("unread") == "true"
 
@@ -46,16 +47,16 @@ func (h *Handler) listNotifications(w http.ResponseWriter, r *http.Request) {
 	if unreadOnly {
 		rows, err = h.DB.Query(`
 			SELECT id, user_id, type, title, message, entity_id, entity_type, read_at, created_at
-			FROM notifications WHERE user_id = ? AND read_at IS NULL
+			FROM notifications WHERE user_id = ? AND company_id = ? AND read_at IS NULL
 			ORDER BY created_at DESC
-		`, userID)
+		`, userID, companyID)
 	} else {
 		rows, err = h.DB.Query(`
 			SELECT id, user_id, type, title, message, entity_id, entity_type, read_at, created_at
-			FROM notifications WHERE user_id = ?
+			FROM notifications WHERE user_id = ? AND company_id = ?
 			ORDER BY created_at DESC
 			LIMIT 100
-		`, userID)
+		`, userID, companyID)
 	}
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list notifications")
@@ -109,10 +110,12 @@ func (h *Handler) createNotification(w http.ResponseWriter, r *http.Request) {
 		targetUserID = &uid
 	}
 
+	companyID := h.GetCompanyID(r)
+
 	result, err := h.DB.Exec(`
-		INSERT INTO notifications (user_id, type, title, message, entity_id, entity_type)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, targetUserID, req.Type, req.Title, req.Message, req.EntityID, req.EntityType)
+		INSERT INTO notifications (user_id, type, title, message, entity_id, entity_type, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, targetUserID, req.Type, req.Title, req.Message, req.EntityID, req.EntityType, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create notification")
 		return
@@ -152,11 +155,12 @@ func (h *Handler) HandleNotificationByID(w http.ResponseWriter, r *http.Request)
 
 func (h *Handler) getNotification(w http.ResponseWriter, r *http.Request, id int) {
 	userID := h.getUserID(r)
+	companyID := h.GetCompanyID(r)
 	var n Notification
 	err := h.DB.QueryRow(`
 		SELECT id, user_id, type, title, message, entity_id, entity_type, read_at, created_at
-		FROM notifications WHERE id = ? AND user_id = ?
-	`, id, userID).Scan(&n.ID, &n.UserID, &n.Type, &n.Title, &n.Message,
+		FROM notifications WHERE id = ? AND user_id = ? AND company_id = ?
+	`, id, userID, companyID).Scan(&n.ID, &n.UserID, &n.Type, &n.Title, &n.Message,
 		&n.EntityID, &n.EntityType, &n.ReadAt, &n.CreatedAt)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "notification not found")
@@ -167,10 +171,11 @@ func (h *Handler) getNotification(w http.ResponseWriter, r *http.Request, id int
 
 func (h *Handler) markNotificationRead(w http.ResponseWriter, r *http.Request, id int) {
 	userID := h.getUserID(r)
+	companyID := h.GetCompanyID(r)
 
 	_, err := h.DB.Exec(`
-		UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?
-	`, id, userID)
+		UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND company_id = ?
+	`, id, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to mark notification as read")
 		return
@@ -181,8 +186,9 @@ func (h *Handler) markNotificationRead(w http.ResponseWriter, r *http.Request, i
 
 func (h *Handler) deleteNotification(w http.ResponseWriter, r *http.Request, id int) {
 	userID := h.getUserID(r)
+	companyID := h.GetCompanyID(r)
 
-	_, err := h.DB.Exec("DELETE FROM notifications WHERE id = ? AND user_id = ?", id, userID)
+	_, err := h.DB.Exec("DELETE FROM notifications WHERE id = ? AND user_id = ? AND company_id = ?", id, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete notification")
 		return
@@ -199,10 +205,11 @@ func (h *Handler) HandleMarkAllNotificationsRead(w http.ResponseWriter, r *http.
 	}
 
 	userID := h.getUserID(r)
+	companyID := h.GetCompanyID(r)
 
 	_, err := h.DB.Exec(`
-		UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND read_at IS NULL
-	`, userID)
+		UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND company_id = ? AND read_at IS NULL
+	`, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to mark all notifications as read")
 		return
@@ -219,11 +226,12 @@ func (h *Handler) HandleNotificationCount(w http.ResponseWriter, r *http.Request
 	}
 
 	userID := h.getUserID(r)
+	companyID := h.GetCompanyID(r)
 
 	var count int
 	err := h.DB.QueryRow(`
-		SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL
-	`, userID).Scan(&count)
+		SELECT COUNT(*) FROM notifications WHERE user_id = ? AND company_id = ? AND read_at IS NULL
+	`, userID, companyID).Scan(&count)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to count notifications")
 		return
