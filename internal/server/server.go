@@ -73,6 +73,8 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Get("/api/notifications", h.HandleNotifications)
 			r.Get("/api/notifications/count", h.HandleNotificationCount)
 			r.Get("/api/notifications/{id}", h.HandleNotificationByID)
+			r.Get("/api/notification-settings", h.HandleNotificationSettings)
+			r.Put("/api/notification-settings", h.HandleNotificationSettings)
 		})
 
 		// Editor+ (create/edit)
