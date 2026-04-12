@@ -571,11 +571,39 @@ _No active work in progress._
 
 ### Pending — Backend (Highest Priority)
 
+- [ ] **Multi-company feature** — See `docs/plans/2026-04-11-multi-company-design.md`
+  - [ ] Migration 013: Create `companies` + `user_companies` tables
+  - [ ] Migration 014: Add `company_id` to `users`, `clients`, `suppliers`
+  - [ ] Migration 015: Add `company_id` to `authorized_signers`, `contracts`, `supplements`
+  - [ ] Migration 016: Add `company_id` to `documents`, `notifications`, `audit_logs`
+  - [ ] Migration 017: Backfill — create default company, link all existing records
+  - [ ] `CompanyMiddleware` — company scoping middleware with context injection
+  - [ ] Company CRUD endpoints (`GET/POST/PUT/DELETE /api/companies`)
+  - [ ] User company membership endpoints (`GET /api/users/me/companies`, `PATCH /api/users/me/company/{id}`)
+  - [ ] Session struct update — add `CompanyID` field
+  - [ ] Setup wizard redesign — mode selection (single/multi), parent + subsidiaries
+  - [ ] Update all existing handlers to use `company_id` from context in queries
+  - [ ] Company validation on entity creation (FK checks, 400/403 on invalid)
 - [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
 - [ ] **Rate limiting on login endpoint** — Brute force protection
 
 ### Pending — Frontend
 
+- [ ] **Multi-company frontend**
+  - [ ] `CompanyContext` React context provider
+  - [ ] `CompanySelector` component (navbar dropdown)
+  - [ ] `CompanyBadge` component (type indicator)
+  - [ ] `CompanyForm` component (create/edit)
+  - [ ] `CompanyHierarchy` component (tree view)
+  - [ ] `SetupModeSelector` component (wizard step 1)
+  - [ ] `SubsidiaryStep` component (wizard step for subsidiaries)
+  - [ ] Companies page (`/companies`) — list, add, edit, delete
+  - [ ] Company settings page (`/settings/company`)
+  - [ ] Setup wizard redesign — mode selection + multi-step flow
+  - [ ] Update all API client modules to include `company_id` from context
+  - [ ] TypeScript types: `Company`, `UserCompany`
+  - [ ] Dashboard company-scoped metrics
+  - [ ] All CRUD pages company-scoped (contracts, clients, suppliers, signers, supplements)
 - [ ] **Document upload UI** — Requires backend endpoints first
 - [ ] **Notification center UI** — Requires backend endpoints first
 - [ ] **User management page** — Requires backend endpoints first (admin only)
