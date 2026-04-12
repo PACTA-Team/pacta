@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-04-11
+
+### Added
+- **Multi-company support** -- Single company and parent + subsidiaries modes with complete data isolation
+- **Company scoping middleware** -- `CompanyMiddleware` resolves active company from session/header and injects into request context
+- **Company CRUD endpoints** -- Full REST API for company management with parent/subsidiary hierarchy
+- **Company selector** -- Dropdown for parent-level admins to switch between companies
+- **Companies management page** -- Frontend CRUD page with search, create, edit, delete
+- **User company membership** -- Endpoints to list user companies and switch active company
+- **Database migrations 013-018** -- Companies table, user_companies junction, company_id on all data tables, backfill
+- **CompanyContext React provider** -- Global company state management with auto-default resolution
+
+### Changed
+- **All handlers company-scoped** -- contracts, clients, suppliers, signers, supplements, documents, notifications, audit_logs now filter by `company_id`
+- **auditLog helper** -- Updated signature to accept `companyID`, all 23 callers updated
+- **Model structs** -- `CompanyID` added to Client, Supplier, Contract, Supplement, AuditLog
+- **Login flow** -- Resolves user's default company from `user_companies` table
+- **Session management** -- `company_id` column added to sessions table for company context persistence
+
+### Technical Details
+- **Files Created:** 6 (companies.go, company_middleware.go, companies-api.ts, CompanyContext.tsx, CompanySelector.tsx, CompaniesPage.tsx)
+- **Files Modified:** 20 (all handlers, models, session, server, frontend types, App.tsx, AppSidebar)
+- **Lines Added:** ~2,900
+- **Migrations:** 013-018 (companies schema + company_id backfill)
+
+### Backend Integration
+- GET /api/companies -- List companies (parent admins see all subsidiaries)
+- POST /api/companies -- Create company
+- GET /api/companies/{id} -- Get company by ID
+- PUT /api/companies/{id} -- Update company
+- DELETE /api/companies/{id} -- Delete company (blocked if active contracts)
+- GET /api/users/me/companies -- List current user's companies
+- PATCH /api/users/me/company/{id} -- Switch active company
+
+---
+
 ## [0.14.0] - 2026-04-11
 
 ### Added

@@ -159,6 +159,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Audit Logging | Complete (v0.8.0 -- automatic CRUD logging, query endpoint with filtering, JSON state capture) |
 | Role-Based Access | Complete (v0.15.0 -- middleware enforcement, 4-tier permission levels, inactive account rejection) |
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
+| Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
 | Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
 | Frontend Pages | 15 pages created (Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |
@@ -406,6 +407,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.16.0 | Latest | Multi-company support (companies table, company_id on all data, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
+| v0.15.0 | - | Role-based access control enforcement (middleware, 4-tier permissions, inactive account rejection) |
 | v0.14.0 | - | Users frontend API migration (UsersPage from localStorage to backend API) |
 | v0.13.0 | - | User management CRUD endpoints (create, update, delete, password reset, status) |
 | v0.12.0 | - | Frontend API migration (documents & notifications from localStorage to backend API) |
@@ -426,6 +429,30 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.16.0)
+
+- [x] Migration 013: `companies` + `user_companies` tables
+- [x] Migration 014: `company_id` on users, clients, suppliers
+- [x] Migration 015: `company_id` on signers, contracts, supplements
+- [x] Migration 016: `company_id` on documents, notifications, audit_logs
+- [x] Migration 017: Backfill existing data to default company
+- [x] Migration 018: `company_id` on sessions table
+- [x] `CompanyMiddleware` — company scoping with context injection
+- [x] Company CRUD endpoints (list, create, get, update, delete)
+- [x] User company membership endpoints (list, switch)
+- [x] Session struct updated with `CompanyID`
+- [x] Login flow resolves user's default company
+- [x] All handlers company-scoped (contracts, clients, suppliers, signers, supplements, documents, notifications, audit_logs)
+- [x] `auditLog` helper updated to accept `companyID` (23 callers updated)
+- [x] Model structs: `CompanyID` added to Client, Supplier, Contract, Supplement, AuditLog
+- [x] Frontend: TypeScript types (`Company`, `UserCompany`)
+- [x] Frontend: Companies API client (`companies-api.ts`)
+- [x] Frontend: `CompanyContext` React provider
+- [x] Frontend: `CompanySelector` component (sidebar dropdown)
+- [x] Frontend: Companies page (CRUD with search, create, edit, delete)
+- [x] Frontend: App.tsx wrapped with `CompanyProvider`
+- [x] Frontend: Sidebar nav link for Companies (admin/manager)
 
 ### Completed (v0.14.0)
 
@@ -571,39 +598,10 @@ _No active work in progress._
 
 ### Pending — Backend (Highest Priority)
 
-- [ ] **Multi-company feature** — See `docs/plans/2026-04-11-multi-company-design.md`
-  - [ ] Migration 013: Create `companies` + `user_companies` tables
-  - [ ] Migration 014: Add `company_id` to `users`, `clients`, `suppliers`
-  - [ ] Migration 015: Add `company_id` to `authorized_signers`, `contracts`, `supplements`
-  - [ ] Migration 016: Add `company_id` to `documents`, `notifications`, `audit_logs`
-  - [ ] Migration 017: Backfill — create default company, link all existing records
-  - [ ] `CompanyMiddleware` — company scoping middleware with context injection
-  - [ ] Company CRUD endpoints (`GET/POST/PUT/DELETE /api/companies`)
-  - [ ] User company membership endpoints (`GET /api/users/me/companies`, `PATCH /api/users/me/company/{id}`)
-  - [ ] Session struct update — add `CompanyID` field
-  - [ ] Setup wizard redesign — mode selection (single/multi), parent + subsidiaries
-  - [ ] Update all existing handlers to use `company_id` from context in queries
-  - [ ] Company validation on entity creation (FK checks, 400/403 on invalid)
-- [ ] **User management endpoints** — Create, update, delete users (CRUD for admin panel)
 - [ ] **Rate limiting on login endpoint** — Brute force protection
 
 ### Pending — Frontend
 
-- [ ] **Multi-company frontend**
-  - [ ] `CompanyContext` React context provider
-  - [ ] `CompanySelector` component (navbar dropdown)
-  - [ ] `CompanyBadge` component (type indicator)
-  - [ ] `CompanyForm` component (create/edit)
-  - [ ] `CompanyHierarchy` component (tree view)
-  - [ ] `SetupModeSelector` component (wizard step 1)
-  - [ ] `SubsidiaryStep` component (wizard step for subsidiaries)
-  - [ ] Companies page (`/companies`) — list, add, edit, delete
-  - [ ] Company settings page (`/settings/company`)
-  - [ ] Setup wizard redesign — mode selection + multi-step flow
-  - [ ] Update all API client modules to include `company_id` from context
-  - [ ] TypeScript types: `Company`, `UserCompany`
-  - [ ] Dashboard company-scoped metrics
-  - [ ] All CRUD pages company-scoped (contracts, clients, suppliers, signers, supplements)
 - [ ] **Document upload UI** — Requires backend endpoints first
 - [ ] **Notification center UI** — Requires backend endpoints first
 - [ ] **User management page** — Requires backend endpoints first (admin only)
