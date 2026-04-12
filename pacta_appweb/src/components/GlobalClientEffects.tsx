@@ -7,7 +7,7 @@ export default function GlobalClientEffects() {
     const generate = async () => {
       try {
         const contracts = await contractsAPI.list();
-        await generateNotifications(contracts);
+        await generateNotifications(contracts as any[]);
       } catch {
         // Silently fail - notifications are non-critical
       }
