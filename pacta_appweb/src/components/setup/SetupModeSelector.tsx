@@ -4,13 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 interface SetupModeSelectorProps {
   mode: 'single' | 'multi';
   onChange: (mode: 'single' | 'multi') => void;
-  onSelect: () => void;
+  onSelect?: () => void;
 }
 
 export default function SetupModeSelector({ mode, onChange, onSelect }: SetupModeSelectorProps) {
   const handleSelect = (newMode: 'single' | 'multi') => {
     onChange(newMode);
-    onSelect();
+    onSelect?.();
   };
 
   return (
@@ -26,7 +26,7 @@ export default function SetupModeSelector({ mode, onChange, onSelect }: SetupMod
           <button
             type="button"
             onClick={() => handleSelect('single')}
-            className={`p-6 rounded-lg border-2 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] ${
+            className={`p-6 rounded-lg border-2 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               mode === 'single'
                 ? 'border-primary bg-primary/5 shadow-md'
                 : 'border-border hover:border-primary/50'
@@ -42,7 +42,7 @@ export default function SetupModeSelector({ mode, onChange, onSelect }: SetupMod
           <button
             type="button"
             onClick={() => handleSelect('multi')}
-            className={`p-6 rounded-lg border-2 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] ${
+            className={`p-6 rounded-lg border-2 text-left transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               mode === 'multi'
                 ? 'border-primary bg-primary/5 shadow-md'
                 : 'border-border hover:border-primary/50'
@@ -57,8 +57,8 @@ export default function SetupModeSelector({ mode, onChange, onSelect }: SetupMod
           </button>
         </div>
         <div className="flex justify-end pt-2">
-          <Button variant="ghost" size="sm" onClick={() => onChange(mode === 'single' ? 'multi' : 'single')} className="text-muted-foreground">
-            Switch to {mode === 'single' ? 'Multiempresa' : 'Empresa Individual'}
+          <Button variant="ghost" size="sm" onClick={() => handleSelect(mode === 'single' ? 'multi' : 'single')} className="text-muted-foreground">
+            Cambiar a {mode === 'single' ? 'Multiempresa' : 'Empresa Individual'}
           </Button>
         </div>
       </CardContent>
