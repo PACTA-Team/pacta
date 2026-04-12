@@ -18,14 +18,14 @@ export interface CreateClientRequest {
   name: string;
   address: string;
   reu_code: string;
-  contacts?: Array<Record<string, unknown>>;
+  contacts: string;
 }
 
 export interface UpdateClientRequest {
   name?: string;
   address?: string;
   reu_code?: string;
-  contacts?: Array<Record<string, unknown>>;
+  contacts?: string;
 }
 
 export const clientsAPI = {
