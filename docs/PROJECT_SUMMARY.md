@@ -417,7 +417,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.24.0 | Latest | Automatic language detection (i18n), Spanish/English support, LanguageToggle, 32 translation files, 32+ components translated |
+| v0.25.0 | Latest | Split-screen login layout (responsive 60/40 desktop, 50/50 tablet, single-column mobile), theme-aware branding gradient, LoginForm layout wrapper removal, Framer Motion entrance animations |
+| v0.24.0 | - | Automatic language detection (i18n), Spanish/English support, LanguageToggle, 32 translation files, 32+ components translated |
 | v0.23.0 | - | Complete localStorage elimination (audit logs, notifications, settings), notification settings backend API, all 24 TypeScript errors fixed, 41 tests passing, clean `tsc --noEmit` build |
 | v0.22.0 | Latest | Setup mode auto-advance (click card to advance, tactile feedback, focus-visible styles, "Cambiar a..." toggle) |
 | v0.21.0 | Latest | Setup flow security (fresh install redirect to /setup, /setup guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
@@ -451,6 +452,20 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.25.0)
+
+**Split-Screen Login Layout:**
+- [x] LoginForm outer `min-h-screen` layout wrapper removed — now renders as pure Card component
+- [x] LoginPage rewritten with responsive split-screen layout
+- [x] Desktop (>1024px): 60/40 split with branding panel (logo + tagline) on left, form on right
+- [x] Tablet (768px-1024px): 50/50 split
+- [x] Mobile (<768px): Single column with compact logo header above form
+- [x] Theme-aware branding gradient using CSS variables (`from-primary/5 via-background to-primary/10`)
+- [x] Framer Motion staggered fade-in animations for both panels
+- [x] Logo clickable on both panels, navigates to home page
+- [x] `prefers-reduced-motion` respected (handled globally in index.css)
+- [x] PR merged: https://github.com/PACTA-Team/pacta/pull/61
 
 ### Completed (v0.24.0)
 
@@ -743,6 +758,17 @@ _No active work in progress. Latest PR: [#59 — Automatic language detection (i
 - [ ] Frontend unit tests (vitest configured, none exist)
 - [ ] E2E tests with Playwright
 - [ ] Load testing for concurrent users
+
+### Completed — Recent
+
+- [x] Split-screen login layout refactor — PR #61 merged, v0.25.0
+- [x] i18n automatic language detection — PR #59 merged, v0.24.0
+- [x] localStorage elimination (audit, notifications, settings) — v0.23.0
+- [x] Setup mode auto-advance — v0.22.0
+- [x] Setup flow security (ForbiddenPage, guard) — v0.21.0
+- [x] Goose database migrations — v0.20.0
+- [x] Multi-company support — v0.16.0
+- [x] Role-based access control — v0.15.0
 
 ### Pending — Documentation
 

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-04-13
+
+### Added
+- **Split-screen login layout** — Responsive two-panel layout with branding panel (logo + tagline) on desktop, single-column stacked layout on mobile
+- **Theme-aware branding gradient** — Login page branding panel uses CSS variable-based gradient (`from-primary/5 via-background to-primary/10`) that adapts to light/dark mode
+- **Framer Motion entrance animations** — Staggered fade-in animations for both branding and form panels with proper `prefers-reduced-motion` support
+
+### Changed
+- **LoginForm.tsx** — Removed outer `min-h-screen` layout wrapper with hardcoded blue/indigo gradient. Now renders as a pure Card component without layout concerns
+- **LoginPage.tsx** — Full rewrite with split-screen responsive layout:
+  - Desktop (>1024px): 60/40 split with branding panel on left, form on right
+  - Tablet (768px-1024px): 50/50 split
+  - Mobile (<768px): Single column with compact logo header above form
+- **Logo integration** — PACTA logo now visually connected to form (inside card on mobile, in branding panel on desktop), no longer floating disconnected above
+
+### Technical Details
+- **Files Modified:** 2 (`LoginForm.tsx`, `LoginPage.tsx`)
+- **Lines Changed:** +136 / -110
+- **Design doc:** `docs/plans/2026-04-13-login-page-split-design.md`
+- **Implementation plan:** `docs/plans/2026-04-13-login-page-split-implementation.md`
+
 ## [0.24.0] - 2026-04-13
 
 ### Added
