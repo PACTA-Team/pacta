@@ -134,6 +134,7 @@ export function HeroSection() {
         >
           <Button
             size="lg"
+            variant="gradient"
             onClick={() => navigate('/login')}
             className="group rounded-xl px-8 text-base"
           >

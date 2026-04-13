@@ -417,7 +417,10 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.25.0 | Latest | Split-screen login layout (responsive 60/40 desktop, 50/50 tablet, single-column mobile), theme-aware branding gradient, LoginForm layout wrapper removal, Framer Motion entrance animations |
+| v0.26.0 | Latest | Frontend modernization: purple-accented OKLCH color palette (light/dark), collapsible sidebar with tooltips, glassmorphism dashboard cards, gradient button variants, modernized input/badge/card components, landing page gradient accents |
+| v0.25.2 | - | Light/dark theme system fix (next-themes `attribute="class"`), ThemeToggle hydration mismatch fix, theme icon state sync |
+| v0.25.1 | - | Supplements page crash fix (migration 022 `deleted_at` column) |
+| v0.25.0 | - | Split-screen login layout (responsive 60/40 desktop, 50/50 tablet, single-column mobile), theme-aware branding gradient, LoginForm layout wrapper removal, Framer Motion entrance animations |
 | v0.24.0 | - | Automatic language detection (i18n), Spanish/English support, LanguageToggle, 32 translation files, 32+ components translated |
 | v0.23.0 | - | Complete localStorage elimination (audit logs, notifications, settings), notification settings backend API, all 24 TypeScript errors fixed, 41 tests passing, clean `tsc --noEmit` build |
 | v0.22.0 | Latest | Setup mode auto-advance (click card to advance, tactile feedback, focus-visible styles, "Cambiar a..." toggle) |
@@ -452,6 +455,21 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.26.0)
+
+**Frontend Modernization:**
+- [x] Color palette updated to purple primary + orange accent (OKLCH, both light/dark themes)
+- [x] Button component: gradient and soft variants, rounded-lg
+- [x] Card component: hover shadow transitions, rounded-xl
+- [x] Input component: rounded-lg, shadow-sm, purple focus ring
+- [x] Badge component: soft variant
+- [x] AppSidebar: collapsible with smooth animation, gradient active states, tooltips, modern user profile
+- [x] AppLayout: CompanySelector moved to header
+- [x] DashboardPage: glassmorphism stat cards, gradient icon backgrounds, improved expiring contracts
+- [x] Landing page: gradient CTA button, gradient icon backgrounds, backdrop-blur cards
+- [x] TypeScript: 0 errors, clean build
+- [x] Design doc: `docs/plans/2026-04-13-frontend-modernization-plan.md`
 
 ### Completed (v0.25.0)
 

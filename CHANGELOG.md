@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-04-13
+
+### Added
+- **Collapsible sidebar** — Desktop sidebar now collapses to icon-only mode (72px) with smooth 300ms animation, tooltip labels on hover, and gradient active state indicators
+- **Purple-accented color palette** — Professional design system with purple primary (`oklch(0.54 0.22 290)` light / `oklch(0.72 0.19 290)` dark) and orange accent for CTAs, both themes fully accessible
+- **Gradient button variants** — New `gradient` variant (primary-to-accent gradient) for CTAs and `soft` variant (primary/10 bg) for secondary actions
+- **Glassmorphism dashboard cards** — Stat cards with gradient icon backgrounds, hover effects, and layered depth; expiring contracts alert with gradient backdrop
+- **Soft badge variant** — New `soft` variant with primary/10 background and primary/20 border
+
+### Changed
+- **Color system** — Full OKLCH palette rewrite for both light/dark modes with warm backgrounds, vibrant chart colors, and purple sidebar tint
+- **Button component** — Modernized border radius (`rounded-lg`), consistent focus ring, shadow variants
+- **Card component** — Hover shadow transitions (`hover:shadow-md`), consistent `rounded-xl`
+- **Input component** — `rounded-lg`, `shadow-sm`, purple focus ring (`ring-primary/20`)
+- **AppSidebar** — Gradient left-border active nav items, modern user profile section with avatar, collapse toggle
+- **AppLayout** — CompanySelector moved from sidebar to header for better collapsed sidebar UX
+- **DashboardPage** — Redesigned KPI cards with gradient icon backgrounds, improved expiring contracts list, soft button quick actions
+- **Landing page** — HeroSection gradient CTA button, FeaturesSection gradient icon backgrounds and backdrop-blur cards
+
+### Technical Details
+- **Files Modified:** 10 (`index.css`, `button.tsx`, `card.tsx`, `input.tsx`, `badge.tsx`, `AppSidebar.tsx`, `AppLayout.tsx`, `DashboardPage.tsx`, `HeroSection.tsx`, `FeaturesSection.tsx`)
+- **Design doc:** `docs/plans/2026-04-13-frontend-modernization-plan.md`
+- **TypeScript:** 0 errors, clean build
+
 ## [0.25.2] - 2026-04-13
 
 ### Fixed

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, AlertTriangle, FilePlus, DollarSign, BarChart3 } from 'lucide-react';
+import { FileText, AlertTriangle, FilePlus, DollarSign, BarChart3, Building2, Truck, FolderOpen } from 'lucide-react';
 import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { Contract, ContractStatus } from '@/types';
@@ -106,58 +106,70 @@ export default function DashboardPage() {
     }));
 
   return (
-    
+
       <div className="space-y-6">
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:bg-primary/10" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('kpi.totalContracts.title')}</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalActive}</div>
-              <p className="text-xs text-muted-foreground">Currently active</p>
+              <div className="text-3xl font-bold tracking-tight">{stats.totalActive}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Currently active</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-yellow-500/5 transition-all duration-300 group-hover:bg-yellow-500/10" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('kpi.expiringSoon.title')}</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-500/10">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.expiringSoon}</div>
-              <p className="text-xs text-muted-foreground">Within 30 days</p>
+              <div className="text-3xl font-bold tracking-tight text-yellow-600 dark:text-yellow-500">{stats.expiringSoon}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Within 30 days</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:bg-primary/10" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('kpi.pendingApproval.title')}</CardTitle>
-              <FilePlus className="h-4 w-4 text-muted-foreground" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <FilePlus className="h-5 w-5 text-primary" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingSupplements}</div>
-              <p className="text-xs text-muted-foreground">Awaiting approval</p>
+              <div className="text-3xl font-bold tracking-tight">{stats.pendingSupplements}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Awaiting approval</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative overflow-hidden group">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-green-500/5 transition-all duration-300 group-hover:bg-green-500/10" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{t('kpi.totalContracts.desc')}</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
+                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-500" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Active contracts</p>
+              <div className="text-3xl font-bold tracking-tight">${stats.totalValue.toLocaleString()}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Active contracts value</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Expiring Contracts Alert */}
         {expiringContracts.length > 0 && (
-          <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <Card className="border-yellow-200 dark:border-yellow-800/50 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-yellow-700 dark:text-yellow-500">
                 <AlertTriangle className="h-5 w-5" />
@@ -171,7 +183,7 @@ export default function DashboardPage() {
                     (new Date(contract.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                   );
                   return (
-                    <div key={contract.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg">
+                    <div key={contract.id} className="flex items-center justify-between rounded-lg border bg-card/80 p-3 backdrop-blur-sm transition-colors hover:bg-card">
                       <div>
                         <p className="font-medium">{contract.title}</p>
                         <p className="text-sm text-muted-foreground">{contract.contract_number}</p>
@@ -197,7 +209,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
+                <BarChart3 className="h-5 w-5 text-primary" />
                 {t('statusTitle')}
               </CardTitle>
             </CardHeader>
@@ -235,49 +247,46 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{t('quickActions')}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                {t('quickActions')}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Link to="/contracts?action=create">
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="mr-2 h-4 w-4" />
+                <Button className="w-full justify-start gap-2" variant="soft">
+                  <FileText className="h-4 w-4" />
                   {t('newContract')}
                 </Button>
               </Link>
               <Link to="/clients">
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="mr-2 h-4 w-4" />
+                <Button className="w-full justify-start gap-2" variant="soft">
+                  <Building2 className="h-4 w-4" />
                   {t('newClient')}
                 </Button>
               </Link>
               <Link to="/suppliers">
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="mr-2 h-4 w-4" />
+                <Button className="w-full justify-start gap-2" variant="soft">
+                  <Truck className="h-4 w-4" />
                   {t('newSupplier')}
                 </Button>
               </Link>
               <Link to="/reports">
-                <Button className="w-full justify-start" variant="outline">
-                  <BarChart3 className="mr-2 h-4 w-4" />
+                <Button className="w-full justify-start gap-2" variant="soft">
+                  <BarChart3 className="h-4 w-4" />
                   {t('viewReports')}
                 </Button>
               </Link>
               <Link to="/documents">
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="mr-2 h-4 w-4" />
+                <Button className="w-full justify-start gap-2" variant="soft">
+                  <FolderOpen className="h-4 w-4" />
                   {tContracts('documents')}
-                </Button>
-              </Link>
-              <Link to="/notifications">
-                <Button className="w-full justify-start" variant="outline">
-                  <AlertTriangle className="mr-2 h-4 w-4" />
-                  {t('settings')}
                 </Button>
               </Link>
             </CardContent>
           </Card>
         </div>
       </div>
-    
+
   );
 }
