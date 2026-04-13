@@ -9,7 +9,7 @@ import './index.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ThemeProvider defaultTheme="system" storageKey="pacta-theme">
+      <ThemeProvider storageKey="pacta-theme">
         <App />
       </ThemeProvider>
     </BrowserRouter>
