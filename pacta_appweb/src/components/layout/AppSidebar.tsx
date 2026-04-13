@@ -17,7 +17,9 @@ import {
   UserCheck,
   Menu,
   X,
-  Building
+  Building,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,10 +27,14 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { notificationsAPI } from '@/lib/notifications-api';
 import CompanySelector from '@/components/CompanySelector';
 
 const TABLET_BREAKPOINT = 1024;
+const SIDEBAR_WIDTH = '16rem'; // 256px (w-64)
+const SIDEBAR_COLLAPSED = '4.5rem'; // 72px
 
 function useIsTablet() {
   const [isTablet, setIsTablet] = useState<boolean | undefined>(undefined);
@@ -64,6 +70,7 @@ export default function AppSidebar() {
   const { user, logout, hasPermission } = useAuth();
   const isTabletOrBelow = useIsTablet();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { t } = useTranslation('common');
   const { t: tDashboard } = useTranslation('dashboard');
@@ -219,10 +226,36 @@ export default function AppSidebar() {
 
   // Desktop sidebar
   return (
-    <div className="flex h-screen w-64 flex-col border-r bg-card">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-primary">PACTA Web</h1>
-        <p className="text-sm text-muted-foreground">Contract Management</p>
+    <div
+      className="flex h-screen flex-col border-r bg-card transition-all duration-300 ease-in-out"
+      style={{ width: collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH }}
+    >
+      {/* Header with logo and collapse toggle */}
+      <div className="flex items-center justify-between px-6 py-5">
+        {!collapsed && (
+          <div className="transition-opacity duration-200">
+            <h1 className="text-xl font-bold tracking-tight text-primary">PACTA</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Contract Management</p>
+          </div>
+        )}
+        {collapsed && (
+          <div className="mx-auto">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
+              P
+            </div>
+          </div>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="hidden lg:flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
       </div>
 
       <Separator />
@@ -231,49 +264,104 @@ export default function AppSidebar() {
         <nav role="navigation" aria-label="Main navigation" className="space-y-1">
           {filteredNavigation.map((item) => {
             const isActive = pathname === item.href;
-            return (
+            const label = navLabels[item.nameKey];
+
+            const linkContent = (
               <Link
                 key={item.nameKey}
                 to={item.href}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    ? 'bg-gradient-to-r from-primary/10 to-transparent text-primary shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
+                style={{ borderLeft: isActive ? '3px solid hsl(var(--primary))' : '3px solid transparent' }}
               >
-                <item.icon className="h-5 w-5" aria-hidden="true" />
-                {navLabels[item.nameKey]}
+                <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {!collapsed && (
+                  <span className="truncate transition-opacity duration-200">
+                    {label}
+                  </span>
+                )}
                 {item.href === '/notifications' && unreadCount > 0 && (
-                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  <span className={cn(
+                    "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1",
+                    collapsed && "ml-0"
+                  )}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
               </Link>
             );
+
+            // Wrap in tooltip when collapsed
+            if (collapsed) {
+              return (
+                <TooltipProvider key={item.nameKey} delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                    <TooltipContent side="right" className="flex items-center gap-2">
+                      <span>{label}</span>
+                      {item.href === '/notifications' && unreadCount > 0 && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            }
+
+            return linkContent;
           })}
         </nav>
       </ScrollArea>
 
       <Separator />
 
-      <div className="p-4 space-y-2">
-        <div className="px-3 py-2 text-sm">
-          <p className="font-medium">{user?.name}</p>
-          <p className="text-xs text-muted-foreground">{user?.email}</p>
-          <p className="text-xs text-muted-foreground capitalize mt-1">
-            {t('role')}: {user?.role}
-          </p>
+      {/* User profile section */}
+      <div className="mt-auto border-t p-4">
+        <div className={cn(
+          "flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted",
+          collapsed && "justify-center"
+        )}>
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+              {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
+            </AvatarFallback>
+          </Avatar>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{user?.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.role}</p>
+            </div>
+          )}
+          {!collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={logout}
+              aria-label="Logout"
+            >
+              <LogOut className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          )}
         </div>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={logout}
-        >
-          <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-          {t('logout')}
-        </Button>
+        {collapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 mx-auto mt-2"
+            onClick={logout}
+            aria-label="Logout"
+          >
+            <LogOut className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
       </div>
     </div>
   );
