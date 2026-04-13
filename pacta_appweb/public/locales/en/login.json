@@ -1,0 +1,19 @@
+{
+  "createAccount": "Create Account",
+  "title": "PACTA Web",
+  "subtitle": "Contract Management System",
+  "setupDesc": "Set up your main admin account.",
+  "fullName": "Full Name",
+  "email": "Email",
+  "password": "Password",
+  "register": "Register",
+  "backToLogin": "Back to Login",
+  "loginTitle": "Login",
+  "loginBtn": "Sign In",
+  "loginError": "Login failed. Please check your credentials.",
+  "registerSuccess": "Account created successfully. You can now log in.",
+  "registerError": "Failed to create account. Please try again.",
+  "fullNamePlaceholder": "Your name",
+  "emailPlaceholder": "you@example.com",
+  "passwordPlaceholder": "Your password"
+}

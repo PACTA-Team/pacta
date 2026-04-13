@@ -1,0 +1,17 @@
+{
+  "title": "Supplements",
+  "subtitle": "Manage contract supplements",
+  "addNew": "Add Supplement",
+  "editSupplement": "Edit Supplement",
+  "addSupplement": "Add Supplement",
+  "updateSupplement": "Update Supplement",
+  "createSupplement": "Create Supplement",
+  "noSupplements": "No supplements found",
+  "loading": "Loading supplements...",
+  "retry": "Retry",
+  "contract": "Contract",
+  "type": "Type",
+  "status": "Status",
+  "effectiveDate": "Effective date",
+  "description": "Description"
+}

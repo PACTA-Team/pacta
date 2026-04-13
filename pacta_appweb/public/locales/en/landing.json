@@ -1,0 +1,34 @@
+{
+  "hero": {
+    "title": "Contract Management System",
+    "subtitle": "Manage Contracts with Clarity",
+    "description": "Track, approve, and monitor all your contracts from one place.",
+    "benefit": "Never miss a renewal again.",
+    "startNow": "Start Now",
+    "learnMore": "Learn More"
+  },
+  "features": {
+    "title": "Features",
+    "subtitle": "Everything you need to stay in control",
+    "description": "PACTA gives you the tools to manage contracts securely and efficiently.",
+    "items": [
+      {
+        "title": "Complete Management",
+        "description": "Create, edit, and organize all your contracts with version tracking and status workflows."
+      },
+      {
+        "title": "Approval Workflows",
+        "description": "Structured approval processes for contract supplements and modifications."
+      },
+      {
+        "title": "Automated Alerts",
+        "description": "Automatic notifications for expiring contracts and upcoming renewals."
+      }
+    ],
+    "learnMore": "Learn more"
+  },
+  "nav": {
+    "features": "Features",
+    "login": "Login"
+  }
+}

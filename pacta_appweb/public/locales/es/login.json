@@ -1,0 +1,19 @@
+{
+  "createAccount": "Crear cuenta",
+  "title": "PACTA Web",
+  "subtitle": "Sistema de Gestión de Contratos",
+  "setupDesc": "Configura tu cuenta de administrador principal.",
+  "fullName": "Nombre completo",
+  "email": "Correo electrónico",
+  "password": "Contraseña",
+  "register": "Registrar",
+  "backToLogin": "Volver al inicio de sesión",
+  "loginTitle": "Iniciar sesión",
+  "loginBtn": "Entrar",
+  "loginError": "Error al iniciar sesión. Verifica tus credenciales.",
+  "registerSuccess": "Cuenta creada exitosamente. Ahora puedes iniciar sesión.",
+  "registerError": "Error al crear la cuenta. Inténtalo de nuevo.",
+  "fullNamePlaceholder": "Tu nombre",
+  "emailPlaceholder": "tu@correo.com",
+  "passwordPlaceholder": "Tu contraseña"
+}

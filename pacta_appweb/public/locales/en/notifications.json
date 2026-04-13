@@ -1,0 +1,13 @@
+{
+  "title": "Notifications",
+  "unread": "unread notification(s)",
+  "markAllRead": "Mark All Read",
+  "empty": "No notifications yet",
+  "loading": "Loading notifications...",
+  "viewContract": "View Contract",
+  "markRead": "Mark as Read",
+  "read": "Read",
+  "unreadBadge": "Unread",
+  "markedRead": "Notification marked as read",
+  "allMarkedRead": "All notifications marked as read"
+}
