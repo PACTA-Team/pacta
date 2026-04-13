@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Home, ArrowLeft, FileQuestion } from 'lucide-react';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
@@ -29,6 +30,7 @@ function FloatingParticle({ delay, x, y, size }: { delay: number; x: number; y: 
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -144,7 +146,7 @@ export default function NotFoundPage() {
           className="mx-auto mt-4 max-w-md text-lg text-muted-foreground"
           variants={itemVariants}
         >
-          The page you're looking for doesn't exist or has been moved. Let's get you back on track.
+          {t('notFoundDesc')}
         </motion.p>
 
         {/* Action buttons */}
@@ -159,7 +161,7 @@ export default function NotFoundPage() {
               className="min-w-[200px] gap-2"
             >
               <Home className="h-5 w-5" aria-hidden="true" />
-              Go Home
+              {t('goHome')}
             </Button>
           </motion.div>
 
@@ -171,7 +173,7 @@ export default function NotFoundPage() {
               className="min-w-[200px] gap-2"
             >
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-              Go Back
+              {t('goBack')}
             </Button>
           </motion.div>
         </motion.div>
@@ -181,12 +183,12 @@ export default function NotFoundPage() {
           className="mt-12 text-sm text-muted-foreground"
           variants={itemVariants}
         >
-          Need help?{' '}
+          {t('needHelp')}{' '}
           <button
             onClick={() => navigate('/login')}
             className="cursor-pointer text-primary underline-offset-4 transition-colors hover:underline"
           >
-            Contact support
+            {t('contactSupport')}
           </button>
         </motion.p>
       </motion.div>
