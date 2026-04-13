@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.2] - 2026-04-13
+
+### Fixed
+- **Light/dark/system theme not working** — ThemeProvider was missing `attribute="class"` prop required by next-themes v0.4+ to toggle the `.dark` CSS class on the `<html>` element. Tailwind's `@custom-variant dark (&:is(.dark *))` now correctly applies dark mode styles
+- **ThemeToggle hydration mismatch** — Added mounted state guard to prevent SSR/client hydration warnings. Active theme now highlighted in dropdown menu
+- **Theme icon not reflecting state** — Sun/Moon icons now use JavaScript state (`resolvedTheme`) instead of relying on CSS `dark:` classes that conflicted with the toggle's own styling
+
+### Technical Details
+- **Files Changed:** 3 (`ThemeProvider.tsx`, `ThemeToggle.tsx`, `main.tsx`)
+- **Root Cause:** `next-themes` v0.4+ requires explicit `attribute="class"` configuration. Without it, the library defaulted to toggling a `data-theme` attribute instead of the `class` attribute, so Tailwind's `.dark` selector never matched
+- **System theme support** — `enableSystem` prop enables automatic detection of OS-level `prefers-color-scheme` setting
+
 ## [0.25.1] - 2026-04-13
 
 ### Fixed
