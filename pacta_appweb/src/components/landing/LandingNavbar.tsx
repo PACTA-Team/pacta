@@ -2,19 +2,17 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { LanguageToggle } from '@/components/LanguageToggle';
 
-const navLinks = [
-  { name: 'Features', href: '#features' },
-];
-
 export function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation('landing');
 
   return (
     <motion.header
@@ -37,18 +35,15 @@ export function LandingNavbar() {
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-4 md:flex">
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {link.name}
-            </a>
-          ))}
+          <a
+            href="#features"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t('nav.features')}
+          </a>
           <LanguageToggle />
           <Button onClick={() => navigate('/login')} size="sm">
-            Login
+            {t('nav.login')}
           </Button>
         </div>
 
@@ -73,21 +68,18 @@ export function LandingNavbar() {
             className="border-t bg-background md:hidden"
           >
             <div className="flex flex-col gap-4 px-6 py-6">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.name}
-                </a>
-              ))}
+              <a
+                href="#features"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                {t('nav.features')}
+              </a>
               <div className="flex items-center justify-between">
                 <LanguageToggle />
               </div>
               <Button onClick={() => navigate('/login')} className="w-full">
-                Login
+                {t('nav.login')}
               </Button>
             </div>
           </motion.div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ interface StepAdminProps {
 }
 
 export function StepAdmin({ data, onChange, onNext, onPrev }: StepAdminProps) {
+  const { t } = useTranslation('setup');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleNext = () => {
@@ -50,23 +52,23 @@ export function StepAdmin({ data, onChange, onNext, onPrev }: StepAdminProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Admin Account</CardTitle>
-        <CardDescription>Create the main administrator account</CardDescription>
+        <CardTitle className="text-xl">{t('admin.title')}</CardTitle>
+        <CardDescription>{t('admin.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="setup-name">Full Name</Label>
-          <Input id="setup-name" value={data.name} onChange={e => updateField('name', e.target.value)} placeholder="Admin User" autoComplete="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} />
+          <Label htmlFor="setup-name">{t('admin.name')}</Label>
+          <Input id="setup-name" value={data.name} onChange={e => updateField('name', e.target.value)} placeholder={t('admin.namePlaceholder')} autoComplete="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} />
           {errors.name && <p id="name-error" className="text-sm text-red-500" role="alert">{errors.name}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="setup-email">Email</Label>
-          <Input id="setup-email" type="email" value={data.email} onChange={e => updateField('email', e.target.value)} placeholder="admin@pacta.local" autoComplete="email" aria-invalid={!!errors.email} aria-describedby={errors.email ? 'email-error' : undefined} />
+          <Label htmlFor="setup-email">{t('admin.email')}</Label>
+          <Input id="setup-email" type="email" value={data.email} onChange={e => updateField('email', e.target.value)} placeholder={t('admin.emailPlaceholder')} autoComplete="email" aria-invalid={!!errors.email} aria-describedby={errors.email ? 'email-error' : undefined} />
           {errors.email && <p id="email-error" className="text-sm text-red-500" role="alert">{errors.email}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="setup-password">Password</Label>
-          <Input id="setup-password" type="password" value={data.password} onChange={e => updateField('password', e.target.value)} placeholder="Min. 8 characters" autoComplete="new-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-error' : 'password-strength'} />
+          <Label htmlFor="setup-password">{t('admin.password')}</Label>
+          <Input id="setup-password" type="password" value={data.password} onChange={e => updateField('password', e.target.value)} placeholder={t('admin.passwordPlaceholder')} autoComplete="new-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-error' : 'password-strength'} />
           {data.password && <p id="password-strength" className={`text-xs ${strengthColor}`}>Strength: {strengthLabel}</p>}
           {errors.password && <p id="password-error" className="text-sm text-red-500" role="alert">{errors.password}</p>}
         </div>
@@ -76,8 +78,8 @@ export function StepAdmin({ data, onChange, onNext, onPrev }: StepAdminProps) {
           {errors.confirmPassword && <p id="confirm-error" className="text-sm text-red-500" role="alert">{errors.confirmPassword}</p>}
         </div>
         <div className="flex gap-3 pt-4">
-          <Button variant="outline" onClick={onPrev} className="flex-1">Back</Button>
-          <Button onClick={handleNext} className="flex-1">Next</Button>
+          <Button variant="outline" onClick={onPrev} className="flex-1">{t('back', { ns: 'common' })}</Button>
+          <Button onClick={handleNext} className="flex-1">{t('next', { ns: 'common' })}</Button>
         </div>
       </CardContent>
     </Card>

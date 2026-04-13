@@ -1,4 +1,5 @@
 
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
@@ -44,17 +45,17 @@ function useIsTablet() {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Contracts', href: '/contracts', icon: FileText, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Supplements', href: '/supplements', icon: FilePlus, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Clients', href: '/clients', icon: Building2, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Suppliers', href: '/suppliers', icon: Truck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Authorized Signers', href: '/authorized-signers', icon: UserCheck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { name: 'Users & Roles', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
-  { name: 'Companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
+  { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'contracts', href: '/contracts', icon: FileText, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'supplements', href: '/supplements', icon: FilePlus, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'clients', href: '/clients', icon: Building2, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'suppliers', href: '/suppliers', icon: Truck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'signers', href: '/authorized-signers', icon: UserCheck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  { nameKey: 'users', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
+  { nameKey: 'companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
 ];
 
 export default function AppSidebar() {
@@ -64,6 +65,32 @@ export default function AppSidebar() {
   const isTabletOrBelow = useIsTablet();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { t } = useTranslation('common');
+  const { t: tDashboard } = useTranslation('dashboard');
+  const { t: tContracts } = useTranslation('contracts');
+  const { t: tSupplements } = useTranslation('supplements');
+  const { t: tClients } = useTranslation('clients');
+  const { t: tSuppliers } = useTranslation('suppliers');
+  const { t: tSigners } = useTranslation('signers');
+  const { t: tDocuments } = useTranslation('documents');
+  const { t: tReports } = useTranslation('reports');
+  const { t: tNotifications } = useTranslation('notifications');
+  const { t: tSettings } = useTranslation('settings');
+  const { t: tCompanies } = useTranslation('companies');
+
+  const navLabels: Record<string, string> = {
+    dashboard: tDashboard('title'),
+    contracts: tContracts('title'),
+    supplements: tSupplements('title'),
+    clients: tClients('title'),
+    suppliers: tSuppliers('title'),
+    signers: tSigners('title'),
+    documents: tDocuments('title'),
+    reports: tReports('title'),
+    notifications: tNotifications('title'),
+    users: tSettings('title'),
+    companies: tCompanies('title'),
+  };
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -140,7 +167,7 @@ export default function AppSidebar() {
                     const isActive = pathname === item.href;
                     return (
                       <Link
-                        key={item.name}
+                        key={item.nameKey}
                         to={item.href}
                         aria-current={isActive ? 'page' : undefined}
                         className={cn(
@@ -152,7 +179,7 @@ export default function AppSidebar() {
                         onClick={() => setSidebarOpen(false)}
                       >
                         <item.icon className="h-5 w-5" aria-hidden="true" />
-                        {item.name}
+                        {navLabels[item.nameKey]}
                         {item.href === '/notifications' && unreadCount > 0 && (
                           <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                             {unreadCount > 99 ? '99+' : unreadCount}
@@ -170,7 +197,7 @@ export default function AppSidebar() {
                     <p className="font-medium">{user?.name}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                     <p className="text-xs text-muted-foreground capitalize mt-1">
-                      Role: {user?.role}
+                      {t('role')}: {user?.role}
                     </p>
                   </div>
                   <Button
@@ -179,7 +206,7 @@ export default function AppSidebar() {
                     onClick={() => { logout(); setSidebarOpen(false); }}
                   >
                     <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Logout
+                    {t('logout')}
                   </Button>
                 </div>
               </ScrollArea>
@@ -206,7 +233,7 @@ export default function AppSidebar() {
             const isActive = pathname === item.href;
             return (
               <Link
-                key={item.name}
+                key={item.nameKey}
                 to={item.href}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
@@ -217,7 +244,7 @@ export default function AppSidebar() {
                 )}
               >
                 <item.icon className="h-5 w-5" aria-hidden="true" />
-                {item.name}
+                {navLabels[item.nameKey]}
                 {item.href === '/notifications' && unreadCount > 0 && (
                   <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -236,7 +263,7 @@ export default function AppSidebar() {
           <p className="font-medium">{user?.name}</p>
           <p className="text-xs text-muted-foreground">{user?.email}</p>
           <p className="text-xs text-muted-foreground capitalize mt-1">
-            Role: {user?.role}
+            {t('role')}: {user?.role}
           </p>
         </div>
         <Button
@@ -245,7 +272,7 @@ export default function AppSidebar() {
           onClick={logout}
         >
           <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-          Logout
+          {t('logout')}
         </Button>
       </div>
     </div>

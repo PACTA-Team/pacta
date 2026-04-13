@@ -1,26 +1,9 @@
 "use client";
 
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { FileText, Bell, BarChart3, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-const features = [
-  {
-    icon: FileText,
-    title: 'Contract Management',
-    description: 'Create, review, and approve contracts with full version tracking and audit trails.',
-  },
-  {
-    icon: Bell,
-    title: 'Expiration Alerts',
-    description: 'Never miss a renewal with automated notifications and smart deadline tracking.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Reports & Analytics',
-    description: 'Real-time dashboards with contract lifecycle insights and compliance tracking.',
-  },
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -40,6 +23,26 @@ const cardVariants = {
 };
 
 export function FeaturesSection() {
+  const { t } = useTranslation('landing');
+
+  const features = [
+    {
+      icon: FileText,
+      title: t('features.items.0.title'),
+      description: t('features.items.0.description'),
+    },
+    {
+      icon: Bell,
+      title: t('features.items.1.title'),
+      description: t('features.items.1.description'),
+    },
+    {
+      icon: BarChart3,
+      title: t('features.items.2.title'),
+      description: t('features.items.2.description'),
+    },
+  ];
+
   return (
     <section id="features" className="px-6 py-24 md:py-32">
       <div className="mx-auto max-w-6xl">
@@ -52,16 +55,13 @@ export function FeaturesSection() {
           className="mb-16 text-center"
         >
           <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm">
-            <span className="text-muted-foreground">Features</span>
+            <span className="text-muted-foreground">{t('features.title')}</span>
           </div>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Everything you need to{' '}
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              stay in control
-            </span>
+            {t('features.subtitle')}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            PACTA gives you the tools to manage contracts from creation to expiration.
+            {t('features.description')}
           </p>
         </motion.div>
 
@@ -88,7 +88,7 @@ export function FeaturesSection() {
                     {feature.description}
                   </CardDescription>
                   <div className="mt-4 flex items-center gap-1 text-sm font-medium text-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <span>Learn more</span>
+                    <span>{t('features.learnMore')}</span>
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </div>
                 </CardContent>

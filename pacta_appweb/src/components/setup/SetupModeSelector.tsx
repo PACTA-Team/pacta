@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -8,6 +9,7 @@ interface SetupModeSelectorProps {
 }
 
 export default function SetupModeSelector({ mode, onChange, onSelect }: SetupModeSelectorProps) {
+  const { t } = useTranslation('setup');
   const handleSelect = (newMode: 'single' | 'multi') => {
     onChange(newMode);
     onSelect?.();
@@ -16,9 +18,9 @@ export default function SetupModeSelector({ mode, onChange, onSelect }: SetupMod
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">¿Cómo usará PACTA?</CardTitle>
+        <CardTitle className="text-xl">{t('modeSelector.title')}</CardTitle>
         <CardDescription>
-          Seleccione el modo de operación que mejor se adapte a su organización.
+          {t('modeSelector.subtitle')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -33,10 +35,9 @@ export default function SetupModeSelector({ mode, onChange, onSelect }: SetupMod
             }`}
             aria-pressed={mode === 'single'}
           >
-            <div className="font-semibold mb-2 text-base">Empresa Individual</div>
+            <div className="font-semibold mb-2 text-base">{t('modeSelector.singleCompany')}</div>
             <p className="text-sm text-muted-foreground">
-              Una sola empresa, todos los abogados gestionan contratos y suplementos.
-              Ideal para organizaciones sin subsidiarias.
+              {t('modeSelector.singleCompanyDesc')}
             </p>
           </button>
           <button
@@ -49,16 +50,15 @@ export default function SetupModeSelector({ mode, onChange, onSelect }: SetupMod
             }`}
             aria-pressed={mode === 'multi'}
           >
-            <div className="font-semibold mb-2 text-base">Multiempresa</div>
+            <div className="font-semibold mb-2 text-base">{t('modeSelector.multiCompany')}</div>
             <p className="text-sm text-muted-foreground">
-              Empresa matriz + subsidiarias con abogados independientes y contratos
-              separados. Cada subsidiaria opera de forma aislada.
+              {t('modeSelector.multiCompanyDesc')}
             </p>
           </button>
         </div>
         <div className="flex justify-end pt-2">
           <Button variant="ghost" size="sm" onClick={() => handleSelect(mode === 'single' ? 'multi' : 'single')} className="text-muted-foreground">
-            Cambiar a {mode === 'single' ? 'Multiempresa' : 'Empresa Individual'}
+            {mode === 'single' ? t('modeSelector.changeToMulti') : t('modeSelector.changeToSingle')}
           </Button>
         </div>
       </CardContent>

@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SetupWizard from '@/components/setup/SetupWizard';
 
 export default function SetupPage() {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(false);
+  const { t } = useTranslation('setup');
 
   useEffect(() => {
     fetch('/api/setup/status')
@@ -26,7 +28,7 @@ export default function SetupPage() {
       <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-hidden="true" />
-          <p className="mt-4 text-sm text-muted-foreground">Checking setup status...</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t('checkingStatus')}</p>
         </div>
       </div>
     );

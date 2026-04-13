@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { runSetup } from '@/lib/setup-api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +29,7 @@ export default function SetupWizard() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation('setup');
 
   const [companyMode, setCompanyMode] = useState<'single' | 'multi'>('single');
   const [company, setCompany] = useState<CompanyFormData>({ name: '', address: '', tax_id: '' });
@@ -64,7 +66,7 @@ export default function SetupWizard() {
           contacts: supplier.contacts || undefined,
         },
       });
-      toast.success('Setup complete! Logging you in...');
+      toast.success(t('review.completeSetup'));
       const user = await login(admin.email, admin.password);
       if (user) {
         setTimeout(() => navigate('/dashboard'), 1000);
