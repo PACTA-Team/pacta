@@ -1,5 +1,6 @@
 
 
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,26 +23,28 @@ export default function ExportButtons({
   onExportCSV,
   disabled = false,
 }: ExportButtonsProps) {
+  const { t } = useTranslation('reports');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" disabled={disabled}>
           <Download className="mr-2 h-4 w-4" />
-          Export
+          {t('export.title')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={onExportPDF}>
           <FileText className="mr-2 h-4 w-4 text-red-500" />
-          Export as PDF
+          {t('export.pdf')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onExportExcel}>
           <FileSpreadsheet className="mr-2 h-4 w-4 text-green-500" />
-          Export as Excel
+          {t('export.excel')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onExportCSV}>
           <File className="mr-2 h-4 w-4 text-blue-500" />
-          Export as CSV
+          {t('export.csv')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

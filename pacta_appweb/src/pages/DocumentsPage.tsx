@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,8 @@ import { toast } from 'sonner';
 import { Link, useSearchParams } from 'react-router-dom';
 
 export default function DocumentsPage() {
+  const { t } = useTranslation('documents');
+  const { t: tCommon } = useTranslation('common');
   const [documents, setDocuments] = useState<APIDocument[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<APIDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

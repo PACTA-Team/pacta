@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,6 +35,8 @@ interface SavedPreset {
 }
 
 export default function ReportsPage() {
+  const { t } = useTranslation('reports');
+  const { t: tCommon } = useTranslation('common');
   const [contracts, setContracts] = useState<any[]>([]);
   const [supplements, setSupplements] = useState<any[]>([]);
   const [activeReport, setActiveReport] = useState<ReportType>('status');
@@ -52,7 +55,7 @@ export default function ReportsPage() {
         setContracts(contractsData as any[]);
         setSupplements(supplementsData as any[]);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to load data');
+        toast.error(err instanceof Error ? err.message : tCommon('error'));
       }
     };
     loadData();
@@ -136,12 +139,12 @@ export default function ReportsPage() {
   };
 
   const reportTypes = [
-    { id: 'status', label: 'By Status', icon: PieChart, description: 'Contract distribution by status' },
-    { id: 'financial', label: 'Financial', icon: DollarSign, description: 'Financial analysis and trends' },
-    { id: 'expiration', label: 'Expirations', icon: AlertTriangle, description: 'Upcoming contract expirations' },
-    { id: 'client-supplier', label: 'Client/Supplier', icon: Users, description: 'Analysis by client and supplier' },
-    { id: 'supplements', label: 'Supplements', icon: FilePlus, description: 'Supplements overview and status' },
-    { id: 'modifications', label: 'Modifications', icon: FileEdit, description: 'Contract modifications history' },
+    { id: 'status', label: t('types.status'), icon: PieChart, description: t('types.contracts') },
+    { id: 'financial', label: t('types.financial'), icon: DollarSign, description: t('types.financial') },
+    { id: 'expiration', label: t('types.expirations'), icon: AlertTriangle, description: t('types.expirations') },
+    { id: 'client-supplier', label: t('types.clientSupplier'), icon: Users, description: t('types.clientSupplier') },
+    { id: 'supplements', label: t('types.supplements'), icon: FilePlus, description: t('types.supplements') },
+    { id: 'modifications', label: t('types.modifications'), icon: FileEdit, description: t('types.modifications') },
   ];
 
   return (
@@ -150,16 +153,16 @@ export default function ReportsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Reports</h1>
+            <h1 className="text-3xl font-bold">{t('title')}</h1>
             <p className="text-muted-foreground">
-              Generate and export comprehensive reports for contracts and supplements
+              {t('subtitle')}
             </p>
           </div>
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
           >
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
+            {showFilters ? t('hideFilters') : t('showFilters')}
           </Button>
         </div>
 
@@ -167,7 +170,7 @@ export default function ReportsPage() {
         {savedPresets.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Saved Filter Presets</CardTitle>
+              <CardTitle className="text-sm">{t('savedPresets')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">

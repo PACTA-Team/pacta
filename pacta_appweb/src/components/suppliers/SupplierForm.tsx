@@ -1,6 +1,7 @@
 
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,8 @@ interface SupplierFormProps {
 }
 
 export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierFormProps) {
+  const { t } = useTranslation('suppliers');
+  const { t: tCommon } = useTranslation('common');
   const [formData, setFormData] = useState({
     name: supplier?.name || '',
     address: supplier?.address || '',
@@ -47,12 +50,12 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
           documentKey: result.fileKey,
           documentName: file.name,
         });
-        toast.success('Document uploaded successfully');
+        toast.success(t('createSuccess'));
       } else {
-        toast.error(result.error || 'Upload failed');
+        toast.error(result.error || tCommon('error'));
       }
     } catch (error) {
-      toast.error('Failed to upload document');
+      toast.error(tCommon('error'));
     } finally {
       setUploading(false);
     }
@@ -75,12 +78,12 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{supplier ? 'Edit Supplier' : 'Add New Supplier'}</CardTitle>
+        <CardTitle>{supplier ? t('editSupplier') : t('addNew')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Company Name *</Label>
+            <Label htmlFor="name">{t('name')} *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -100,7 +103,7 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address *</Label>
+            <Label htmlFor="address">{t('address')} *</Label>
             <Textarea
               id="address"
               value={formData.address}
@@ -111,19 +114,19 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contacts">Company Contacts *</Label>
+            <Label htmlFor="contacts">{t('name')} Contacts *</Label>
             <Textarea
               id="contacts"
               value={formData.contacts}
               onChange={(e) => setFormData({ ...formData, contacts: e.target.value })}
               rows={3}
-              placeholder="Phone, email, contact person, etc."
+              placeholder={t('phone') + ', ' + t('email') + ', contact person, etc.'}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Official Company Document (PDF, DOC, DOCX)</Label>
+            <Label>{t('officialDocument')} (PDF, DOC, DOCX)</Label>
             {formData.documentUrl ? (
               <div className="flex items-center gap-2 p-3 border rounded-lg">
                 <FileText className="h-5 w-5 text-green-600" />
@@ -150,7 +153,7 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
                 <Label htmlFor="document-upload" className="cursor-pointer">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {uploading ? 'Uploading...' : 'Click to upload document'}
+                    {uploading ? t('uploading') : t('uploadClick')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     PDF, DOC, DOCX (max 5MB)
@@ -162,10 +165,10 @@ export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierF
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit">
-              {supplier ? 'Update Supplier' : 'Create Supplier'}
+              {supplier ? t('updateSupplier') : t('createSupplier')}
             </Button>
           </div>
         </form>
