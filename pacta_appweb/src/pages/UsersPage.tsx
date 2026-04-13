@@ -36,7 +36,7 @@ export default function UsersPage() {
       const data = await usersAPI.list();
       setUsers(data);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load users');
+      toast.error(err instanceof Error ? err.message : tCommon('error'));
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     if (!hasPermission('admin')) {
-      toast.error('You do not have permission to access this page');
+      toast.error(t('noUsers'));
       return;
     }
     loadUsers();
@@ -55,15 +55,15 @@ export default function UsersPage() {
     try {
       if (editingUser) {
         await usersAPI.update(editingUser.id, formData.name, formData.email, formData.role);
-        toast.success('User updated successfully');
+        toast.success(t('updateSuccess'));
       } else {
         await usersAPI.create(formData.name, formData.email, formData.password, formData.role);
-        toast.success('User created successfully');
+        toast.success(t('createSuccess'));
       }
       resetForm();
       loadUsers();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Operation failed');
+      toast.error(err instanceof Error ? err.message : tCommon('error'));
     }
   };
 
@@ -93,7 +93,7 @@ export default function UsersPage() {
 
   const handleToggleStatus = async (userId: number) => {
     if (currentUser && parseInt(currentUser.id) === userId) {
-      toast.error('You cannot change your own status');
+      toast.error(tCommon('error'));
       return;
     }
     const user = users.find(u => u.id === userId);
@@ -101,39 +101,39 @@ export default function UsersPage() {
     const newStatus = user.status === 'active' ? 'inactive' : 'active';
     try {
       await usersAPI.updateStatus(userId, newStatus);
-      toast.success('User status updated');
+      toast.success(t('updateSuccess'));
       loadUsers();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update status');
+      toast.error(err instanceof Error ? err.message : tCommon('error'));
     }
   };
 
   const handleResetPassword = async (userId: number) => {
     if (!newPassword) {
-      toast.error('Password is required');
+      toast.error(t('resetPassword'));
       return;
     }
     try {
       await usersAPI.resetPassword(userId, newPassword);
-      toast.success('Password reset successfully');
+      toast.success(t('resetPassword'));
       setShowResetPassword(null);
       setNewPassword('');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset password');
+      toast.error(err instanceof Error ? err.message : tCommon('error'));
     }
   };
 
   const handleDelete = async (userId: number) => {
     if (currentUser && parseInt(currentUser.id) === userId) {
-      toast.error('You cannot delete your own account');
+      toast.error(tCommon('error'));
       return;
     }
     try {
       await usersAPI.delete(userId);
-      toast.success('User deleted');
+      toast.success(tCommon('delete'));
       loadUsers();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete user');
+      toast.error(err instanceof Error ? err.message : tCommon('error'));
     }
   };
 
@@ -171,12 +171,12 @@ export default function UsersPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{editingUser ? 'Edit User' : 'Add New User'}</CardTitle>
+          <CardTitle>{editingUser ? t('editUser') : t('addNew')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="name">{t('name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -186,7 +186,7 @@ export default function UsersPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t('email')} *</Label>
               <Input
                 id="email"
                 type="email"
@@ -199,7 +199,7 @@ export default function UsersPage() {
 
             {!editingUser && (
               <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password">{t('password', { ns: 'login' })} *</Label>
                 <Input
                   id="password"
                   type="password"
@@ -213,30 +213,30 @@ export default function UsersPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="role">Role *</Label>
+                <Label htmlFor="role">{t('role')} *</Label>
                 <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as typeof formData.role })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="editor">Editor</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="admin">{t('admin')}</SelectItem>
+                    <SelectItem value="manager">{t('manager')}</SelectItem>
+                    <SelectItem value="editor">{t('editor')}</SelectItem>
+                    <SelectItem value="viewer">{t('viewer')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="status">{t('status')} *</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as typeof formData.status })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="locked">Locked</SelectItem>
+                    <SelectItem value="active">{t('active')}</SelectItem>
+                    <SelectItem value="inactive">{t('inactive')}</SelectItem>
+                    <SelectItem value="locked">{t('pending')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -244,10 +244,10 @@ export default function UsersPage() {
 
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={resetForm}>
-                Cancel
+                {tCommon('cancel')}
               </Button>
               <Button type="submit">
-                {editingUser ? 'Update User' : 'Create User'}
+                {editingUser ? t('updateUser') : t('createUser')}
               </Button>
             </div>
           </form>
@@ -260,11 +260,11 @@ export default function UsersPage() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Reset Password</CardTitle>
+          <CardTitle>{t('resetPassword')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="new-password">New Password *</Label>
+            <Label htmlFor="new-password">{t('newPassword')} *</Label>
             <Input
               id="new-password"
               type="password"
@@ -277,11 +277,11 @@ export default function UsersPage() {
           </div>
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => { setShowResetPassword(null); setNewPassword(''); }}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button onClick={() => handleResetPassword(showResetPassword)}>
               <KeyRound className="mr-2 h-4 w-4" />
-              Reset Password
+              {t('resetPassword')}
             </Button>
           </div>
         </CardContent>
@@ -293,18 +293,18 @@ export default function UsersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground">
-          Manage users and their roles
+          {t('subtitle')}
         </p>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add User
+          {t('addNew')}
         </Button>
       </div>
 
       {loading ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Loading users...
+            {t('loading')}
           </CardContent>
         </Card>
       ) : (
@@ -313,19 +313,19 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t('name')}</TableHead>
+                  <TableHead>{t('email')}</TableHead>
+                  <TableHead>{t('role')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
                   <TableHead>Last Access</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{tCommon('edit')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      No users found
+                      {t('noUsers')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -380,22 +380,22 @@ export default function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Role Permissions Matrix</CardTitle>
+          <CardTitle>{t('rolePermissions')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Permission</TableHead>
-                <TableHead>Admin</TableHead>
-                <TableHead>Manager</TableHead>
-                <TableHead>Editor</TableHead>
-                <TableHead>Viewer</TableHead>
+                <TableHead>{tCommon('edit')}</TableHead>
+                <TableHead>{t('admin')}</TableHead>
+                <TableHead>{t('manager')}</TableHead>
+                <TableHead>{t('editor')}</TableHead>
+                <TableHead>{t('viewer')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell>View Contracts</TableCell>
+                <TableCell>{t('permissions', { ns: 'settings' })}</TableCell>
                 <TableCell>Yes</TableCell>
                 <TableCell>Yes</TableCell>
                 <TableCell>Yes</TableCell>
