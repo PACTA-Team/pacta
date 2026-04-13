@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +29,8 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function CompaniesPage() {
+  const { t } = useTranslation('companies');
+  const { t: tCommon } = useTranslation('common');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filtered, setFiltered] = useState<Company[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,40 +117,40 @@ export default function CompaniesPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading companies...</div>;
+  if (loading) return <div className="p-8 text-center text-muted-foreground">{t('loading')}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Companies</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
         {canEdit && (
-          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Add Company</Button>
+          <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t('addNew')}</Button>
         )}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Company Directory</CardTitle>
+          <CardTitle>{t('directory')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search companies..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-sm" />
+            <Input placeholder={t('searchPlaceholder')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-sm" />
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Tax ID</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('name')}</TableHead>
+                <TableHead>{t('type')}</TableHead>
+                <TableHead>{t('taxId')}</TableHead>
+                <TableHead>{t('parent')}</TableHead>
+                <TableHead className="text-right">{tCommon('edit')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No companies found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t('noCompanies')}</TableCell></TableRow>
               ) : (
                 filtered.map(c => (
                   <TableRow key={c.id}>
@@ -173,35 +176,35 @@ export default function CompaniesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingCompany ? 'Edit Company' : 'Create Company'}</DialogTitle>
+            <DialogTitle>{editingCompany ? t('editCompany') : t('createCompany')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="company-name">Name</Label>
+              <Label htmlFor="company-name">{t('name')}</Label>
               <Input id="company-name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
             </div>
             <div>
-              <Label htmlFor="company-address">Address</Label>
+              <Label htmlFor="company-address">{t('address', { ns: 'clients' })}</Label>
               <Input id="company-address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
             </div>
             <div>
-              <Label htmlFor="company-taxid">Tax ID</Label>
+              <Label htmlFor="company-taxid">{t('taxId')}</Label>
               <Input id="company-taxid" value={formData.tax_id} onChange={e => setFormData({ ...formData, tax_id: e.target.value })} />
             </div>
             {!editingCompany && (
               <div>
-                <Label htmlFor="company-type">Type</Label>
+                <Label htmlFor="company-type">{t('type')}</Label>
                 <select id="company-type" value={formData.company_type} onChange={e => setFormData({ ...formData, company_type: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <option value="single">Single</option>
-                  <option value="parent">Parent</option>
-                  <option value="subsidiary">Subsidiary</option>
+                  <option value="single">{t('standalone')}</option>
+                  <option value="parent">{t('parent')}</option>
+                  <option value="subsidiary">{t('subsidiary')}</option>
                 </select>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingCompany ? 'Update' : 'Create'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{tCommon('cancel')}</Button>
+            <Button onClick={handleSave}>{editingCompany ? t('update') : t('create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -210,12 +213,12 @@ export default function CompaniesPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Company</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure? This cannot be undone if the company has no active contracts.</AlertDialogDescription>
+            <AlertDialogTitle>{t('delete')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('deleteConfirm')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{tCommon('delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
