@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,9 @@ export default function SupplementForm({
   contracts,
   onCancel,
 }: SupplementFormProps) {
+  const { t } = useTranslation('supplements');
+  const { t: tCommon } = useTranslation('common');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -45,12 +49,12 @@ export default function SupplementForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{editingSupplement ? 'Edit Supplement' : 'Add New Supplement'}</CardTitle>
+        <CardTitle>{editingSupplement ? t('editSupplement') : t('addNew')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="contract_id">Parent Contract *</Label>
+            <Label htmlFor="contract_id">{t('contract')} *</Label>
             <Select
               name="contract_id"
               defaultValue={editingSupplement ? String(editingSupplement.contract_id) : ''}
@@ -58,7 +62,7 @@ export default function SupplementForm({
               required
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select contract" />
+                <SelectValue placeholder={t('contract')} />
               </SelectTrigger>
               <SelectContent>
                 {contracts.map((contract) => (
@@ -72,7 +76,7 @@ export default function SupplementForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="supplement_number">Supplement Number *</Label>
+              <Label htmlFor="supplement_number">{t('title')} *</Label>
               <Input
                 id="supplement_number"
                 name="supplement_number"
@@ -82,7 +86,7 @@ export default function SupplementForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="effective_date">Effective Date *</Label>
+              <Label htmlFor="effective_date">{t('effectiveDate')} *</Label>
               <Input
                 id="effective_date"
                 name="effective_date"
@@ -94,7 +98,7 @@ export default function SupplementForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description">{t('description')} *</Label>
             <Textarea
               id="description"
               name="description"
@@ -105,7 +109,7 @@ export default function SupplementForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="modifications">Modifications Summary</Label>
+            <Label htmlFor="modifications">{t('type')} Summary</Label>
             <Textarea
               id="modifications"
               name="modifications"
@@ -116,10 +120,10 @@ export default function SupplementForm({
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit">
-              {editingSupplement ? 'Update Supplement' : 'Create Supplement'}
+              {editingSupplement ? t('updateSupplement') : t('createSupplement')}
             </Button>
           </div>
         </form>

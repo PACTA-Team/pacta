@@ -1,6 +1,7 @@
 
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,8 @@ interface AuthorizedSignerFormProps {
 }
 
 export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: AuthorizedSignerFormProps) {
+  const { t } = useTranslation('signers');
+  const { t: tCommon } = useTranslation('common');
   const [clients, setClients] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -100,13 +103,13 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{signer ? 'Edit Authorized Signer' : 'Add Authorized Signer'}</CardTitle>
+        <CardTitle>{signer ? t('editSigner') : t('addNew')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="companyType">Company Type *</Label>
+              <Label htmlFor="companyType">{t('role')} *</Label>
               <Select 
                 value={formData.companyType} 
                 onValueChange={(value) => setFormData({ ...formData, companyType: value as 'client' | 'supplier', companyId: '' })}
@@ -115,14 +118,14 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="supplier">Supplier</SelectItem>
+                  <SelectItem value="client">{t('client', { ns: 'common' })}</SelectItem>
+                  <SelectItem value="supplier">{t('supplier', { ns: 'common' })}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="companyId">Company *</Label>
+              <Label htmlFor="companyId">{t('selectCompany', { ns: 'common' })} *</Label>
               <Select 
                 value={formData.companyId} 
                 onValueChange={(value) => setFormData({ ...formData, companyId: value })}
@@ -143,7 +146,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First Name *</Label>
+              <Label htmlFor="firstName">{t('name')} *</Label>
               <Input
                 id="firstName"
                 value={formData.firstName}
@@ -153,7 +156,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name *</Label>
+              <Label htmlFor="lastName">{t('role')} *</Label>
               <Input
                 id="lastName"
                 value={formData.lastName}
@@ -164,7 +167,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="position">Position *</Label>
+            <Label htmlFor="position">{t('role')} *</Label>
             <Input
               id="position"
               value={formData.position}
@@ -176,7 +179,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t('email')} *</Label>
               <Input
                 id="email"
                 type="email"
@@ -187,7 +190,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone">{t('phone')} *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -199,7 +202,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
           </div>
 
           <div className="space-y-2">
-            <Label>Authorization Document (PDF, DOC, DOCX) *</Label>
+            <Label>{t('authDocument')} (PDF, DOC, DOCX) *</Label>
             <p className="text-xs text-muted-foreground">
               Document signed by the Director authorizing this person to sign contracts
             </p>
@@ -229,7 +232,7 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
                 <Label htmlFor="document-upload" className="cursor-pointer">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {uploading ? 'Uploading...' : 'Click to upload authorization document'}
+                    {uploading ? t('uploading', { ns: 'common' }) : t('uploadClick', { ns: 'common' })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     PDF, DOC, DOCX (max 5MB)
@@ -241,10 +244,10 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit">
-              {signer ? 'Update Signer' : 'Create Signer'}
+              {signer ? t('updateSigner') : t('createSigner')}
             </Button>
           </div>
         </form>
