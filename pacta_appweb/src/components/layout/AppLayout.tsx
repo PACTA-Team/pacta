@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppSidebar from './AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import CompanySelector from '@/components/CompanySelector';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -66,10 +67,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header role="banner" className="border-b bg-card px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">
-            {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
-          </h1>
+        <header role="banner" className="border-b bg-card px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <CompanySelector />
+            <h1 className="text-xl font-semibold tracking-tight">
+              {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             <LanguageToggle />
             <ThemeToggle />
