@@ -44,107 +44,105 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4 sm:p-6 lg:p-8">
-      <Card className="w-full max-w-md shadow-lg dark:shadow-2xl">
-        <CardHeader className="space-y-3 pb-6">
-          <CardTitle className="text-2xl font-bold text-center sm:text-3xl">
-            {showRegister ? t('createAccount') : t('title')}
-          </CardTitle>
-          <CardDescription className="text-center text-sm sm:text-base">
-            {showRegister ? t('setupDesc') : t('subtitle')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-6 sm:px-8">
-          {showRegister ? (
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">{t('fullName')}</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder={t('fullNamePlaceholder')}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('email')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('emailPlaceholder')}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('password')}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t('passwordPlaceholder')}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+    <Card className="w-full max-w-md shadow-lg dark:shadow-2xl">
+      <CardHeader className="space-y-3 pb-6">
+        <CardTitle className="text-2xl font-bold text-center sm:text-3xl">
+          {showRegister ? t('createAccount') : t('title')}
+        </CardTitle>
+        <CardDescription className="text-center text-sm sm:text-base">
+          {showRegister ? t('setupDesc') : t('subtitle')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-6 sm:px-8">
+        {showRegister ? (
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">{t('fullName')}</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder={t('fullNamePlaceholder')}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('email')}</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder={t('emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t('password')}</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder={t('passwordPlaceholder')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {t('register')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setShowRegister(false)}
+            >
+              {t('backToLogin')}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('email')}</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder={t('emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t('password')}</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder={t('passwordPlaceholder')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+            </div>
+            <div className="space-y-3">
               <Button type="submit" className="w-full">
-                {t('register')}
+                {t('loginBtn')}
               </Button>
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 className="w-full"
-                onClick={() => setShowRegister(false)}
+                onClick={() => setShowRegister(true)}
               >
-                {t('backToLogin')}
+                {t('createAccount')}
               </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('email')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('emailPlaceholder')}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('password')}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t('passwordPlaceholder')}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="text-sm text-muted-foreground">
-              </div>
-              <div className="space-y-3">
-                <Button type="submit" className="w-full">
-                  {t('loginBtn')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setShowRegister(true)}
-                >
-                  {t('createAccount')}
-                </Button>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
   );
 }
