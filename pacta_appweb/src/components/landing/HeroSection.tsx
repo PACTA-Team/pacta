@@ -1,6 +1,7 @@
 "use client";
 
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ function ElegantShape({
 
 export function HeroSection() {
   const navigate = useNavigate();
+  const { t } = useTranslation('landing');
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-24">
@@ -94,7 +96,7 @@ export function HeroSection() {
           className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm"
         >
           <FileText className="h-3.5 w-3.5" />
-          <span className="text-muted-foreground">Contract Management System</span>
+          <span className="text-muted-foreground">{t('hero.subtitle')}</span>
         </motion.div>
 
         {/* Headline */}
@@ -106,11 +108,7 @@ export function HeroSection() {
           className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl md:leading-tight"
         >
           <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Manage Contracts
-          </span>
-          <br />
-          <span className="bg-gradient-to-r from-primary via-foreground/90 to-primary/70 bg-clip-text text-transparent">
-            with Clarity
+            {t('hero.title')}
           </span>
         </motion.h1>
 
@@ -122,8 +120,8 @@ export function HeroSection() {
           transition={{ delay: 0.6 }}
           className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl"
         >
-          Track, approve, and monitor every contract in one place.
-          Never miss a renewal again.
+          {t('hero.description')}
+          {t('hero.benefit')}
         </motion.p>
 
         {/* CTA Buttons */}
@@ -139,7 +137,7 @@ export function HeroSection() {
             onClick={() => navigate('/login')}
             className="group rounded-xl px-8 text-base"
           >
-            Start Now
+            {t('hero.startNow')}
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <Button
@@ -151,7 +149,7 @@ export function HeroSection() {
             }}
             className="rounded-xl px-8 text-base"
           >
-            Learn More
+            {t('hero.learnMore')}
           </Button>
         </motion.div>
       </div>

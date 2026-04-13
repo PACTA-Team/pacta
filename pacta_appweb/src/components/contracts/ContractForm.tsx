@@ -1,6 +1,7 @@
 
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,8 @@ interface ContractFormProps {
 }
 
 export default function ContractForm({ contract, onSubmit, onCancel }: ContractFormProps) {
+  const { t } = useTranslation('contracts');
+  const { t: tCommon } = useTranslation('common');
   const [clients, setClients] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [clientSigners, setClientSigners] = useState<any[]>([]);
@@ -115,7 +118,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{contract ? 'Edit Contract' : 'Create New Contract'}</CardTitle>
+        <CardTitle>{contract ? t('editContract') : t('newContract')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -150,12 +153,12 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="service">Service</SelectItem>
-                  <SelectItem value="purchase">Purchase</SelectItem>
-                  <SelectItem value="lease">Lease</SelectItem>
-                  <SelectItem value="partnership">Partnership</SelectItem>
-                  <SelectItem value="employment">Employment</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="service">{t('service')}</SelectItem>
+                  <SelectItem value="purchase">{t('purchase')}</SelectItem>
+                  <SelectItem value="lease">{t('lease')}</SelectItem>
+                  <SelectItem value="employment">{t('employment')}</SelectItem>
+                  <SelectItem value="nda">{t('nda')}</SelectItem>
+                  <SelectItem value="other">{t('other')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -292,10 +295,10 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="active">{t('active')}</SelectItem>
+                  <SelectItem value="pending">{t('pending')}</SelectItem>
+                  <SelectItem value="expired">{t('expired')}</SelectItem>
+                  <SelectItem value="cancelled">{t('cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -313,10 +316,10 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit">
-              {contract ? 'Update Contract' : 'Create Contract'}
+              {contract ? t('updateContract') : t('createContract')}
             </Button>
           </div>
         </form>

@@ -1,0 +1,32 @@
+{
+  "title": "Users",
+  "subtitle": "Manage users and their roles",
+  "addNew": "Add New User",
+  "editUser": "Edit User",
+  "addUser": "Add User",
+  "updateUser": "Update User",
+  "createUser": "Create User",
+  "resetPassword": "Reset Password",
+  "newPassword": "New Password",
+  "noUsers": "No users found",
+  "loading": "Loading users...",
+  "rolePermissions": "Role Permissions Matrix",
+  "role": "Role",
+  "admin": "Admin",
+  "manager": "Manager",
+  "editor": "Editor",
+  "viewer": "Viewer",
+  "active": "Active",
+  "inactive": "Inactive",
+  "pending": "Pending",
+  "name": "Name",
+  "email": "Email",
+  "status": "Status",
+  "permissions": {
+    "contracts": "Contracts",
+    "parties": "Parties",
+    "reports": "Reports",
+    "users": "Users",
+    "settings": "Settings"
+  }
+}

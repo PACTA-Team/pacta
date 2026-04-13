@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ interface StepSupplierProps {
 }
 
 export function StepSupplier({ data, onChange, onNext, onPrev }: StepSupplierProps) {
+  const { t } = useTranslation('setup');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleNext = () => {
@@ -37,30 +39,30 @@ export function StepSupplier({ data, onChange, onNext, onPrev }: StepSupplierPro
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">First Supplier</CardTitle>
-        <CardDescription>Add your primary supplier/vendor</CardDescription>
+        <CardTitle className="text-xl">{t('supplier.title')}</CardTitle>
+        <CardDescription>{t('supplier.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="supplier-name">Supplier Name *</Label>
-          <Input id="supplier-name" value={data.name} onChange={e => updateField('name', e.target.value)} placeholder="Supplier Company" required aria-invalid={!!errors.name} aria-describedby={errors.name ? 'supplier-name-error' : undefined} />
+          <Label htmlFor="supplier-name">{t('supplier.name')} *</Label>
+          <Input id="supplier-name" value={data.name} onChange={e => updateField('name', e.target.value)} placeholder={t('supplier.namePlaceholder')} required aria-invalid={!!errors.name} aria-describedby={errors.name ? 'supplier-name-error' : undefined} />
           {errors.name && <p id="supplier-name-error" className="text-sm text-red-500" role="alert">{errors.name}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="supplier-address">Address</Label>
-          <Input id="supplier-address" value={data.address || ''} onChange={e => updateField('address', e.target.value)} placeholder="Optional" />
+          <Label htmlFor="supplier-address">{t('supplier.address')}</Label>
+          <Input id="supplier-address" value={data.address || ''} onChange={e => updateField('address', e.target.value)} placeholder={t('supplier.addressPlaceholder')} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="supplier-reu">REU Code</Label>
-          <Input id="supplier-reu" value={data.reu_code || ''} onChange={e => updateField('reu_code', e.target.value)} placeholder="Optional" />
+          <Label htmlFor="supplier-reu">{t('supplier.taxId')}</Label>
+          <Input id="supplier-reu" value={data.reu_code || ''} onChange={e => updateField('reu_code', e.target.value)} placeholder={t('supplier.taxIdPlaceholder')} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="supplier-contacts">Contacts</Label>
-          <Input id="supplier-contacts" value={data.contacts || ''} onChange={e => updateField('contacts', e.target.value)} placeholder="Optional (JSON)" />
+          <Label htmlFor="supplier-contacts">{t('supplier.phone')}</Label>
+          <Input id="supplier-contacts" value={data.contacts || ''} onChange={e => updateField('contacts', e.target.value)} placeholder={t('supplier.phonePlaceholder')} />
         </div>
         <div className="flex gap-3 pt-4">
-          <Button variant="outline" onClick={onPrev} className="flex-1">Back</Button>
-          <Button onClick={handleNext} className="flex-1">Next</Button>
+          <Button variant="outline" onClick={onPrev} className="flex-1">{t('back', { ns: 'common' })}</Button>
+          <Button onClick={handleNext} className="flex-1">{t('next', { ns: 'common' })}</Button>
         </div>
       </CardContent>
     </Card>

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-04-13
+
+### Added
+- **Automatic language detection** — Browser locale detection via `i18next-browser-languagedetector`; Spanish browsers (`es-*`) auto-display in Spanish, all others default to English
+- **Language toggle UI** — `LanguageToggle` component (dropdown with Languages icon) integrated in AppLayout header and LandingNavbar; manual override persists to localStorage
+- **Full Spanish translations** — 16 namespace JSON files with ~446 translation keys covering all UI text: common, landing, login, setup, contracts, clients, suppliers, supplements, reports, settings, documents, notifications, signers, companies, pending, dashboard
+- **Full English translations** — Matching 16 namespace JSON files with English equivalents for all Spanish keys
+- **Dynamic HTML lang attribute** — `<html lang>` synced via `useEffect` in App.tsx for accessibility and SEO
+- **Locale-aware date/number formatting** — `toLocaleDateString()` and `toLocaleString()` calls updated to pass `i18n.language` for locale-specific formatting
+- **i18n unit tests** — Test suite for i18n configuration, translation loading, language switching, and namespace verification
+
+### Changed
+- **32+ components translated** — All page and form components wrapped with `useTranslation()` hooks: landing, auth, setup, layout, contracts, clients, suppliers, supplements, reports, settings, documents, notifications, signers, companies, pending, dashboard
+- **Multi-namespace support** — Components using shared strings import both primary namespace and `common` via `useTranslation('primary')` + `useTranslation('common')`
+- **PROJECT_SUMMARY updated** — Added v0.24.0 section, i18n usage guide for end users and developers, roadmap updated
+
+### Technical Details
+- **Stack:** i18next v26.0.4, react-i18next v17.0.2, i18next-browser-languagedetector v8.2.1
+- **Detection chain:** localStorage cache → `navigator.language` → fallback `en`
+- **Storage key:** `pacta-language` for user preference persistence
+- **Zero breaking changes** — All existing functionality preserved; English remains default
+
 ## [0.23.0] - 2026-04-12
 
 ### Added

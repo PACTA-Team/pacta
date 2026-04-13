@@ -1,6 +1,7 @@
 
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +54,8 @@ export default function ReportFiltersComponent({
   showAmountFilter = true,
   showClientFilter = true,
 }: ReportFiltersProps) {
+  const { t } = useTranslation('reports');
+  const { t: tCommon } = useTranslation('common');
   const [presetName, setPresetName] = useState('');
   const [showSavePreset, setShowSavePreset] = useState(false);
 
@@ -73,14 +76,14 @@ export default function ReportFiltersComponent({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Filter className="h-5 w-5" />
-          Report Filters
+          {t('filters.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Date Range */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="dateFrom">From Date</Label>
+            <Label htmlFor="dateFrom">{t('filters.fromDate')}</Label>
             <Input
               id="dateFrom"
               type="date"
@@ -89,7 +92,7 @@ export default function ReportFiltersComponent({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="dateTo">To Date</Label>
+            <Label htmlFor="dateTo">{t('filters.toDate')}</Label>
             <Input
               id="dateTo"
               type="date"
@@ -102,16 +105,16 @@ export default function ReportFiltersComponent({
         {/* Status and Type */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Status</Label>
+            <Label>{t('filters.status')}</Label>
             <Select
               value={filters.status}
               onValueChange={(value) => handleChange('status', value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder={t('filters.allStatus')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">{t('filters.allStatus')}</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
@@ -121,16 +124,16 @@ export default function ReportFiltersComponent({
           </div>
           {showTypeFilter && (
             <div className="space-y-2">
-              <Label>Contract Type</Label>
+              <Label>{t('filters.contractType')}</Label>
               <Select
                 value={filters.type}
                 onValueChange={(value) => handleChange('type', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Types" />
+                  <SelectValue placeholder={t('filters.allTypes')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="all">{t('filters.allTypes')}</SelectItem>
                   <SelectItem value="service">Service</SelectItem>
                   <SelectItem value="purchase">Purchase</SelectItem>
                   <SelectItem value="lease">Lease</SelectItem>
@@ -147,19 +150,19 @@ export default function ReportFiltersComponent({
         {showClientFilter && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="client">Client</Label>
+              <Label htmlFor="client">{t('filters.client')}</Label>
               <Input
                 id="client"
-                placeholder="Filter by client..."
+                placeholder={t('filters.client') + '...'}
                 value={filters.client}
                 onChange={(e) => handleChange('client', e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier</Label>
+              <Label htmlFor="supplier">{t('filters.supplier')}</Label>
               <Input
                 id="supplier"
-                placeholder="Filter by supplier..."
+                placeholder={t('filters.supplier') + '...'}
                 value={filters.supplier}
                 onChange={(e) => handleChange('supplier', e.target.value)}
               />
@@ -171,7 +174,7 @@ export default function ReportFiltersComponent({
         {showAmountFilter && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amountMin">Min Amount ($)</Label>
+              <Label htmlFor="amountMin">{t('filters.minAmount')} ($)</Label>
               <Input
                 id="amountMin"
                 type="number"
@@ -181,11 +184,11 @@ export default function ReportFiltersComponent({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amountMax">Max Amount ($)</Label>
+              <Label htmlFor="amountMax">{t('filters.maxAmount')} ($)</Label>
               <Input
                 id="amountMax"
                 type="number"
-                placeholder="No limit"
+                placeholder={tCommon('noResults')}
                 value={filters.amountMax}
                 onChange={(e) => handleChange('amountMax', e.target.value)}
               />
@@ -198,11 +201,11 @@ export default function ReportFiltersComponent({
           <div className="flex items-center gap-2">
             <Button onClick={onApply}>
               <Filter className="mr-2 h-4 w-4" />
-              Apply Filters
+              {t('filters.apply')}
             </Button>
             <Button variant="outline" onClick={onReset}>
               <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
+              {t('filters.reset')}
             </Button>
           </div>
           {onSavePreset && (
@@ -210,22 +213,22 @@ export default function ReportFiltersComponent({
               {showSavePreset ? (
                 <>
                   <Input
-                    placeholder="Preset name..."
+                    placeholder={t('savePreset') + '...'}
                     value={presetName}
                     onChange={(e) => setPresetName(e.target.value)}
                     className="w-40"
                   />
                   <Button size="sm" onClick={handleSavePreset}>
-                    Save
+                    {t('filters.save')}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setShowSavePreset(false)}>
-                    Cancel
+                    {t('filters.cancel')}
                   </Button>
                 </>
               ) : (
                 <Button variant="outline" size="sm" onClick={() => setShowSavePreset(true)}>
                   <Save className="mr-2 h-4 w-4" />
-                  Save Preset
+                  {t('savePreset')}
                 </Button>
               )}
             </div>

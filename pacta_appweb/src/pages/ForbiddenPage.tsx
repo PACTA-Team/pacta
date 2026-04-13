@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert, Home, LogIn } from 'lucide-react';
 
@@ -27,6 +28,7 @@ function FloatingParticle({ delay, x, y, size }: { delay: number; x: number; y: 
 
 export default function ForbiddenPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -84,14 +86,14 @@ export default function ForbiddenPage() {
           className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl"
           variants={itemVariants}
         >
-          Access Denied
+          {t('accessDenied')}
         </motion.h2>
 
         <motion.p
           className="mx-auto mt-4 max-w-md text-lg text-muted-foreground"
           variants={itemVariants}
         >
-          Setup has already been completed. This page is no longer accessible.
+          {t('setupCompleted')}
         </motion.p>
 
         <motion.div
@@ -100,11 +102,11 @@ export default function ForbiddenPage() {
         >
           <Button onClick={() => navigate('/')} size="lg" className="min-w-[180px] gap-2">
             <Home className="h-5 w-5" />
-            Go to Home
+            {t('goToHome')}
           </Button>
           <Button variant="outline" onClick={() => navigate('/login')} size="lg" className="min-w-[180px] gap-2">
             <LogIn className="h-5 w-5" />
-            Login
+            {t('login')}
           </Button>
         </motion.div>
       </motion.div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, AlertTriangle, FilePlus, DollarSign, BarChart3 } from 'lucide-react';
@@ -31,6 +32,9 @@ export default function DashboardPage() {
     pending: 0,
     cancelled: 0,
   });
+  const { t } = useTranslation('dashboard');
+  const { t: tContracts } = useTranslation('contracts');
+  const { i18n } = useTranslation();
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -108,7 +112,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Active Contracts</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('kpi.totalContracts.title')}</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -119,7 +123,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('kpi.expiringSoon.title')}</CardTitle>
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
@@ -130,7 +134,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Supplements</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('kpi.pendingApproval.title')}</CardTitle>
               <FilePlus className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -141,7 +145,7 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Contract Value</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('kpi.totalContracts.desc')}</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -157,7 +161,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-yellow-700 dark:text-yellow-500">
                 <AlertTriangle className="h-5 w-5" />
-                Contracts Expiring Soon
+                {t('expiringTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -174,10 +178,10 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <Badge variant={daysUntilExpiration <= 7 ? 'destructive' : 'default'}>
-                          {daysUntilExpiration} days left
+                          {daysUntilExpiration} {t('daysLeft')}
                         </Badge>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(contract.end_date).toLocaleDateString()}
+                          {new Date(contract.end_date).toLocaleDateString(i18n.language)}
                         </p>
                       </div>
                     </div>
@@ -194,7 +198,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Contracts by Status
+                {t('statusTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -223,7 +227,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  No contracts to display
+                  {t('noContracts')}
                 </div>
               )}
             </CardContent>
@@ -231,43 +235,43 @@ export default function DashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>{t('quickActions')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Link to="/contracts?action=create">
                 <Button className="w-full justify-start" variant="outline">
                   <FileText className="mr-2 h-4 w-4" />
-                  Create New Contract
+                  {t('newContract')}
                 </Button>
               </Link>
-              <Link to="/supplements?action=create">
-                <Button className="w-full justify-start" variant="outline">
-                  <FilePlus className="mr-2 h-4 w-4" />
-                  Add New Supplement
-                </Button>
-              </Link>
-              <Link to="/contracts">
+              <Link to="/clients">
                 <Button className="w-full justify-start" variant="outline">
                   <FileText className="mr-2 h-4 w-4" />
-                  View All Contracts
+                  {t('newClient')}
+                </Button>
+              </Link>
+              <Link to="/suppliers">
+                <Button className="w-full justify-start" variant="outline">
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('newSupplier')}
                 </Button>
               </Link>
               <Link to="/reports">
                 <Button className="w-full justify-start" variant="outline">
                   <BarChart3 className="mr-2 h-4 w-4" />
-                  Generate Reports
+                  {t('viewReports')}
                 </Button>
               </Link>
               <Link to="/documents">
                 <Button className="w-full justify-start" variant="outline">
                   <FileText className="mr-2 h-4 w-4" />
-                  Document Repository
+                  {tContracts('documents')}
                 </Button>
               </Link>
               <Link to="/notifications">
                 <Button className="w-full justify-start" variant="outline">
                   <AlertTriangle className="mr-2 h-4 w-4" />
-                  View Notifications
+                  {t('settings')}
                 </Button>
               </Link>
             </CardContent>

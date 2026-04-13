@@ -1,0 +1,34 @@
+{
+  "hero": {
+    "title": "Sistema de Gestión de Contratos",
+    "subtitle": "Gestiona tus contratos con claridad",
+    "description": "Realiza seguimiento, aprueba y monitorea todos tus contratos desde un solo lugar.",
+    "benefit": "Nunca más pierdas una renovación.",
+    "startNow": "Comenzar ahora",
+    "learnMore": "Saber más"
+  },
+  "features": {
+    "title": "Funcionalidades",
+    "subtitle": "Todo lo que necesitas para mantener el control",
+    "description": "PACTA te ofrece las herramientas para gestionar contratos de forma segura y eficiente.",
+    "items": [
+      {
+        "title": "Gestión Completa",
+        "description": "Crea, edita y organiza todos tus contratos con seguimiento de versiones y estados."
+      },
+      {
+        "title": "Flujos de Aprobación",
+        "description": "Procesos de aprobación estructurados para suplementos y modificaciones contractuales."
+      },
+      {
+        "title": "Alertas Automáticas",
+        "description": "Notificaciones automáticas para contratos por vencer y renovaciones próximas."
+      }
+    ],
+    "learnMore": "Saber más"
+  },
+  "nav": {
+    "features": "Funcionalidades",
+    "login": "Iniciar sesión"
+  }
+}

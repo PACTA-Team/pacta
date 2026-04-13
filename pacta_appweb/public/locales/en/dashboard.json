@@ -1,0 +1,32 @@
+{
+  "title": "Dashboard",
+  "kpi": {
+    "totalContracts": {
+      "title": "Total Contracts",
+      "desc": "Active contracts"
+    },
+    "expiringSoon": {
+      "title": "Expiring Soon",
+      "desc": "Next 30 days"
+    },
+    "activeParties": {
+      "title": "Active Parties",
+      "desc": "Clients and suppliers"
+    },
+    "pendingApproval": {
+      "title": "Pending",
+      "desc": "Awaiting approval"
+    }
+  },
+  "expiringTitle": "Contracts Expiring Soon",
+  "daysLeft": "days left",
+  "statusTitle": "Contracts by Status",
+  "noContracts": "No contracts to display",
+  "quickActions": "Quick Actions",
+  "newContract": "New contract",
+  "newClient": "New client",
+  "newSupplier": "New supplier",
+  "viewReports": "View reports",
+  "manageUsers": "Manage users",
+  "settings": "Settings"
+}

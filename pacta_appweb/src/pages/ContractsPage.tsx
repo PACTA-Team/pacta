@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,8 @@ export default function ContractsPage() {
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
   const { hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation('contracts');
+  const { t: tCommon } = useTranslation('common');
 
   useEffect(() => {
     loadData();
@@ -107,7 +110,7 @@ export default function ContractsPage() {
           type: data.type,
           status: data.status,
         });
-        toast.success('Contract updated successfully');
+        toast.success(t('updateSuccess'));
       } else {
         await contractsAPI.create({
           contract_number: data.contractNumber,
@@ -120,7 +123,7 @@ export default function ContractsPage() {
           type: data.type,
           status: data.status,
         });
-        toast.success('Contract created successfully');
+        toast.success(t('createSuccess'));
       }
       setShowForm(false);
       setEditingContract(undefined);
@@ -152,7 +155,7 @@ export default function ContractsPage() {
     if (!contractToDelete) return;
     try {
       await contractsAPI.delete(contractToDelete);
-      toast.success('Contract deleted successfully');
+      toast.success(t('deleteSuccess'));
       setDeleteDialogOpen(false);
       setContractToDelete(null);
       loadData();
@@ -168,7 +171,7 @@ export default function ContractsPage() {
       pending: 'secondary',
       cancelled: 'outline',
     };
-    return <Badge variant={variants[status]}>{status}</Badge>;
+    return <Badge variant={variants[status]}>{t(status)}</Badge>;
   };
 
   const getClientName = (clientId: number) => {
@@ -204,7 +207,7 @@ export default function ContractsPage() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search contracts..."
+                placeholder={t('searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -213,28 +216,28 @@ export default function ContractsPage() {
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">{t('active')}</SelectItem>
+                  <SelectItem value="pending">{t('pending')}</SelectItem>
+                  <SelectItem value="expired">{t('expired')}</SelectItem>
+                  <SelectItem value="cancelled">{t('cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Type" />
+                  <SelectValue placeholder={t('type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="service">Service</SelectItem>
-                  <SelectItem value="purchase">Purchase</SelectItem>
-                  <SelectItem value="lease">Lease</SelectItem>
-                  <SelectItem value="partnership">Partnership</SelectItem>
-                  <SelectItem value="employment">Employment</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="service">{t('service')}</SelectItem>
+                  <SelectItem value="purchase">{t('purchase')}</SelectItem>
+                  <SelectItem value="lease">{t('lease')}</SelectItem>
+                  <SelectItem value="employment">{t('employment')}</SelectItem>
+                  <SelectItem value="nda">{t('nda')}</SelectItem>
+                  <SelectItem value="other">{t('other')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -242,8 +245,8 @@ export default function ContractsPage() {
           {hasPermission('editor') && (
             <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Create New Contract</span>
-              <span className="sm:hidden">New Contract</span>
+              <span className="hidden sm:inline">{t('createNew')}</span>
+              <span className="sm:hidden">{t('newContract')}</span>
             </Button>
           )}
         </div>
@@ -255,21 +258,21 @@ export default function ContractsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Internal ID</TableHead>
-                    <TableHead>Contract Number</TableHead>
+                    <TableHead>{t('contractNumber', 'Contract Number')}</TableHead>
                     <TableHead className="hidden md:table-cell">Title</TableHead>
-                    <TableHead className="hidden lg:table-cell">Client/Supplier</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead className="hidden sm:table-cell">End Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Amount</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="hidden lg:table-cell">{t('client')}/{t('supplier')}</TableHead>
+                    <TableHead>{t('startDate')}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t('endDate')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead className="hidden md:table-cell">{t('amount')}</TableHead>
+                    <TableHead>{tCommon('edit')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredContracts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        No contracts found
+                        {t('noContracts')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -280,8 +283,8 @@ export default function ContractsPage() {
                         <TableCell className="hidden md:table-cell">{contract.title}</TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="text-sm">
-                            <div>Client: {getClientName(contract.client_id)}</div>
-                            <div className="text-muted-foreground">Supplier: {getSupplierName(contract.supplier_id)}</div>
+                            <div>{t('client')}: {getClientName(contract.client_id)}</div>
+                            <div className="text-muted-foreground">{t('supplier')}: {getSupplierName(contract.supplier_id)}</div>
                           </div>
                         </TableCell>
                         <TableCell>{new Date(contract.start_date).toLocaleDateString()}</TableCell>
@@ -320,14 +323,14 @@ export default function ContractsPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{tCommon('areYouSure')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the contract and all associated data.
+              {t('deleteConfirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>{tCommon('delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

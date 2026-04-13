@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,6 +37,8 @@ export default function SuppliersPage() {
   const [supplierToDelete, setSupplierToDelete] = useState<number | null>(null);
   const [viewingSupplier, setViewingSupplier] = useState<any | null>(null);
   const { hasPermission } = useAuth();
+  const { t } = useTranslation('suppliers');
+  const { t: tCommon } = useTranslation('common');
 
   useEffect(() => {
     loadSuppliers();
@@ -77,7 +80,7 @@ export default function SuppliersPage() {
           reu_code: data.reuCode,
           contacts: data.contacts,
         });
-        toast.success('Supplier updated successfully');
+        toast.success(t('updateSuccess'));
       } else {
         await suppliersAPI.create({
           name: data.name,
@@ -85,7 +88,7 @@ export default function SuppliersPage() {
           reu_code: data.reuCode,
           contacts: data.contacts,
         });
-        toast.success('Supplier created successfully');
+        toast.success(t('createSuccess'));
       }
       setShowForm(false);
       setEditingSupplier(undefined);
@@ -117,7 +120,7 @@ export default function SuppliersPage() {
     if (!supplierToDelete) return;
     try {
       await suppliersAPI.delete(supplierToDelete);
-      toast.success('Supplier deleted successfully');
+      toast.success(t('updateSuccess'));
       setDeleteDialogOpen(false);
       setSupplierToDelete(null);
       loadSuppliers();
@@ -148,7 +151,7 @@ export default function SuppliersPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search suppliers..."
+              placeholder={t('searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -157,7 +160,7 @@ export default function SuppliersPage() {
           {hasPermission('editor') && (
             <Button onClick={() => setShowForm(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add New Supplier
+              {t('addNew')}
             </Button>
           )}
         </div>
@@ -179,7 +182,7 @@ export default function SuppliersPage() {
                 {filteredSuppliers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      No suppliers found
+                      {t('noSuppliers')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -193,7 +196,7 @@ export default function SuppliersPage() {
                         {supplier.document_url ? (
                           <FileText className="h-4 w-4 text-green-600" />
                         ) : (
-                          <span className="text-muted-foreground text-sm">No document</span>
+                          <span className="text-muted-foreground text-sm">{t('noDocument')}</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -225,14 +228,14 @@ export default function SuppliersPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{tCommon('areYouSure')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the supplier.
+              {t('deleteConfirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>{tCommon('delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -240,30 +243,30 @@ export default function SuppliersPage() {
       <Dialog open={!!viewingSupplier} onOpenChange={() => setViewingSupplier(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Supplier Details</DialogTitle>
+            <DialogTitle>{t('supplierDetails')}</DialogTitle>
           </DialogHeader>
           {viewingSupplier && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Company Name</p>
+                  <p className="text-sm text-muted-foreground">{t('name')}</p>
                   <p className="font-medium">{viewingSupplier.name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">REU Code</p>
+                  <p className="text-sm text-muted-foreground">{t('taxId')}</p>
                   <p className="font-medium">{viewingSupplier.reu_code}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Address</p>
+                  <p className="text-sm text-muted-foreground">{t('address')}</p>
                   <p className="font-medium">{viewingSupplier.address}</p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Contacts</p>
+                  <p className="text-sm text-muted-foreground">{t('phone')}</p>
                   <p className="font-medium">{viewingSupplier.contacts}</p>
                 </div>
                 {viewingSupplier.document_url && (
                   <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground mb-2">Official Document</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t('officialDocument')}</p>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       <a
@@ -272,7 +275,7 @@ export default function SuppliersPage() {
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        {viewingSupplier.document_name || 'View Document'}
+                        {viewingSupplier.document_name || t('viewDocument')}
                       </a>
                     </div>
                   </div>

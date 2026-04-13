@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,8 @@ export default function ContractDetailsPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const { hasPermission } = useAuth();
+  const { t } = useTranslation('contracts');
+  const { t: tCommon } = useTranslation('common');
 
   const contractId = id ? parseInt(id) : 0;
 
@@ -85,9 +88,9 @@ export default function ContractDetailsPage() {
     return (
       
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Contract not found</p>
+          <p className="text-muted-foreground">{t('notFound')}</p>
           <Button onClick={() => navigate('/contracts')} className="mt-4">
-            Back to Contracts
+            {t('backToList')}
           </Button>
         </div>
       
@@ -120,65 +123,65 @@ export default function ContractDetailsPage() {
                 <Link to={`/contracts?action=edit&id=${contract.id}`}>
                   <Button variant="outline">
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit Contract
+                    {t('edit')}
                   </Button>
                 </Link>
                 <Link to={`/supplements?action=create&contractId=${contract.id}`}>
                   <Button variant="outline">
                     <FilePlus className="mr-2 h-4 w-4" />
-                    Add Supplement
+                    {t('addSupplement')}
                   </Button>
                 </Link>
               </>
             )}
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              Generate Report
+              {t('generateReport')}
             </Button>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>General Information</CardTitle>
+            <CardTitle>{t('generalInfo')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-muted-foreground">Contract Number</p>
+                <p className="text-sm text-muted-foreground">{t('contractNumber', 'Contract Number')}</p>
                 <p className="font-medium">{contract.contract_number}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="text-sm text-muted-foreground">{t('status')}</p>
                 <div className="mt-1">{getStatusBadge(contract.status)}</div>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Type</p>
+                <p className="text-sm text-muted-foreground">{t('type')}</p>
                 <p className="font-medium capitalize">{contract.type}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Amount</p>
+                <p className="text-sm text-muted-foreground">{t('amount')}</p>
                 <p className="font-medium">${contract.amount.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Client</p>
+                <p className="text-sm text-muted-foreground">{t('client')}</p>
                 <p className="font-medium">{clientName || 'Unknown client'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Supplier</p>
+                <p className="text-sm text-muted-foreground">{t('supplier')}</p>
                 <p className="font-medium">{supplierName || 'Unknown supplier'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Start Date</p>
+                <p className="text-sm text-muted-foreground">{t('startDate')}</p>
                 <p className="font-medium">{new Date(contract.start_date).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">End Date</p>
+                <p className="text-sm text-muted-foreground">{t('endDate')}</p>
                 <p className="font-medium">{new Date(contract.end_date).toLocaleDateString()}</p>
               </div>
               <div className="col-span-2">
-                <p className="text-sm text-muted-foreground">Description</p>
-                <p className="font-medium">{contract.description || 'No description provided'}</p>
+                <p className="text-sm text-muted-foreground">{t('description')}</p>
+                <p className="font-medium">{contract.description || t('noDescription')}</p>
               </div>
             </div>
           </CardContent>
@@ -186,11 +189,11 @@ export default function ContractDetailsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Associated Supplements</CardTitle>
+            <CardTitle>{t('supplements')}</CardTitle>
           </CardHeader>
           <CardContent>
             {supplements.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">No supplements found</p>
+              <p className="text-center text-muted-foreground py-4">{t('noSupplements')}</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -220,19 +223,19 @@ export default function ContractDetailsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Document Repository</CardTitle>
+            <CardTitle>{t('documents')}</CardTitle>
             {hasPermission('editor') && (
               <Link to={`/documents?action=upload&contractId=${contract.id}`}>
                 <Button size="sm">
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Document
+                  {t('uploadDocument')}
                 </Button>
               </Link>
             )}
           </CardHeader>
           <CardContent>
             {documents.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">No documents uploaded</p>
+              <p className="text-center text-muted-foreground py-4">{t('noDocuments')}</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -276,11 +279,11 @@ export default function ContractDetailsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Audit Trail</CardTitle>
+            <CardTitle>{t('auditTrail')}</CardTitle>
           </CardHeader>
           <CardContent>
             {auditLogs.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">No audit logs found</p>
+              <p className="text-center text-muted-foreground py-4">{t('noAuditLogs')}</p>
             ) : (
               <div className="space-y-4">
                 {auditLogs.map((log) => (

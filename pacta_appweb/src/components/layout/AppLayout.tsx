@@ -1,9 +1,11 @@
 
 import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import AppSidebar from './AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -24,6 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const pathname = location.pathname;
   const mainRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('common');
 
   // Update document title on route change
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" aria-hidden="true" />
-          <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     );
@@ -67,7 +70,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <h1 className="text-xl font-semibold">
             {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
           </h1>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
         </header>
         <main
           ref={mainRef}
