@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,9 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 export default function NotificationsPage() {
+  const { t } = useTranslation('notifications');
+  const { t: tCommon } = useTranslation('common');
+  const { i18n } = useTranslation();
   const [notifications, setNotifications] = useState<APINotification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,13 +66,13 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-muted-foreground">
-            {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+            {unreadCount} {t('unread')}
           </p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" onClick={handleMarkAllRead}>
             <CheckCheck className="mr-2 h-4 w-4" />
-            Mark All Read
+            {t('markAllRead')}
           </Button>
         )}
       </div>
@@ -78,7 +82,7 @@ export default function NotificationsPage() {
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No notifications yet</p>
+              <p>{t('empty')}</p>
             </CardContent>
           </Card>
         ) : (
@@ -96,7 +100,7 @@ export default function NotificationsPage() {
                         </Badge>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        {new Date(notification.created_at).toLocaleDateString()}
+                        {new Date(notification.created_at).toLocaleDateString(i18n.language)}
                       </span>
                     </div>
                     {notification.message && (
@@ -108,7 +112,7 @@ export default function NotificationsPage() {
                       {notification.entity_id && notification.entity_type === 'contract' && (
                         <Link to={`/contracts/${notification.entity_id}`}>
                           <Button variant="outline" size="sm">
-                            View Contract
+                            {t('viewContract')}
                           </Button>
                         </Link>
                       )}
@@ -119,7 +123,7 @@ export default function NotificationsPage() {
                           onClick={() => handleMarkAsRead(notification.id)}
                         >
                           <Check className="mr-2 h-4 w-4" />
-                          Mark as Read
+                          {t('markRead')}
                         </Button>
                       )}
                     </div>
