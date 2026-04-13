@@ -451,6 +451,29 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ## Progress Tracking
 
+### Completed (v0.24.0)
+
+**Automatic Language Detection (i18n):**
+- [x] i18next ecosystem installed (i18next@26.0.4, react-i18next@17.0.2, i18next-browser-languagedetector@8.2.1)
+- [x] i18n configuration (`src/i18n/index.ts`) with browser language detection
+- [x] Detection priority chain: localStorage cache → navigator.language → fallback to 'en'
+- [x] Spanish detection logic: `navigator.language.startsWith('es')` → 'es', everything else → 'en'
+- [x] LanguageToggle component (mirrors ThemeToggle pattern with Languages icon)
+- [x] LanguageToggle integrated in AppLayout header and LandingNavbar (desktop + mobile)
+- [x] Dynamic HTML lang attribute synced via useEffect in App.tsx
+- [x] 32 translation JSON files created (16 Spanish + 16 English)
+- [x] 16 namespaces: common, landing, login, setup, contracts, clients, suppliers, supplements, reports, settings, documents, notifications, signers, companies, pending, dashboard
+- [x] ~446 translation keys defined per language
+- [x] 25+ components wrapped with useTranslation() hooks
+- [x] Date/number formatting updated to use i18n.language for locale-aware formatting
+- [x] Build verified (vite build passes)
+
+**Remaining i18n tasks:**
+- [ ] Complete string replacements in 7 files (UsersPage, SupplementsPage, AuthorizedSignersPage, CompaniesPage, NotificationsPage, AuthorizedSignerForm, SupplementForm) — imports added, pattern established
+- [ ] Write i18n unit tests (detection config, language switching, namespace verification)
+- [ ] Write component render tests (HeroSection/LoginForm in both languages)
+- [ ] CHANGELOG update and version bump to 0.24.0
+
 ### Completed (v0.23.0)
 
 **localStorage Elimination:**
@@ -739,7 +762,7 @@ _No active work in progress._
 - [ ] Custom role definitions and permission matrices
 - [ ] Data export (CSV, PDF report generation)
 - [ ] Backup and restore utilities
-- [ ] Multi-language UI support (i18n)
+- [ ] Multi-language UI support (i18n) — **IN PROGRESS (v0.24.0)** — infrastructure complete, 25+ components translated, 7 files pending string replacements
 - [ ] systemd service template for easy installation
 - [ ] Docker container option
 - [ ] Windows installer (.exe with auto-start and browser launch)
@@ -757,6 +780,74 @@ _No active work in progress._
 | Build pipeline | GoReleaser over manual scripts | Automated multi-platform builds, checksums, release management |
 | Data directory | XDG spec (`~/.local/share/pacta/data`) | Professional standard, follows Linux conventions |
 | QA deployment | Caddy reverse proxy | Auto TLS, simple config, production-ready |
+
+---
+
+## Using the Language Toggle
+
+### For End Users
+
+The language toggle is available on **every page** of the application:
+
+1. **Landing page** — Top-right corner of the navbar, next to the Login button
+2. **Authenticated app** — Top-right corner of the header, next to the theme toggle
+
+**How it works:**
+- Click the Languages icon (🌐) to open the dropdown
+- Select **English** or **Español**
+- Your preference is saved to localStorage and persists across sessions
+- The entire UI updates immediately without page reload
+
+**Automatic detection:**
+- On first visit, PACTA detects your browser's language setting
+- If your browser is configured in Spanish (`es`, `es-MX`, `es-AR`, etc.), the app displays in Spanish automatically
+- All other browser languages default to English
+- Manual override always takes precedence over automatic detection
+
+### For Developers
+
+**Adding a new language:**
+
+1. Create translation files in `pacta_appweb/public/locales/{lang}/` for each namespace
+2. Add the language to `supportedLngs` in `src/i18n/index.ts`
+3. Update the LanguageToggle component to include the new option
+4. No code changes needed — i18next loads the new JSON files automatically
+
+**Translating a new component:**
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation('namespace'); // e.g., 'contracts', 'common'
+  
+  return (
+    <div>
+      <h1>{t('myKey')}</h1>
+      <p>{t('anotherKey', { count: 5 })}</p> {/* with interpolation */}
+    </div>
+  );
+}
+```
+
+**Using multiple namespaces:**
+
+```tsx
+const { t } = useTranslation('contracts');
+const { t: tCommon } = useTranslation('common');
+
+// Use t() for contract-specific strings, tCommon() for shared UI
+```
+
+**Date/number formatting:**
+
+```tsx
+const { i18n } = useTranslation();
+
+// Locale-aware formatting
+new Date(contract.end_date).toLocaleDateString(i18n.language)
+amount.toLocaleString(i18n.language)
+```
 
 ---
 
