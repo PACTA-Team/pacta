@@ -1,3 +1,4 @@
+-- +goose Up
 -- Create notification_settings table
 CREATE TABLE IF NOT EXISTS notification_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -13,5 +14,5 @@ CREATE TABLE IF NOT EXISTS notification_settings (
 CREATE INDEX IF NOT EXISTS idx_notification_settings_user ON notification_settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_notification_settings_company ON notification_settings(company_id);
 
--- Down
+-- +goose Down
 DROP TABLE IF EXISTS notification_settings;
