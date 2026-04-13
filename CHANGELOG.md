@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.1] - 2026-04-13
+
+### Fixed
+- **Supplements page crash** — Added missing `deleted_at` column to `supplements` table via migration `022_supplements_deleted_at.sql`. The backend handler queried `WHERE deleted_at IS NULL` but the column was never created, causing `Error loading supplements: failed to list supplements` on page load
+
+### Technical Details
+- **Files Created:** 1 (`internal/db/migrations/022_supplements_deleted_at.sql`)
+- **Root Cause:** Migration `006_supplements.sql` created the table without `deleted_at`, while all other soft-delete-enabled tables (contracts, clients, suppliers, etc.) included it from the start
+
 ## [0.25.0] - 2026-04-13
 
 ### Added
