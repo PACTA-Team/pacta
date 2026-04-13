@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,6 +30,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 export default function AuthorizedSignersPage() {
+  const { t } = useTranslation('signers');
+  const { t: tCommon } = useTranslation('common');
   const [signers, setSignersState] = useState<any[]>([]);
   const [filteredSigners, setFilteredSigners] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -175,7 +178,7 @@ export default function AuthorizedSignersPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search authorized signers..."
+              placeholder={t('searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -184,7 +187,7 @@ export default function AuthorizedSignersPage() {
           {hasPermission('editor') && (
             <Button onClick={() => setShowForm(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Authorized Signer
+              {t('addNew')}
             </Button>
           )}
         </div>
@@ -194,20 +197,20 @@ export default function AuthorizedSignersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t('name')}</TableHead>
+                  <TableHead>{tCommon('selectCompany')}</TableHead>
+                  <TableHead>{t('role')}</TableHead>
+                  <TableHead>{t('email')}</TableHead>
+                  <TableHead>{t('phone')}</TableHead>
+                  <TableHead>{t('authDocument')}</TableHead>
+                  <TableHead>{tCommon('edit')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSigners.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No authorized signers found
+                      {t('noSigners')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -231,7 +234,7 @@ export default function AuthorizedSignersPage() {
                         {signer.document_url ? (
                           <FileText className="h-4 w-4 text-green-600" />
                         ) : (
-                          <span className="text-muted-foreground text-sm">No document</span>
+                          <span className="text-muted-foreground text-sm">{t('noDocument')}</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -263,14 +266,14 @@ export default function AuthorizedSignersPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{tCommon('areYouSure')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the authorized signer.
+              {tCommon('actionCannotBeUndone')} {t('deleteConfirm')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>{tCommon('delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -278,21 +281,21 @@ export default function AuthorizedSignersPage() {
       <Dialog open={!!viewingSigner} onOpenChange={() => setViewingSigner(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Authorized Signer Details</DialogTitle>
+            <DialogTitle>{t('signerDetails')}</DialogTitle>
           </DialogHeader>
           {viewingSigner && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Full Name</p>
+                  <p className="text-sm text-muted-foreground">{t('name')}</p>
                   <p className="font-medium">{viewingSigner.first_name} {viewingSigner.last_name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Position</p>
+                  <p className="text-sm text-muted-foreground">{t('role')}</p>
                   <p className="font-medium">{viewingSigner.position}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Company</p>
+                  <p className="text-sm text-muted-foreground">{tCommon('selectCompany')}</p>
                   <div className="flex items-center gap-2">
                     <Badge variant={viewingSigner.company_type === 'client' ? 'default' : 'secondary'}>
                       {viewingSigner.company_type}
@@ -301,16 +304,16 @@ export default function AuthorizedSignersPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="text-sm text-muted-foreground">{t('email')}</p>
                   <p className="font-medium">{viewingSigner.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="text-sm text-muted-foreground">{t('phone')}</p>
                   <p className="font-medium">{viewingSigner.phone}</p>
                 </div>
                 {viewingSigner.document_url && (
                   <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground mb-2">Authorization Document</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t('authDocument')}</p>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       <a
@@ -319,7 +322,7 @@ export default function AuthorizedSignersPage() {
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        {viewingSigner.document_name || 'View Document'}
+                        {viewingSigner.document_name || t('viewDocument')}
                       </a>
                     </div>
                   </div>
