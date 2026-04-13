@@ -10,6 +10,8 @@
 
 PACTA is a local-first contract management platform designed for organizations that require full control over their data. Distributed as a single binary with zero external dependencies, it runs entirely on your machine — no cloud, no third-party servers, no data leaving your infrastructure.
 
+🇪🇸 [Leer en español →](docs/README-ES.md)
+
 ---
 
 ## Features
@@ -51,14 +53,17 @@ Get the latest release for your platform from the [Releases](https://github.com/
 
 The application starts on `http://127.0.0.1:3000` and opens your browser automatically.
 
-### 4. Log In
+### 4. Set Up
 
-| Field    | Value              |
-|----------|--------------------|
-| Email    | admin@pacta.local  |
-| Password | admin123           |
+On first run, PACTA opens a **Setup Wizard** in your browser. Navigate to `/setup` (or wait for the automatic redirect) to configure:
 
-> **Security note:** Change the default credentials immediately after first login.
+1. **Create admin account** — Choose your email and password
+2. **Add clients** — Register your organization's clients (optional, can be skipped)
+3. **Add suppliers** — Register suppliers (optional, can be skipped)
+
+Once setup is complete, you'll be redirected to the login page. Use the credentials you created to log in.
+
+> **Note:** The setup wizard only appears on first run. If you need to reconfigure, delete the SQLite database file and restart PACTA.
 
 ---
 
@@ -137,6 +142,8 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Version | Date | Type | Highlights |
 |---------|------|------|------------|
+| [v0.24.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.24.0) | 2026-04-13 | 🌍 i18n | Full Spanish/English translations, language detection, locale-aware formatting |
+| [v0.23.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.23.0) | 2026-04-12 | 🔧 Refactor | Audit logs API, notification settings API, localStorage elimination |
 | [v0.22.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.22.0) | 2026-04-12 | ✨ Feature | Setup mode auto-advance, tactile card feedback |
 | [v0.21.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.21.0) | 2026-04-12 | 🔒 Security | Setup flow security, ForbiddenPage component |
 | [v0.20.4](https://github.com/PACTA-Team/pacta/releases/tag/v0.20.4) | 2026-04-12 | 🐛 Fix | Migration ordering, goose database migrations |
