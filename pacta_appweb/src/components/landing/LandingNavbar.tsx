@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 const navLinks = [
   { name: 'Features', href: '#features' },
@@ -35,7 +36,7 @@ export function LandingNavbar() {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-8 md:flex">
+        <div className="hidden items-center gap-4 md:flex">
           {navLinks.map((link) => (
             <a
               key={link.name}
@@ -45,6 +46,7 @@ export function LandingNavbar() {
               {link.name}
             </a>
           ))}
+          <LanguageToggle />
           <Button onClick={() => navigate('/login')} size="sm">
             Login
           </Button>
@@ -81,6 +83,9 @@ export function LandingNavbar() {
                   {link.name}
                 </a>
               ))}
+              <div className="flex items-center justify-between">
+                <LanguageToggle />
+              </div>
               <Button onClick={() => navigate('/login')} className="w-full">
                 Login
               </Button>
