@@ -417,7 +417,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.23.0 | Latest | Complete localStorage elimination (audit logs, notifications, settings), notification settings backend API, all 24 TypeScript errors fixed, 41 tests passing, clean `tsc --noEmit` build |
+| v0.24.0 | Latest | Automatic language detection (i18n), Spanish/English support, LanguageToggle, 32 translation files, 32+ components translated |
+| v0.23.0 | - | Complete localStorage elimination (audit logs, notifications, settings), notification settings backend API, all 24 TypeScript errors fixed, 41 tests passing, clean `tsc --noEmit` build |
 | v0.22.0 | Latest | Setup mode auto-advance (click card to advance, tactile feedback, focus-visible styles, "Cambiar a..." toggle) |
 | v0.21.0 | Latest | Setup flow security (fresh install redirect to /setup, /setup guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | v0.20.4 | - | Fix missing migration 016 (documents/notifications/audit_logs company_id), correct migration ordering |
@@ -469,10 +470,10 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 - [x] Build verified (vite build passes)
 
 **Remaining i18n tasks:**
-- [ ] Complete string replacements in 7 files (UsersPage, SupplementsPage, AuthorizedSignersPage, CompaniesPage, NotificationsPage, AuthorizedSignerForm, SupplementForm) — imports added, pattern established
-- [ ] Write i18n unit tests (detection config, language switching, namespace verification)
-- [ ] Write component render tests (HeroSection/LoginForm in both languages)
-- [ ] CHANGELOG update and version bump to 0.24.0
+- [x] Complete string replacements in 7 files (UsersPage, SupplementsPage, AuthorizedSignersPage, CompaniesPage, NotificationsPage, AuthorizedSignerForm, SupplementForm) — all translated
+- [x] Write i18n unit tests (detection config, language switching, namespace verification)
+- [x] CHANGELOG update and version bump to 0.24.0
+- [x] PR created: https://github.com/PACTA-Team/pacta/pull/59
 
 ### Completed (v0.23.0)
 
@@ -708,7 +709,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### In Progress
 
-_No active work in progress._
+_No active work in progress. Latest PR: [#59 — Automatic language detection (i18n)](https://github.com/PACTA-Team/pacta/pull/59)_
 
 ### Pending — Backend (Highest Priority)
 
@@ -762,7 +763,7 @@ _No active work in progress._
 - [ ] Custom role definitions and permission matrices
 - [ ] Data export (CSV, PDF report generation)
 - [ ] Backup and restore utilities
-- [ ] Multi-language UI support (i18n) — **IN PROGRESS (v0.24.0)** — infrastructure complete, 25+ components translated, 7 files pending string replacements
+- [ ] Multi-language UI support (i18n) — **Complete (v0.24.0)** — PR #59, 18 commits, 32 translation files, 32+ components translated
 - [ ] systemd service template for easy installation
 - [ ] Docker container option
 - [ ] Windows installer (.exe with auto-start and browser launch)
