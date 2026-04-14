@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Hybrid registration system** — Two registration modes: email code verification (via Resend) and admin approval with company assignment
+- **Resend email integration** — `github.com/resend/resend-go/v3` SDK with configurable `RESEND_API_KEY` and `EMAIL_FROM` environment variables
+- **Email verification flow** — 6-digit verification code sent via email, 5-minute expiration window, auto-redirect to support contact page on expiry
+- **Admin approval workflow** — Users can register with company name; admins receive email + in-app notification to approve/reject with company assignment
+- **Pending approvals UI** — New "Pending Approvals" tab in Users page with approve/reject actions, company selector dropdown, and optional notes
+- **User company assignment** — Admins can now assign or change a user's company from the Users edit form
+- **Role constants** — Named constants (`RoleViewer`, `RoleEditor`, `RoleManager`, `RoleAdmin`) replacing magic numbers in route definitions
+
+### Fixed
+- **Login fails after registration** — Newly registered users without company assignment now get clear error message; registration auto-assigns to first company
+- **Pending status checks in login** — `pending_email` and `pending_approval` users receive specific guidance instead of generic "account inactive" error
+- **SPA 404 on back button and F5** — Custom `spaHandler` serves `index.html` for non-file routes, enabling React Router to handle client-side navigation
+- **Race condition in email client** — `sync.Once` protection for Resend client initialization
+- **Silent email failures** — Logging warnings when email service is disabled or code not sent
+- **Go version in go.mod** — Corrected from `go 1.25.0` (non-existent) to `go 1.23`
+
+### Changed
+- **Registration form** — Now includes registration method radio selector (email verification vs admin approval) and conditional company name field
+- **HandleRegister logic** — First user gets admin/active; subsequent users get viewer + mode-based status (`pending_email` or `pending_approval`)
+- **Database schema** — New `registration_codes` and `pending_approvals` tables (migration 023)
+
+### Technical Details
+- **Files Created:** 8 (`internal/email/resend.go`, `internal/auth/roles.go`, `internal/handlers/registration.go`, `internal/handlers/approvals.go`, `internal/db/migrations/023_registration.sql`, `pacta_appweb/src/lib/registration-api.ts`, `pacta_appweb/src/pages/VerifyEmailPage.tsx`, `pacta_appweb/src/pages/RegistrationExpiredPage.tsx`, `pacta_appweb/src/components/admin/PendingUsersTable.tsx`)
+- **Files Modified:** 10 (`go.mod`, `go.sum`, `internal/config/config.go`, `internal/server/server.go`, `internal/handlers/auth.go`, `pacta_appweb/.env.example`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/pages/UsersPage.tsx`, `pacta_appweb/src/App.tsx`)
+
 ## [0.28.0] - 2026-04-13
 
 ### Added
