@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/email"
@@ -57,7 +58,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		// Viewer+ (read-only)
 		r.Group(func(r chi.Router) {
-			r.Use(h.RequireRole(1))
+			r.Use(h.RequireRole(auth.RoleViewer))
 
 			r.Get("/api/companies", h.HandleCompanies)
 			r.Get("/api/companies/{id}", h.HandleCompanyByID)
@@ -84,7 +85,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		// Editor+ (create/edit)
 		r.Group(func(r chi.Router) {
-			r.Use(h.RequireRole(2))
+			r.Use(h.RequireRole(auth.RoleEditor))
 
 			r.Post("/api/companies", h.HandleCompanies)
 			r.Put("/api/companies/{id}", h.HandleCompanyByID)
@@ -108,7 +109,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		// Manager+ (delete)
 		r.Group(func(r chi.Router) {
-			r.Use(h.RequireRole(3))
+			r.Use(h.RequireRole(auth.RoleManager))
 
 			r.Delete("/api/companies/{id}", h.HandleCompanyByID)
 			r.Delete("/api/contracts/{id}", h.HandleContractByID)
@@ -122,7 +123,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		// Admin only
 		r.Group(func(r chi.Router) {
-			r.Use(h.RequireRole(4))
+			r.Use(h.RequireRole(auth.RoleAdmin))
 
 			r.Get("/api/users", h.HandleUsers)
 			r.Post("/api/users", h.HandleUsers)

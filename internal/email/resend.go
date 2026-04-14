@@ -4,18 +4,24 @@ import (
 	"context"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/resend/resend-go/v3"
 )
 
-var client *resend.Client
+var (
+	client     *resend.Client
+	clientOnce sync.Once
+)
 
 func Init(apiKey string) {
-	if apiKey == "" {
-		log.Println("[email] RESEND_API_KEY not set, email features disabled")
-		return
-	}
-	client = resend.NewClient(apiKey)
+	clientOnce.Do(func() {
+		if apiKey == "" {
+			log.Println("[email] RESEND_API_KEY not set, email features disabled")
+			return
+		}
+		client = resend.NewClient(apiKey)
+	})
 }
 
 func IsEnabled() bool {
@@ -24,6 +30,7 @@ func IsEnabled() bool {
 
 func SendVerificationCode(ctx context.Context, to, code string) error {
 	if client == nil {
+		log.Printf("[email] verification code for %s not sent (email disabled)", to)
 		return nil
 	}
 
@@ -45,6 +52,7 @@ func SendVerificationCode(ctx context.Context, to, code string) error {
 
 func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail, companyName string) error {
 	if client == nil {
+		log.Printf("[email] admin notification for %s not sent (email disabled)", adminEmail)
 		return nil
 	}
 
