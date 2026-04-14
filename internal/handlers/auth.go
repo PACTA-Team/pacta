@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/models"
@@ -12,6 +13,116 @@ import (
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	if strings.TrimSpace(req.Name) == "" {
+		h.Error(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	if strings.TrimSpace(req.Email) == "" {
+		h.Error(w, http.StatusBadRequest, "email is required")
+		return
+	}
+	if len(req.Password) < 8 {
+		h.Error(w, http.StatusBadRequest, "password must be at least 8 characters")
+		return
+	}
+
+	// Check if email already exists
+	var existing int
+	err := h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ? AND deleted_at IS NULL", req.Email).Scan(&existing)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to check email")
+		return
+	}
+	if existing > 0 {
+		h.Error(w, http.StatusConflict, "a user with this email already exists")
+		return
+	}
+
+	// Determine role: first user gets admin, others get viewer
+	var userCount int
+	err = h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&userCount)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to determine role")
+		return
+	}
+	role := "viewer"
+	if userCount == 0 {
+		role = "admin"
+	}
+
+	// Hash password
+	hash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to process registration")
+		return
+	}
+
+	// Insert user
+	result, err := h.DB.Exec(
+		"INSERT INTO users (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)",
+		req.Name, req.Email, hash, role, "active",
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			h.Error(w, http.StatusConflict, "a user with this email already exists")
+			return
+		}
+		h.Error(w, http.StatusInternalServerError, "failed to create user")
+		return
+	}
+	userID, _ := result.LastInsertId()
+
+	// Build user object
+	var u models.User
+	err = h.DB.QueryRow(`
+		SELECT id, name, email, role, status, created_at, updated_at
+		FROM users WHERE id = ? AND deleted_at IS NULL
+	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to retrieve created user")
+		return
+	}
+
+	// Auto-login: create session and set cookie
+	// For first user (admin), assign to first company; otherwise no company needed for session
+	var companyID int
+	err = h.DB.QueryRow("SELECT id FROM companies LIMIT 1").Scan(&companyID)
+	if err != nil && err != sql.ErrNoRows {
+		h.Error(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+
+	session, err := auth.CreateSession(h.DB, int(userID), companyID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    session.Token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	h.JSON(w, http.StatusCreated, sanitizeUser(&u))
 }
 
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {

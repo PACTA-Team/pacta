@@ -20,26 +20,26 @@ export default function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = await login(email, password);
-    if (user) {
+    const result = await login(email, password);
+    if (result.user) {
       toast.success(t('loginTitle'));
       navigate('/dashboard');
     } else {
-      toast.error(t('loginError'));
+      toast.error(result.error || t('loginError'));
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = await register(name, email, password);
-    if (user) {
+    const result = await register(name, email, password);
+    if (result.user) {
       toast.success(t('registerSuccess'));
       setShowRegister(false);
       setName('');
       setEmail('');
       setPassword('');
     } else {
-      toast.error(t('registerError'));
+      toast.error(result.error || t('registerError'));
     }
   };
 

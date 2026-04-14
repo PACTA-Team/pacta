@@ -36,6 +36,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 	// Auth routes (no auth required)
 	r.Post("/api/auth/login", h.HandleLogin)
+	r.Post("/api/auth/register", h.HandleRegister)
 	r.Post("/api/auth/logout", h.HandleLogout)
 
 	// Setup routes (no auth required, gated by first-run check)
