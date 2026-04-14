@@ -123,6 +123,7 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Method   | Path                  | Auth | Description            |
 |----------|-----------------------|------|------------------------|
+| `POST`   | `/api/auth/register`  | No   | Register new user      |
 | `POST`   | `/api/auth/login`     | No   | Authenticate user      |
 | `POST`   | `/api/auth/logout`    | Yes  | Destroy session        |
 | `GET`    | `/api/auth/me`        | Yes  | Get current user       |
@@ -142,7 +143,8 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Version | Date | Type | Highlights |
 |---------|------|------|------------|
-| [v0.24.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.24.0) | 2026-04-13 | 🌍 i18n | Full Spanish/English translations, language detection, locale-aware formatting |
+| [v0.28.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.28.0) | 2026-04-13 | 🔧 Fix | Registration endpoint, toast error messages, silent failure fixes |
+| [v0.27.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.27.0) | 2026-04-13 | 🌍 i18n | Full Spanish/English translations, language detection, locale-aware formatting |
 | [v0.23.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.23.0) | 2026-04-12 | 🔧 Refactor | Audit logs API, notification settings API, localStorage elimination |
 | [v0.22.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.22.0) | 2026-04-12 | ✨ Feature | Setup mode auto-advance, tactile card feedback |
 | [v0.21.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.21.0) | 2026-04-12 | 🔒 Security | Setup flow security, ForbiddenPage component |

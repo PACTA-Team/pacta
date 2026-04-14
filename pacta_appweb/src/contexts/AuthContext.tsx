@@ -5,9 +5,9 @@ import { checkSetupStatus } from '@/lib/setup-api';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<User | null>;
+  login: (email: string, password: string) => Promise<{ user: User | null; error?: string }>;
   logout: () => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<User | null>;
+  register: (name: string, email: string, password: string) => Promise<{ user: User | null; error?: string }>;
   isAuthenticated: boolean;
   hasPermission: (role: User['role']) => boolean;
   isLoading: boolean;
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => controller.abort();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<User | null> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ user: User | null; error?: string }> => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -44,12 +44,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
         credentials: 'include',
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const errorText = await res.text();
+        return { user: null, error: errorText || 'Login failed' };
+      }
       const data = await res.json();
       setUser(data);
-      return data;
-    } catch {
-      return null;
+      return { user: data };
+    } catch (err) {
+      return { user: null, error: err instanceof Error ? err.message : 'Network error' };
     }
   }, []);
 
@@ -60,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string): Promise<User | null> => {
+  const register = useCallback(async (name: string, email: string, password: string): Promise<{ user: User | null; error?: string }> => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -68,12 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ name, email, password }),
         credentials: 'include',
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const errorText = await res.text();
+        return { user: null, error: errorText || 'Registration failed' };
+      }
       const data = await res.json();
       setUser(data);
-      return data;
-    } catch {
-      return null;
+      return { user: data };
+    } catch (err) {
+      return { user: null, error: err instanceof Error ? err.message : 'Network error' };
     }
   }, []);
 

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-04-13
+
+### Added
+- **User registration endpoint** — `POST /api/auth/register` now allows new users to create accounts directly from the login page
+- **Auto-login after registration** — Successful registration automatically creates a session and logs the user in
+- **First-user admin role** — The first registered user receives admin role; subsequent users receive viewer role
+- **Registration validation** — Validates name (required), email (required, unique), password (min 8 characters)
+- **Error message propagation** — AuthContext now returns actual server error messages instead of swallowing them
+
+### Fixed
+- **Registration flow 404** — Frontend was calling `/api/auth/register` but backend had no handler. Now fully functional
+- **Silent login failures** — Login errors now display actual server messages (e.g., "user not found", "invalid password") via toast notifications
+- **Silent registration failures** — Registration errors (duplicate email, weak password) now show specific error messages via toast
+
+### Changed
+- **AuthContext return type** — `login()` and `register()` now return `{ user: User | null; error?: string }` instead of `User | null`
+- **LoginForm error handling** — Now displays actual server error messages instead of generic fallback text
+
+### Technical Details
+- **Files Created:** 0
+- **Files Modified:** 4 (`internal/handlers/auth.go`, `internal/server/server.go`, `pacta_appweb/src/contexts/AuthContext.tsx`, `pacta_appweb/src/components/auth/LoginForm.tsx`)
+- **Lines Added:** ~136 (backend handler + route + frontend error handling)
+
 ## [0.27.0] - 2026-04-13
 
 ### Added
