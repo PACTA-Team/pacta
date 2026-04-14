@@ -8,6 +8,7 @@ import { HeroSection } from '@/components/landing/HeroSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { AboutSection } from '@/components/landing/AboutSection';
 import { FaqSection } from '@/components/landing/FaqSection';
+import { ContactSection } from '@/components/landing/ContactSection';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
@@ -43,6 +44,7 @@ export default function HomePage() {
       <FeaturesSection />
       <AboutSection />
       <FaqSection />
+      <ContactSection />
     </div>
   );
 }
