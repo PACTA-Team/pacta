@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Linux, Apple, Monitor } from 'lucide-react';
+import { ArrowLeft, Download, Terminal, Apple, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,8 +46,8 @@ export default function DownloadPage() {
   }, [t]);
 
   const platforms = ['linux', 'macos', 'windows'];
-  const icons: Record<string, typeof Linux> = {
-    linux: Linux,
+  const icons: Record<string, typeof Terminal> = {
+    linux: Terminal,
     macos: Apple,
     windows: Monitor,
   };
