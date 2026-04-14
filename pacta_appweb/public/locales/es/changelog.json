@@ -1,0 +1,12 @@
+{
+  "title": "Registro de Cambios",
+  "subtitle": "Novedades en PACTA",
+  "description": "Rastrea cada mejora, corrección y función en las versiones de PACTA.",
+  "version": "Versión",
+  "releasedOn": "Publicado el",
+  "viewOnGitHub": "Ver en GitHub",
+  "teamNotes": "Notas del Equipo",
+  "fetchError": "No se pudo cargar el registro de cambios. Consulta nuestra página de releases en GitHub.",
+  "backToHome": "Volver al Inicio",
+  "loading": "Cargando versiones..."
+}

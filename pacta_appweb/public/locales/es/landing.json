@@ -29,6 +29,74 @@
   },
   "nav": {
     "features": "Funcionalidades",
+    "about": "Acerca de",
+    "faq": "FAQ",
     "login": "Iniciar sesión"
+  },
+  "about": {
+    "title": "Acerca de PACTA",
+    "description": "PACTA es un sistema de Gestión del Ciclo de Vida de Contratos local-first diseñado para equipos que necesitan control total sobre sus datos de contratos. Sin dependencias en la nube, sin bases de datos externas — solo un binario que se ejecuta en tu máquina.",
+    "mission": "Nuestra misión es hacer que la gestión de contratos sea accesible, segura y completamente bajo tu control.",
+    "values": {
+      "localFirst": {
+        "title": "Local-First",
+        "description": "Tus datos permanecen en tu máquina. Sin sincronización en la nube, sin dependencias externas."
+      },
+      "openSource": {
+        "title": "Código Abierto",
+        "description": "Código transparente, mejoras impulsadas por la comunidad, seguridad auditable."
+      },
+      "simplicity": {
+        "title": "Simplicidad",
+        "description": "Un binario, cero infraestructura. Despliega en minutos, no en días."
+      }
+    }
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "subtitle": "Todo lo que necesitas saber sobre PACTA",
+    "items": [
+      {
+        "question": "¿Qué es PACTA?",
+        "answer": "PACTA es un sistema de Gestión del Ciclo de Vida de Contratos (CLM) que se ejecuta localmente en tu máquina. Te ayuda a crear, rastrear, aprobar y gestionar contratos sin depender de servicios en la nube."
+      },
+      {
+        "question": "¿Necesito conexión a internet?",
+        "answer": "No. PACTA se ejecuta completamente en tu máquina local. Una vez instalado, funciona sin conexión sin dependencias externas."
+      },
+      {
+        "question": "¿Cómo se almacenan mis datos?",
+        "answer": "Todos los datos se almacenan en una base de datos SQLite integrada dentro de la aplicación. No se requiere un servidor de base de datos externo."
+      },
+      {
+        "question": "¿PACTA es gratuito?",
+        "answer": "Sí. PACTA es de código abierto y gratuito bajo la Licencia MIT."
+      },
+      {
+        "question": "¿Cómo instalo PACTA?",
+        "answer": "Descarga el binario para tu plataforma desde la página de Descarga, extráelo y ejecuta el ejecutable. No se necesita asistente de instalación."
+      },
+      {
+        "question": "¿Para quién es PACTA?",
+        "answer": "Equipos legales, departamentos de compras, firmas de consultoría y cualquier organización que necesite gestionar contratos sin dependencia de la nube."
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contáctanos",
+    "description": "¿Tienes preguntas o quieres contribuir? Nos encantaría saber de ti.",
+    "email": "Contáctanos",
+    "emailAddress": "pactateam@gmail.com",
+    "github": "Ver en GitHub",
+    "githubDesc": "Explora el código fuente, reporta problemas o contribuye"
+  },
+  "footer": {
+    "tagline": "Gestión del Ciclo de Vida de Contratos Local-First",
+    "links": {
+      "download": "Descargar",
+      "changelog": "Registro de Cambios",
+      "github": "GitHub"
+    },
+    "copyright": "PACTA es código abierto bajo la Licencia MIT."
   }
 }
