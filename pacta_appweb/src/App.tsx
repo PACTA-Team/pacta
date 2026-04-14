@@ -11,6 +11,7 @@ import SetupPage from './pages/SetupPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 import DownloadPage from './pages/DownloadPage';
+import ChangelogPage from './pages/ChangelogPage';
 
 // Lazy-loaded page components for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -54,6 +55,7 @@ function App() {
         <Route path="/403" element={<ForbiddenPage />} />
         <Route path="/" element={<HomePage />} />
         <Route path="/download" element={<DownloadPage />} />
+        <Route path="/changelog" element={<ChangelogPage />} />
 
         {/* Protected routes with authentication guards */}
         <Route path="/dashboard" element={
