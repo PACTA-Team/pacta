@@ -41,6 +41,18 @@ export function LandingNavbar() {
           >
             {t('nav.features')}
           </a>
+          <a
+            href="#about"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t('nav.about')}
+          </a>
+          <a
+            href="#faq"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t('nav.faq')}
+          </a>
           <LanguageToggle />
           <Button onClick={() => navigate('/login')} size="sm">
             {t('nav.login')}
@@ -74,6 +86,20 @@ export function LandingNavbar() {
                 onClick={() => setMobileOpen(false)}
               >
                 {t('nav.features')}
+              </a>
+              <a
+                href="#about"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                {t('nav.about')}
+              </a>
+              <a
+                href="#faq"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                {t('nav.faq')}
               </a>
               <div className="flex items-center justify-between">
                 <LanguageToggle />

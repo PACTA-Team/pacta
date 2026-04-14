@@ -164,7 +164,8 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Role-Based Access | Complete (v0.15.0 -- middleware enforcement, 4-tier permission levels, inactive account rejection) |
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
-| Landing Page | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
+| Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
+| Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
 | Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
 | Documentation | Complete (v0.18.0 -- README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
@@ -176,6 +177,34 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
 | Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | Setup Mode Auto-Advance | Complete (v0.22.0 -- click mode card to auto-advance, tactile card feedback, focus-visible accessibility, "Cambiar a..." toggle button) |
+
+---
+
+## Landing Page Enhancement (v0.27.0)
+
+### What Changed
+The public-facing landing page received a comprehensive professional upgrade with new content sections, dedicated pages, SEO optimization, and browser favicon.
+
+### New Sections Added to Landing Page
+- **About section** — Three-column card grid showcasing PACTA's core values (Local-First, Open Source, Simplicity) with icon badges and Framer Motion scroll animations
+- **FAQ section** — Six-question accordion covering common questions about PACTA's purpose, requirements, data storage, pricing, and installation
+- **Contact section** — Gradient-bordered card with email (pactateam @gmail.com) and GitHub repository links
+- **Landing footer** — Three-column footer with logo, navigation links, and contact info
+
+### New Dedicated Pages
+- **Download page** (`/download`) — Platform-specific download cards (Linux, macOS, Windows) with direct links to GitHub release assets, version badges, and collapsible installation instructions
+- **Changelog page** (`/changelog`) — Blog-style timeline of all GitHub releases with parsed markdown notes, team commentary extraction, and "View on GitHub" links
+
+### Technical Additions
+- **GitHub API wrapper** — `github-api.ts` with `fetchLatestRelease()`, `fetchAllReleases()`, localStorage caching (5-min TTL), 3-retry exponential backoff, rate limit handling
+- **Professional SEO** — JSON-LD `SoftwareApplication` schema, Open Graph tags, Twitter Card tags, canonical URL, keywords meta, `robots: index, follow`
+- **Favicon** — Contract SVG icon as browser favicon, `site.webmanifest` for PWA support
+- **i18n** — Full English/Spanish translations for download, changelog, about, faq, contact, footer namespaces
+
+### Files Created/Modified
+- **15 new files** — 4 landing components, 2 pages, 2 lib modules, 4 locale files, 1 test file, favicon, webmanifest
+- **8 modified files** — App.tsx, HomePage.tsx, LandingNavbar.tsx, index.html, 4 locale files
+- **5 new tests** — GitHub API wrapper test suite (caching, retry, error handling)
 
 ---
 

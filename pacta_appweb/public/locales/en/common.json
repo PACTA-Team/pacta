@@ -29,5 +29,8 @@
   "success": "Success",
   "error": "Error",
   "close": "Close",
-  "selectCompany": "Select company"
+  "selectCompany": "Select company",
+  "footer": {
+    "rights": "All rights reserved."
+  }
 }
