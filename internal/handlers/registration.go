@@ -84,7 +84,7 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 
 	h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)", userID, companyID)
 
-	session, err := auth.CreateSession(h.DB, int64(userID), companyID)
+	session, err := auth.CreateSession(h.DB, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return

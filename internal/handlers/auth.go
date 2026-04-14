@@ -154,7 +154,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := auth.CreateSession(h.DB, int64(userID), companyID)
+	session, err := auth.CreateSession(h.DB, int(userID), companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
