@@ -14,6 +14,7 @@ import (
 
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
+	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/handlers"
 )
 
@@ -23,6 +24,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		return err
 	}
 	defer database.Close()
+
+	// Initialize email service
+	email.Init(cfg.ResendAPIKey)
 
 	if err := db.Migrate(database); err != nil {
 		return err
