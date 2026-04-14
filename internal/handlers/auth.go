@@ -195,6 +195,15 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if user.Status == "pending_email" {
+		h.Error(w, http.StatusForbidden, "please verify your email first. Check your inbox for the verification code.")
+		return
+	}
+	if user.Status == "pending_approval" {
+		h.Error(w, http.StatusForbidden, "your account is pending admin approval. You will be notified once approved.")
+		return
+	}
+
 	if user.Status != "active" {
 		h.Error(w, http.StatusForbidden, "account is "+user.Status)
 		return

@@ -17,7 +17,7 @@ PACTA is a local-first contract management platform designed for organizations t
 ## Features
 
 - **Contract Management** — Full CRUD operations with soft delete, version tracking, and status workflows
-- **Modern Landing Page** — Animated landing page with Framer Motion, feature showcase, and quick access to login
+- **Hybrid Registration** — Email code verification (via Resend) or admin approval with company assignment
 - **Party Management** — Centralized registry of clients, suppliers, and authorized signers
 - **Approval Workflows** — Structured supplement approvals with draft, approved, and active states
 - **Document Attachments** — Link supporting documents directly to contracts and parties
@@ -25,6 +25,7 @@ PACTA is a local-first contract management platform designed for organizations t
 - **Audit Trail** — Immutable log of all operations for compliance and accountability
 - **Role-Based Access Control** — Granular permissions across admin, manager, editor, and viewer roles
 - **Multi-Company Support** — Single company and parent + subsidiaries modes with complete data isolation
+- **Admin Approval Dashboard** — Pending user approvals with company assignment and email notifications
 - **Setup Wizard** — Guided initial configuration for admin user, clients, and suppliers
 - **Dark/Light Theme** — System-aware theme toggle with persistent preferences
 - **Zero External Dependencies** — Single static binary, embedded SQLite, no database server required

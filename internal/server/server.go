@@ -1,11 +1,13 @@
 package server
 
 import (
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -141,9 +143,12 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		})
 	})
 
-	// Static files (Vite build output) - catch-all
-	staticSub, _ := fs.Sub(staticFS, "dist")
-	r.Handle("/*", http.FileServer(http.FS(staticSub)))
+	// Static files (Vite build output) - SPA catch-all
+	staticSub, err := fs.Sub(staticFS, "dist")
+	if err != nil {
+		log.Printf("warning: static sub fs error: %v", err)
+	}
+	r.Handle("/*", spaHandler(staticSub))
 
 	srv := &http.Server{
 		Addr:         cfg.Addr,
@@ -169,4 +174,45 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	<-quit
 	log.Println("Shutting down...")
 	return nil
+}
+
+// spaHandler serves static files, falling back to index.html for SPA routing.
+func spaHandler(fsys fs.FS) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/")
+
+		// Try to open the requested file
+		f, err := fsys.Open(path)
+		if err != nil {
+			// File doesn't exist - serve index.html for SPA routing
+			indexFile, err := fsys.Open("index.html")
+			if err != nil {
+				http.Error(w, "index.html not found", http.StatusInternalServerError)
+				return
+			}
+			defer indexFile.Close()
+
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+
+			stat, err := indexFile.Stat()
+			if err == nil {
+				http.ServeContent(w, r, "index.html", stat.ModTime(), indexFile)
+			} else {
+				io.Copy(w, indexFile)
+			}
+			return
+		}
+		defer f.Close()
+
+		// Check if it's a directory
+		stat, err := f.Stat()
+		if err == nil && stat.IsDir() {
+			http.FileServer(http.FS(fsys)).ServeHTTP(w, r)
+			return
+		}
+
+		// Serve the static file
+		http.FileServer(http.FS(fsys)).ServeHTTP(w, r)
+	})
 }

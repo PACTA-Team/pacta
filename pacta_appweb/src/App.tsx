@@ -12,6 +12,8 @@ import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 import DownloadPage from './pages/DownloadPage';
 import ChangelogPage from './pages/ChangelogPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import RegistrationExpiredPage from './pages/RegistrationExpiredPage';
 
 // Lazy-loaded page components for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -150,6 +152,10 @@ function App() {
           </ProtectedRoute>
         } />
         
+        {/* Email verification routes */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/registration-expired" element={<RegistrationExpiredPage />} />
+
         {/* 404 Catch-all route - must be last */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
