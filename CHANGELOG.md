@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-04-13
+
+### Added
+- **About section** — Landing page now includes an About section with PACTA's mission statement and three core values (Local-First, Open Source, Simplicity) displayed as animated cards with icon badges
+- **FAQ section** — Accordion-based FAQ with 6 common questions covering what PACTA is, internet requirements, data storage, pricing, installation, and target audience
+- **Contact section** — Centered contact card with email (pactateam @gmail.com) and GitHub repository links, gradient border with hover effects
+- **Landing footer** — Three-column footer with logo/tagline, navigation links (Download, Changelog, GitHub), and contact email with copyright
+- **Download page** (`/download`) — Dedicated page with platform cards (Linux, macOS, Windows) showing latest version from GitHub Releases API, direct download links to release assets, and collapsible installation instructions
+- **Changelog page** (`/changelog`) — Blog-style timeline of all GitHub releases with version badges, dates, parsed markdown release notes, team commentary extraction, and links to full GitHub releases
+- **GitHub API wrapper** — `github-api.ts` module with `fetchLatestRelease()`, `fetchAllReleases()`, localStorage caching (5-min TTL), 3-retry exponential backoff, and team commentary extraction helpers
+- **Professional SEO** — JSON-LD `SoftwareApplication` structured data, Open Graph meta tags, Twitter Card meta tags, canonical URL, keywords meta tag, changed `robots` from `noindex, nofollow` to `index, follow`
+- **Favicon & PWA manifest** — Contract icon as SVG favicon, `site.webmanifest` for PWA support, multiple favicon format references
+- **Dynamic page titles** — `page-title.ts` utility that updates `document.title` per route for SEO
+- **Navbar anchor links** — About and FAQ anchor links added to landing navbar (desktop + mobile)
+- **Full i18n support** — English and Spanish translations for all new sections (download, changelog, about, faq, contact, footer)
+
+### Changed
+- **Landing page composition** — HomePage now includes: LandingNavbar, HeroSection, FeaturesSection, AboutSection, FaqSection, ContactSection, LandingFooter
+- **App routes** — Added `/download` and `/changelog` as public routes in App.tsx
+- **index.html** — Complete SEO overhaul with enhanced meta tags, structured data, and favicon configuration
+
+### Technical Details
+- **Files Created:** 15 (4 landing components, 2 pages, 2 lib modules, 4 locale files, 1 test file, favicon.svg, site.webmanifest)
+- **Files Modified:** 8 (App.tsx, HomePage.tsx, LandingNavbar.tsx, index.html, 4 locale files)
+- **Tests:** 5 new tests for GitHub API wrapper (caching, retry, error handling)
+- **TypeScript:** 0 errors, clean build
+- **Design doc:** `docs/plans/2026-04-13-landing-page-enhancement-design.md`
+- **Implementation plan:** `docs/plans/2026-04-13-landing-page-enhancement-plan.md`
+
 ## [0.26.0] - 2026-04-13
 
 ### Added
