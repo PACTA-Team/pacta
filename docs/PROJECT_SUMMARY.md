@@ -165,6 +165,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
+| Auth System | Complete (v0.28.0 — Registration endpoint, auto-login, error message propagation, toast notifications) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
 | Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
 | Documentation | Complete (v0.18.0 -- README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding) |
@@ -446,7 +447,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.26.0 | Latest | Frontend modernization: purple-accented OKLCH color palette (light/dark), collapsible sidebar with tooltips, glassmorphism dashboard cards, gradient button variants, modernized input/badge/card components, landing page gradient accents |
+| v0.28.0 | Latest | Registration endpoint (`POST /api/auth/register`), auto-login after registration, error message propagation to toasts, silent failure fixes, AuthContext return type refactor |
+| v0.27.0 | Latest | Frontend modernization: purple-accented OKLCH color palette (light/dark), collapsible sidebar with tooltips, glassmorphism dashboard cards, gradient button variants, modernized input/badge/card components, landing page gradient accents |
 | v0.25.2 | - | Light/dark theme system fix (next-themes `attribute="class"`), ThemeToggle hydration mismatch fix, theme icon state sync |
 | v0.25.1 | - | Supplements page crash fix (migration 022 `deleted_at` column) |
 | v0.25.0 | - | Split-screen login layout (responsive 60/40 desktop, 50/50 tablet, single-column mobile), theme-aware branding gradient, LoginForm layout wrapper removal, Framer Motion entrance animations |
