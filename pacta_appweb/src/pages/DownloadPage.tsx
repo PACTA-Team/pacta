@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { fetchLatestRelease, GitHubRelease } from '@/lib/github-api';
+import { setPageTitle } from '@/lib/page-title';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 
 const platformMap: Record<string, { match: string[] }> = {
@@ -39,6 +40,10 @@ export default function DownloadPage() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    setPageTitle(t('title'));
+  }, [t]);
 
   const platforms = ['linux', 'macos', 'windows'];
   const icons: Record<string, typeof Linux> = {

@@ -15,6 +15,7 @@ import {
   extractTeamCommentary,
   stripTeamCommentary,
 } from '@/lib/github-api';
+import { setPageTitle } from '@/lib/page-title';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
 
 function formatDate(dateStr: string): string {
@@ -95,6 +96,10 @@ export default function ChangelogPage() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    setPageTitle(t('title'));
+  }, [t]);
 
   return (
     <div className="relative min-h-screen">
