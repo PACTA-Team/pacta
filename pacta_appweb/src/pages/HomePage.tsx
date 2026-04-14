@@ -9,6 +9,7 @@ import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { AboutSection } from '@/components/landing/AboutSection';
 import { FaqSection } from '@/components/landing/FaqSection';
 import { ContactSection } from '@/components/landing/ContactSection';
+import { LandingFooter } from '@/components/landing/LandingFooter';
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth();
@@ -45,6 +46,7 @@ export default function HomePage() {
       <AboutSection />
       <FaqSection />
       <ContactSection />
+      <LandingFooter />
     </div>
   );
 }
