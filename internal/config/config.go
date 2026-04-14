@@ -15,17 +15,19 @@ const (
 var AppVersion = "0.28.0"
 
 type Config struct {
-	Addr    string
-	DataDir string
-	Version string
+	Addr         string
+	DataDir      string
+	Version      string
+	ResendAPIKey string
 }
 
 func Default() *Config {
 	dataDir := defaultDataDir()
 	return &Config{
-		Addr:    fmt.Sprintf(":%d", DefaultPort),
-		DataDir: dataDir,
-		Version: AppVersion,
+		Addr:         fmt.Sprintf(":%d", DefaultPort),
+		DataDir:      dataDir,
+		Version:      AppVersion,
+		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
 	}
 }
 
