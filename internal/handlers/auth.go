@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
+	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
@@ -16,9 +19,11 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	Mode        string `json:"mode"`
+	CompanyName string `json:"company_name"`
 }
 
 func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -60,9 +65,17 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, "failed to determine role")
 		return
 	}
+
 	role := "viewer"
+	status := "active"
 	if userCount == 0 {
 		role = "admin"
+	} else {
+		if req.Mode == "email" {
+			status = "pending_email"
+		} else if req.Mode == "approval" {
+			status = "pending_approval"
+		}
 	}
 
 	// Hash password
@@ -75,7 +88,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	// Insert user
 	result, err := h.DB.Exec(
 		"INSERT INTO users (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)",
-		req.Name, req.Email, hash, role, "active",
+		req.Name, req.Email, hash, role, status,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -87,19 +100,53 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := result.LastInsertId()
 
-	// Build user object
-	var u models.User
-	err = h.DB.QueryRow(`
-		SELECT id, name, email, role, status, created_at, updated_at
-		FROM users WHERE id = ? AND deleted_at IS NULL
-	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt)
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to retrieve created user")
-		return
+	if userCount > 0 {
+		if req.Mode == "email" && email.IsEnabled() {
+			code, err := generateCode()
+			if err != nil {
+				h.Error(w, http.StatusInternalServerError, "failed to generate code")
+				return
+			}
+			codeHash, _ := auth.HashPassword(code)
+			h.DB.Exec(
+				"INSERT INTO registration_codes (user_id, code_hash, expires_at) VALUES (?, ?, ?)",
+				userID, codeHash, time.Now().Add(5*time.Minute),
+			)
+
+			ctx := context.Background()
+			email.SendVerificationCode(ctx, req.Email, code)
+
+			h.JSON(w, http.StatusCreated, map[string]interface{}{
+				"id":     userID,
+				"name":   req.Name,
+				"email":  req.Email,
+				"role":   role,
+				"status": "pending_email",
+			})
+			return
+		}
+
+		if req.Mode == "approval" {
+			h.DB.Exec(
+				"INSERT INTO pending_approvals (user_id, company_name) VALUES (?, ?)",
+				userID, req.CompanyName,
+			)
+
+			ctx := context.Background()
+			sendAdminNotifications(ctx, h.DB, req.Name, req.Email, req.CompanyName)
+
+			h.JSON(w, http.StatusCreated, map[string]interface{}{
+				"id":     userID,
+				"name":   req.Name,
+				"email":  req.Email,
+				"role":   role,
+				"status": "pending_approval",
+			})
+			return
+		}
 	}
 
-	// Auto-login: create session and set cookie
-	// For first user (admin), assign to first company; otherwise no company needed for session
+	// First user or active user: auto-login with company assignment
 	var companyID int
 	err = h.DB.QueryRow("SELECT id FROM companies LIMIT 1").Scan(&companyID)
 	if err != nil && err != sql.ErrNoRows {
@@ -107,7 +154,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := auth.CreateSession(h.DB, int(userID), companyID)
+	session, err := auth.CreateSession(h.DB, int64(userID), companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
@@ -121,6 +168,16 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	})
+
+	var u models.User
+	err = h.DB.QueryRow(`
+		SELECT id, name, email, role, status, created_at, updated_at
+		FROM users WHERE id = ? AND deleted_at IS NULL
+	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to retrieve created user")
+		return
+	}
 
 	h.JSON(w, http.StatusCreated, sanitizeUser(&u))
 }
