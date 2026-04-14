@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"io"
 	"io/fs"
 	"log"
@@ -192,15 +193,21 @@ func spaHandler(fsys fs.FS) http.Handler {
 			}
 			defer indexFile.Close()
 
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
-
 			stat, err := indexFile.Stat()
-			if err == nil {
-				http.ServeContent(w, r, "index.html", stat.ModTime(), indexFile)
-			} else {
-				io.Copy(w, indexFile)
+			if err != nil {
+				http.Error(w, "index.html stat failed", http.StatusInternalServerError)
+				return
 			}
+
+			// Read file into bytes since fs.File doesn't implement io.ReadSeeker
+			data, err := io.ReadAll(indexFile)
+			if err != nil {
+				http.Error(w, "index.html read failed", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			http.ServeContent(w, r, "index.html", stat.ModTime(), bytes.NewReader(data))
 			return
 		}
 		defer f.Close()
