@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Race condition in email client** — `sync.Once` protection for Resend client initialization
 - **Silent email failures** — Logging warnings when email service is disabled or code not sent
 - **Go version in go.mod** — Corrected from `go 1.25.0` (non-existent) to `go 1.23`
+- **spaHandler compilation error** — `fs.File` doesn't implement `io.ReadSeeker`; fixed by reading into bytes and using `bytes.NewReader` (v0.29.1)
 
 ### Changed
 - **Registration form** — Now includes registration method radio selector (email verification vs admin approval) and conditional company name field
@@ -30,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Database schema** — New `registration_codes` and `pending_approvals` tables (migration 023)
 
 ### Technical Details
-- **Files Created:** 8 (`internal/email/resend.go`, `internal/auth/roles.go`, `internal/handlers/registration.go`, `internal/handlers/approvals.go`, `internal/db/migrations/023_registration.sql`, `pacta_appweb/src/lib/registration-api.ts`, `pacta_appweb/src/pages/VerifyEmailPage.tsx`, `pacta_appweb/src/pages/RegistrationExpiredPage.tsx`, `pacta_appweb/src/components/admin/PendingUsersTable.tsx`)
-- **Files Modified:** 10 (`go.mod`, `go.sum`, `internal/config/config.go`, `internal/server/server.go`, `internal/handlers/auth.go`, `pacta_appweb/.env.example`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/pages/UsersPage.tsx`, `pacta_appweb/src/App.tsx`)
+- **Files Created:** 9 (`internal/email/resend.go`, `internal/auth/roles.go`, `internal/handlers/registration.go`, `internal/handlers/approvals.go`, `internal/db/migrations/023_registration.sql`, `pacta_appweb/src/lib/registration-api.ts`, `pacta_appweb/src/pages/VerifyEmailPage.tsx`, `pacta_appweb/src/pages/RegistrationExpiredPage.tsx`, `pacta_appweb/src/components/admin/PendingUsersTable.tsx`)
+- **Files Modified:** 11 (`go.mod`, `go.sum`, `internal/config/config.go`, `internal/server/server.go`, `internal/handlers/auth.go`, `pacta_appweb/.env.example`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/pages/UsersPage.tsx`, `pacta_appweb/src/App.tsx`)
 
 ## [0.28.0] - 2026-04-13
 
