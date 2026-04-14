@@ -17,6 +17,19 @@ jobs:
           go-version: '1.25'
           cache: true
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: pacta_appweb/package-lock.json
+
+      - name: Build frontend
+        working-directory: pacta_appweb
+        run: npm ci && npm run build
+
+      - name: Copy frontend dist
+        run: cp -r pacta_appweb/dist cmd/pacta/dist
+
       - name: Tidy
         run: go mod tidy
 
