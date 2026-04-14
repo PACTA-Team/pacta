@@ -133,6 +133,11 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Delete("/api/users/{id}", h.HandleUserByID)
 			r.Patch("/api/users/{id}/reset-password", h.HandleUserByID)
 			r.Patch("/api/users/{id}/status", h.HandleUserByID)
+			r.Patch("/api/users/{id}/company", h.HandleUserCompany)
+
+			// Approval routes
+			r.Get("/api/approvals/pending", h.HandlePendingApprovals)
+			r.Post("/api/approvals", h.HandlePendingApprovals)
 		})
 	})
 
