@@ -43,7 +43,7 @@ export function LandingFooter() {
                 {t('footer.links.changelog')}
               </button>
               <a
-                href="https://github.com/mowgliph/pacta"
+                href="https://github.com/PACTA-Team/pacta"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"

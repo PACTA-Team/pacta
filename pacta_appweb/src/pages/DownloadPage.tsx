@@ -128,7 +128,7 @@ export default function DownloadPage() {
                     ) : (
                       <Button asChild variant="outline" size="sm">
                         <a
-                          href="https://github.com/mowgliph/pacta/releases"
+                          href="https://github.com/PACTA-Team/pacta/releases"
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -170,7 +170,7 @@ export default function DownloadPage() {
           >
             <p className="text-sm text-muted-foreground">{t('fetchError')}</p>
             <Button variant="link" asChild className="mt-2">
-              <a href="https://github.com/mowgliph/pacta/releases" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/PACTA-Team/pacta/releases" target="_blank" rel="noopener noreferrer">
                 {t('viewAllReleases')}
               </a>
             </Button>

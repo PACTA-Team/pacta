@@ -6,7 +6,7 @@ const mockRelease = {
   name: 'Release v0.6.0',
   published_at: '2026-04-10T00:00:00Z',
   body: '## Changes\n- Feature A\n- Feature B',
-  html_url: 'https://github.com/mowgliph/pacta/releases/tag/v0.6.0',
+  html_url: 'https://github.com/PACTA-Team/pacta/releases/tag/v0.6.0',
   assets: [
     { name: 'pacta_0.6.0_linux_amd64.tar.gz', browser_download_url: 'https://example.com/linux.tar.gz' },
     { name: 'pacta_0.6.0_darwin_universal.tar.gz', browser_download_url: 'https://example.com/macos.tar.gz' },
@@ -33,7 +33,7 @@ describe('github-api', () => {
       const result = await fetchLatestRelease();
       expect(result).toEqual(mockRelease);
       expect(fetch).toHaveBeenCalledWith(
-        'https://api.github.com/repos/mowgliph/pacta/releases/latest',
+        'https://api.github.com/repos/PACTA-Team/pacta/releases/latest',
         { headers: { Accept: 'application/vnd.github+json' } },
       );
     });

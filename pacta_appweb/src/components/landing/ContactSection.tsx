@@ -43,7 +43,7 @@ export function ContactSection() {
 
             {/* GitHub */}
             <a
-              href="https://github.com/mowgliph/pacta"
+              href="https://github.com/PACTA-Team/pacta"
               target="_blank"
               rel="noopener noreferrer"
               className="group flex flex-col items-center gap-2 text-center"
