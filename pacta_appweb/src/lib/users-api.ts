@@ -66,3 +66,11 @@ export const usersAPI = {
       signal,
     }),
 };
+
+export const usersCompanyAPI = {
+  assignCompany: (userId: number, companyId: number) =>
+    fetchJSON(`/api/users/${userId}/company`, {
+      method: 'PATCH',
+      body: JSON.stringify({ company_id: companyId }),
+    }),
+};

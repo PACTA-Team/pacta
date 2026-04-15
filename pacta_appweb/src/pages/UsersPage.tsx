@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Edit, UserX, Shield, KeyRound } from 'lucide-react';
-import { usersAPI, APIUser } from '@/lib/users-api';
+import { usersAPI, usersCompanyAPI, APIUser } from '@/lib/users-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import PendingUsersTable from '@/components/admin/PendingUsersTable';
@@ -32,6 +32,8 @@ export default function UsersPage() {
   });
   const { hasPermission, user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
+  const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -53,11 +55,26 @@ export default function UsersPage() {
     loadUsers();
   }, [hasPermission, loadUsers]);
 
+  useEffect(() => {
+    fetch('/api/companies', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => setCompanies(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (editingUser) {
         await usersAPI.update(editingUser.id, formData.name, formData.email, formData.role);
+        if (selectedCompanyId) {
+          try {
+            await usersCompanyAPI.assignCompany(editingUser.id, selectedCompanyId);
+            toast.success('Company updated');
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to assign company');
+          }
+        }
         toast.success(t('updateSuccess'));
       } else {
         await usersAPI.create(formData.name, formData.email, formData.password, formData.role);
@@ -73,6 +90,7 @@ export default function UsersPage() {
   const resetForm = () => {
     setShowForm(false);
     setEditingUser(null);
+    setSelectedCompanyId(null);
     setFormData({
       name: '',
       email: '',
@@ -92,6 +110,7 @@ export default function UsersPage() {
       status: user.status,
     });
     setShowForm(true);
+    setSelectedCompanyId(null);
   };
 
   const handleToggleStatus = async (userId: number) => {
@@ -231,7 +250,7 @@ export default function UsersPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="role">{t('role')} *</Label>
                       <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as typeof formData.role })}>
@@ -243,6 +262,23 @@ export default function UsersPage() {
                           <SelectItem value="manager">{t('manager')}</SelectItem>
                           <SelectItem value="editor">{t('editor')}</SelectItem>
                           <SelectItem value="viewer">{t('viewer')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Company</Label>
+                      <Select
+                        value={selectedCompanyId?.toString() || ''}
+                        onValueChange={(v) => setSelectedCompanyId(parseInt(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map(c => (
+                            <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
