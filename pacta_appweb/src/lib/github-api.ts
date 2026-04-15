@@ -1,5 +1,5 @@
 const GITHUB_API_BASE = 'https://api.github.com';
-const REPO_OWNER = 'mowgliph';
+const REPO_OWNER = 'PACTA-Team';
 const REPO_NAME = 'pacta';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const CACHE_KEY_LATEST = 'pacta_gh_latest';
