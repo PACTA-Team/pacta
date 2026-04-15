@@ -170,7 +170,7 @@ export default function LoginForm() {
             <div className="space-y-2">
               <Label htmlFor="company">Company</Label>
               <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                <SelectTrigger>
+                <SelectTrigger id="company">
                   <SelectValue placeholder="Select your company" />
                 </SelectTrigger>
                 <SelectContent>
@@ -186,6 +186,7 @@ export default function LoginForm() {
                   placeholder="Enter new company name"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
+                  required
                 />
               )}
             </div>
@@ -197,14 +198,16 @@ export default function LoginForm() {
                     id="code"
                     placeholder="Enter 6-digit code"
                     value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                     maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     className="text-center text-2xl tracking-widest"
                     autoFocus
                     required
                   />
                 </div>
-                <Button onClick={handleVerifyCode} className="w-full">
+                <Button type="button" onClick={handleVerifyCode} className="w-full">
                   Verify Email
                 </Button>
               </div>
@@ -248,8 +251,6 @@ export default function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-            </div>
-            <div className="text-sm text-muted-foreground">
             </div>
             <div className="space-y-3">
               <Button type="submit" className="w-full">
