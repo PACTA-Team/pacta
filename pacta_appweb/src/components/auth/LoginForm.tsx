@@ -1,11 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { registrationAPI } from '@/lib/registration-api';
@@ -17,12 +18,23 @@ export default function LoginForm() {
   const [name, setName] = useState('');
   const [registrationMode, setRegistrationMode] = useState<'email' | 'approval'>('email');
   const [companyName, setCompanyName] = useState('');
+  const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [showVerification, setShowVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('login');
+
+  useEffect(() => {
+    if (showRegister) {
+      fetch('/api/companies', { credentials: 'include' })
+        .then(r => r.json())
+        .then(data => setCompanies(Array.isArray(data) ? data : []))
+        .catch(() => setCompanies([]));
+    }
+  }, [showRegister]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +50,8 @@ export default function LoginForm() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const data = await registrationAPI.register(name, email, password, registrationMode, companyName);
+      const companyParam = selectedCompanyId === 'other' ? companyName : undefined;
+      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam);
       if (data.status === 'pending_email') {
         setVerificationEmail(email);
         setShowVerification(true);
@@ -50,12 +63,15 @@ export default function LoginForm() {
         setEmail('');
         setPassword('');
         setCompanyName('');
+        setSelectedCompanyId('');
       } else {
         toast.success(t('registerSuccess'));
         setShowRegister(false);
         setName('');
         setEmail('');
         setPassword('');
+        setCompanyName('');
+        setSelectedCompanyId('');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('registerError'));
@@ -151,18 +167,29 @@ export default function LoginForm() {
                 </label>
               </div>
             </div>
-            {registrationMode === 'approval' && (
-              <div className="space-y-2">
-                <Label htmlFor="company">Company Name</Label>
+            <div className="space-y-2">
+              <Label htmlFor="company">Company</Label>
+              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                <SelectTrigger id="company">
+                  <SelectValue placeholder="Select your company" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(c => (
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                  ))}
+                  <SelectItem value="other">Other (new company)</SelectItem>
+                </SelectContent>
+              </Select>
+              {selectedCompanyId === 'other' && (
                 <Input
-                  id="company"
-                  placeholder="Your company name"
+                  id="companyName"
+                  placeholder="Enter new company name"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   required
                 />
-              </div>
-            )}
+              )}
+            </div>
             {showVerification && (
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
@@ -171,14 +198,16 @@ export default function LoginForm() {
                     id="code"
                     placeholder="Enter 6-digit code"
                     value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                     maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     className="text-center text-2xl tracking-widest"
                     autoFocus
                     required
                   />
                 </div>
-                <Button onClick={handleVerifyCode} className="w-full">
+                <Button type="button" onClick={handleVerifyCode} className="w-full">
                   Verify Email
                 </Button>
               </div>
@@ -190,7 +219,11 @@ export default function LoginForm() {
               type="button"
               variant="ghost"
               className="w-full"
-              onClick={() => setShowRegister(false)}
+              onClick={() => {
+                setShowRegister(false);
+                setCompanyName('');
+                setSelectedCompanyId('');
+              }}
             >
               {t('backToLogin')}
             </Button>
@@ -218,8 +251,6 @@ export default function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-            </div>
-            <div className="text-sm text-muted-foreground">
             </div>
             <div className="space-y-3">
               <Button type="submit" className="w-full">

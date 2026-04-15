@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pending approvals UI** — New "Pending Approvals" tab in Users page with approve/reject actions, company selector dropdown, and optional notes
 - **User company assignment** — Admins can now assign or change a user's company from the Users edit form
 - **Role constants** — Named constants (`RoleViewer`, `RoleEditor`, `RoleManager`, `RoleAdmin`) replacing magic numbers in route definitions
+- **Company selection in registration** — Dropdown with existing companies + "Other" option for new company name
 
 ### Fixed
 - **Login fails after registration** — Newly registered users without company assignment now get clear error message; registration auto-assigns to first company
@@ -24,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Silent email failures** — Logging warnings when email service is disabled or code not sent
 - **Go version in go.mod** — Corrected from `go 1.25.0` (non-existent) to `go 1.23`
 - **spaHandler compilation error** — `fs.File` doesn't implement `io.ReadSeeker`; fixed by reading into bytes and using `bytes.NewReader` (v0.29.1)
+- **Verify Email double-submit** — Added `type="button"` to prevent form submission race condition
+- **Registration company field** — Now always visible with dropdown of existing companies + "Other" for new company
+- **Users page edit form** — Added company selector dropdown; assigns company on submit
 
 ### Changed
 - **Registration form** — Now includes registration method radio selector (email verification vs admin approval) and conditional company name field
@@ -32,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 - **Files Created:** 9 (`internal/email/resend.go`, `internal/auth/roles.go`, `internal/handlers/registration.go`, `internal/handlers/approvals.go`, `internal/db/migrations/023_registration.sql`, `pacta_appweb/src/lib/registration-api.ts`, `pacta_appweb/src/pages/VerifyEmailPage.tsx`, `pacta_appweb/src/pages/RegistrationExpiredPage.tsx`, `pacta_appweb/src/components/admin/PendingUsersTable.tsx`)
-- **Files Modified:** 11 (`go.mod`, `go.sum`, `internal/config/config.go`, `internal/server/server.go`, `internal/handlers/auth.go`, `pacta_appweb/.env.example`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/pages/UsersPage.tsx`, `pacta_appweb/src/App.tsx`)
+- **Files Modified:** 13 (`go.mod`, `go.sum`, `internal/config/config.go`, `internal/server/server.go`, `internal/handlers/auth.go`, `pacta_appweb/.env.example`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/pages/UsersPage.tsx`, `pacta_appweb/src/pages/UsersPage.tsx`, `pacta_appweb/src/App.tsx`, `pacta_appweb/src/lib/users-api.ts`)
 
 ## [0.28.0] - 2026-04-13
 
