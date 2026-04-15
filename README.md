@@ -144,6 +144,7 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Version | Date | Type | Highlights |
 |---------|------|------|------------|
+| [v0.31.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.31.0) | 2026-04-15 | 🔧 Fix | Login error display, registration UX, admin approval workflow, toast notifications |
 | [v0.28.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.28.0) | 2026-04-13 | 🔧 Fix | Registration endpoint, toast error messages, silent failure fixes |
 | [v0.27.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.27.0) | 2026-04-13 | 🌍 i18n | Full Spanish/English translations, language detection, locale-aware formatting |
 | [v0.23.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.23.0) | 2026-04-12 | 🔧 Refactor | Audit logs API, notification settings API, localStorage elimination |

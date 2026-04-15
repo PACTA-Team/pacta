@@ -167,6 +167,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
 | Auth System | Complete (v0.28.0 — Registration endpoint, auto-login, error message propagation, toast notifications) |
 | Hybrid Registration | Complete (v0.30.0 — Resend email integration, email code verification with 5-min timeout, admin approval workflow with company assignment, pending approvals UI, SPA routing fix, login bug fix, spaHandler compilation fix, company selection in registration, company assignment in user edit form) |
+| Login UX Fixes | Complete (v0.31.0 — Error message JSON parsing fix, Sonner Toaster provider, public companies endpoint, first-user dashboard navigation, approval role selection, company tooltip, form loading states) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
 | Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
 | Documentation | Complete (v0.18.0 -- README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding) |
@@ -448,7 +449,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.30.0 | Current | Company selection in registration (dropdown + Other), company assignment in user edit form, verify email double-submit fix, accessibility improvements |
+| v0.31.0 | Current | Login error message fix (res.json vs res.text), Sonner Toaster provider, public companies endpoint, registration company selector fix, first-user auto-navigation to dashboard, admin approval role selection, company tooltip with i18n, isSubmitting state on forms |
+| v0.30.0 | - | Company selection in registration (dropdown + Other), company assignment in user edit form, verify email double-submit fix, accessibility improvements |
 | v0.29.1 | - | spaHandler compilation fix (fs.File not io.ReadSeeker → bytes.NewReader), all v0.29.0 features |
 | v0.29.0 | - | Hybrid registration (Resend email code + admin approval), email verification with 5-min timeout, admin approval workflow with company assignment, pending approvals UI, SPA routing fix (back button + F5), login bug fix, role constants, user company assignment from admin panel |
 | v0.28.0 | Latest | Registration endpoint (`POST /api/auth/register`), auto-login after registration, error message propagation to toasts, silent failure fixes, AuthContext return type refactor |

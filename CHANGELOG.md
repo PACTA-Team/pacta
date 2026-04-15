@@ -7,8 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-04-15
+
 ### Added
-- **Hybrid registration system** — Two registration modes: email code verification (via Resend) and admin approval with company assignment
+- **Sonner Toaster provider** — Toast notifications now render correctly across the entire app
+- **Public companies endpoint** — `GET /api/public/companies` for unauthenticated registration form
+- **Role selection in admin approval** — Admins can now set user role (Viewer/Editor/Manager/Admin) when approving registrations
+- **Company tooltip** — Guidance tooltip on registration form company selector with i18n support
+- **Loading state on forms** — `isSubmitting` state prevents double-submit on login/register/verify
+- **i18n keys for registration** — Company label, tip, placeholder, new company option, and toast messages (en/es)
+
+### Fixed
+- **Login error messages display raw JSON** — `AuthContext.tsx` used `res.text()` instead of `res.json()`, causing error messages to render as raw JSON strings
+- **All toast notifications silently dropped** — Sonner `<Toaster />` component was missing from `main.tsx`
+- **Registration company selector empty** — Form fetched `/api/companies` (requires auth); now uses public endpoint
+- **First user stuck on login page after registration** — Backend auto-logins first user but frontend didn't navigate to dashboard
+- **Approval toast message unclear** — Improved to "Registration submitted! Your account is waiting for admin approval. You will be notified once approved."
+
+### Changed
+- **Registration passes `company_id`** — When user selects existing company, the ID is sent to backend for approval workflow
+- **Approval handler updates user role** — `approveOrReject` now accepts `role` parameter and updates user's role on approval
+- **PendingUsersTable role column** — Added role selector dropdown (Viewer/Editor/Manager/Admin) to approval workflow
+
+### Technical Details
+- **Files Created:** 1 (`internal/db/migrations/024_add_role_pending_approvals.sql`)
+- **Files Modified:** 11 (`internal/server/server.go`, `internal/handlers/companies.go`, `internal/handlers/auth.go`, `internal/handlers/approvals.go`, `pacta_appweb/src/main.tsx`, `pacta_appweb/src/contexts/AuthContext.tsx`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/components/admin/PendingUsersTable.tsx`, `pacta_appweb/src/lib/registration-api.ts`, `pacta_appweb/public/locales/en/login.json`, `pacta_appweb/public/locales/es/login.json`)
+
+## [0.30.0] - 2026-04-14
 - **Resend email integration** — `github.com/resend/resend-go/v3` SDK with configurable `RESEND_API_KEY` and `EMAIL_FROM` environment variables
 - **Email verification flow** — 6-digit verification code sent via email, 5-minute expiration window, auto-redirect to support contact page on expiry
 - **Admin approval workflow** — Users can register with company name; admins receive email + in-app notification to approve/reject with company assignment
