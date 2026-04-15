@@ -24,6 +24,7 @@ type RegisterRequest struct {
 	Password    string `json:"password"`
 	Mode        string `json:"mode"`
 	CompanyName string `json:"company_name"`
+	CompanyID   *int   `json:"company_id,omitempty"`
 }
 
 func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -127,13 +128,21 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if req.Mode == "approval" {
+			companyName := req.CompanyName
+			if req.CompanyID != nil && *req.CompanyID > 0 {
+				var existingName string
+				err := h.DB.QueryRow("SELECT name FROM companies WHERE id = ? AND deleted_at IS NULL", *req.CompanyID).Scan(&existingName)
+				if err == nil {
+					companyName = existingName
+				}
+			}
 			h.DB.Exec(
-				"INSERT INTO pending_approvals (user_id, company_name) VALUES (?, ?)",
-				userID, req.CompanyName,
+				"INSERT INTO pending_approvals (user_id, company_name, company_id, requested_role) VALUES (?, ?, ?, ?)",
+				userID, companyName, req.CompanyID, "viewer",
 			)
 
 			ctx := context.Background()
-			sendAdminNotifications(ctx, h.DB, req.Name, req.Email, req.CompanyName)
+			sendAdminNotifications(ctx, h.DB, req.Name, req.Email, companyName)
 
 			h.JSON(w, http.StatusCreated, map[string]interface{}{
 				"id":     userID,

@@ -48,6 +48,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	r.Post("/api/auth/logout", h.HandleLogout)
 	r.Post("/api/auth/verify-code", h.HandleVerifyCode)
 
+	// Public companies list (for registration form)
+	r.Get("/api/public/companies", h.HandlePublicCompanies)
+
 	// Setup routes (no auth required, gated by first-run check)
 	r.Get("/api/setup/status", h.HandleSetupStatus)
 	r.Post("/api/setup", h.HandleSetup)

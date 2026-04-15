@@ -14,10 +14,10 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
 }
 
 export const registrationAPI = {
-  register: (name: string, email: string, password: string, mode: 'email' | 'approval', companyName?: string) =>
+  register: (name: string, email: string, password: string, mode: 'email' | 'approval', companyName?: string, companyId?: number) =>
     fetchJSON(`${BASE}/register`, {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, mode, company_name: companyName }),
+      body: JSON.stringify({ name, email, password, mode, company_name: companyName, company_id: companyId }),
     }),
 
   verifyCode: (email: string, code: string) =>
@@ -29,10 +29,10 @@ export const registrationAPI = {
 
 export const approvalsAPI = {
   listPending: () => fetchJSON('/api/approvals/pending'),
-  approve: (approvalId: number, companyId?: number, notes?: string) =>
+  approve: (approvalId: number, companyId?: number, notes?: string, role?: string) =>
     fetchJSON('/api/approvals', {
       method: 'POST',
-      body: JSON.stringify({ approval_id: approvalId, action: 'approve', company_id: companyId, notes }),
+      body: JSON.stringify({ approval_id: approvalId, action: 'approve', company_id: companyId, notes, role }),
     }),
   reject: (approvalId: number, notes?: string) =>
     fetchJSON('/api/approvals', {

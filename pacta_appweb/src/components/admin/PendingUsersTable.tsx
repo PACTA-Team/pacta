@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,9 +14,13 @@ interface PendingApproval {
   user_name: string;
   user_email: string;
   company_name: string;
+  company_id: number | null;
+  requested_role: string;
   status: string;
   created_at: string;
 }
+
+type UserRole = 'viewer' | 'editor' | 'manager' | 'admin';
 
 interface Company {
   id: number;
@@ -30,6 +33,7 @@ export default function PendingUsersTable() {
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState<number | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Record<number, number>>({});
+  const [selectedRole, setSelectedRole] = useState<Record<number, UserRole>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
 
   const loadData = useCallback(async () => {
@@ -56,7 +60,8 @@ export default function PendingUsersTable() {
     setActioning(approvalId);
     try {
       const companyId = selectedCompany[approvalId] || undefined;
-      await approvalsAPI.approve(approvalId, companyId, notes[approvalId]);
+      const role = selectedRole[approvalId] || 'viewer';
+      await approvalsAPI.approve(approvalId, companyId, notes[approvalId], role);
       toast.success('User approved and activated');
       loadData();
     } catch (err) {
@@ -100,6 +105,7 @@ export default function PendingUsersTable() {
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Company</TableHead>
+          <TableHead>Role</TableHead>
           <TableHead>Registered</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
@@ -111,7 +117,7 @@ export default function PendingUsersTable() {
             <TableCell>{approval.user_email}</TableCell>
             <TableCell>
               <Select
-                value={(selectedCompany[approval.id] ?? 0).toString()}
+                value={(selectedCompany[approval.id] ?? approval.company_id ?? 0).toString()}
                 onValueChange={(v) => setSelectedCompany(prev => ({ ...prev, [approval.id]: parseInt(v) }))}
               >
                 <SelectTrigger className="w-[200px]">
@@ -122,6 +128,22 @@ export default function PendingUsersTable() {
                   {companies.map((c: Company) => (
                     <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </TableCell>
+            <TableCell>
+              <Select
+                value={selectedRole[approval.id] || approval.requested_role || 'viewer'}
+                onValueChange={(v) => setSelectedRole(prev => ({ ...prev, [approval.id]: v as UserRole }))}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="editor">Editor</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </TableCell>

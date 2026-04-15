@@ -15,5 +15,11 @@
   "registerError": "Failed to create account. Please try again.",
   "fullNamePlaceholder": "Your name",
   "emailPlaceholder": "you@example.com",
-  "passwordPlaceholder": "Your password"
+  "passwordPlaceholder": "Your password",
+  "companyLabel": "Company",
+  "companyTip": "Select an existing company to join, or choose 'Other' to create a new company. New companies require admin approval before you can access the system.",
+  "companyPlaceholder": "Select your company",
+  "newCompanyOption": "Other (new company)",
+  "approvalPendingToast": "Registration submitted! Your account is waiting for admin approval. You will be notified once approved.",
+  "emailVerificationToast": "Verification code sent to your email"
 }
