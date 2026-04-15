@@ -9,13 +9,15 @@ import (
 )
 
 type PendingApproval struct {
-	ID          int       `json:"id"`
-	UserID      int       `json:"user_id"`
-	UserName    string    `json:"user_name"`
-	UserEmail   string    `json:"user_email"`
-	CompanyName string    `json:"company_name"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID            int       `json:"id"`
+	UserID        int       `json:"user_id"`
+	UserName      string    `json:"user_name"`
+	UserEmail     string    `json:"user_email"`
+	CompanyName   string    `json:"company_name"`
+	CompanyID     *int      `json:"company_id,omitempty"`
+	RequestedRole string    `json:"requested_role"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 func (h *Handler) HandlePendingApprovals(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +33,7 @@ func (h *Handler) HandlePendingApprovals(w http.ResponseWriter, r *http.Request)
 
 func (h *Handler) listPendingApprovals(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.DB.Query(`
-		SELECT pa.id, pa.user_id, u.name, u.email, pa.company_name, pa.status, pa.created_at
+		SELECT pa.id, pa.user_id, u.name, u.email, pa.company_name, pa.company_id, pa.requested_role, pa.status, pa.created_at
 		FROM pending_approvals pa
 		JOIN users u ON u.id = pa.user_id
 		WHERE pa.status = 'pending' AND u.deleted_at IS NULL
@@ -46,7 +48,7 @@ func (h *Handler) listPendingApprovals(w http.ResponseWriter, r *http.Request) {
 	var approvals []PendingApproval
 	for rows.Next() {
 		var a PendingApproval
-		rows.Scan(&a.ID, &a.UserID, &a.UserName, &a.UserEmail, &a.CompanyName, &a.Status, &a.CreatedAt)
+		rows.Scan(&a.ID, &a.UserID, &a.UserName, &a.UserEmail, &a.CompanyName, &a.CompanyID, &a.RequestedRole, &a.Status, &a.CreatedAt)
 		approvals = append(approvals, a)
 	}
 	if approvals == nil {
@@ -60,6 +62,7 @@ type ApprovalRequest struct {
 	ApprovalID int    `json:"approval_id"`
 	Action     string `json:"action"`
 	CompanyID  *int   `json:"company_id,omitempty"`
+	Role       string `json:"role,omitempty"`
 	Notes      string `json:"notes,omitempty"`
 }
 
@@ -94,7 +97,14 @@ func (h *Handler) approveOrReject(w http.ResponseWriter, r *http.Request) {
 			companyID = int(id64)
 		}
 
-		_, err = h.DB.Exec("UPDATE users SET status = 'active' WHERE id = ?", userID)
+		// Default role is viewer if not specified
+		role := "viewer"
+		if req.Role != "" {
+			role = req.Role
+		}
+
+		// Activate user and set their role
+		_, err = h.DB.Exec("UPDATE users SET status = 'active', role = ? WHERE id = ?", role, userID)
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to activate user")
 			return

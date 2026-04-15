@@ -23,6 +23,37 @@ func (h *Handler) HandleCompanies(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandlePublicCompanies returns a list of all companies without authentication (for registration form).
+func (h *Handler) HandlePublicCompanies(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.DB.Query(`
+		SELECT id, name FROM companies
+		WHERE deleted_at IS NULL
+		ORDER BY name
+	`)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
+	}
+	defer rows.Close()
+
+	type PublicCompany struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	var companies []PublicCompany
+	for rows.Next() {
+		var c PublicCompany
+		if err := rows.Scan(&c.ID, &c.Name); err != nil {
+			continue
+		}
+		companies = append(companies, c)
+	}
+	if companies == nil {
+		companies = []PublicCompany{}
+	}
+	h.JSON(w, http.StatusOK, companies)
+}
+
 func (h *Handler) HandleCompanyByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)

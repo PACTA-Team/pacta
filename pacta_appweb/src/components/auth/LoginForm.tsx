@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { registrationAPI } from '@/lib/registration-api';
@@ -23,13 +24,14 @@ export default function LoginForm() {
   const [showVerification, setShowVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('login');
 
   useEffect(() => {
     if (showRegister) {
-      fetch('/api/companies', { credentials: 'include' })
+      fetch('/api/public/companies')
         .then(r => r.json())
         .then(data => setCompanies(Array.isArray(data) ? data : []))
         .catch(() => setCompanies([]));
@@ -38,26 +40,34 @@ export default function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await login(email, password);
-    if (result.user) {
-      toast.success(t('loginTitle'));
-      navigate('/dashboard');
-    } else {
-      toast.error(result.error || t('loginError'));
+    setIsSubmitting(true);
+    try {
+      const result = await login(email, password);
+      if (result.user) {
+        toast.success(t('loginTitle'));
+        navigate('/dashboard');
+      } else {
+        toast.error(result.error || t('loginError'));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
-      const companyParam = selectedCompanyId === 'other' ? companyName : undefined;
-      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam);
+      const isNewCompany = selectedCompanyId === 'other';
+      const companyParam = isNewCompany ? companyName : undefined;
+      const companyId = isNewCompany ? undefined : (selectedCompanyId ? parseInt(selectedCompanyId) : undefined);
+      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam, companyId);
       if (data.status === 'pending_email') {
         setVerificationEmail(email);
         setShowVerification(true);
-        toast.info('Verification code sent to your email');
+        toast.info(t('emailVerificationToast'));
       } else if (data.status === 'pending_approval') {
-        toast.success('Registration submitted. An admin will review your request.');
+        toast.success(t('approvalPendingToast'));
         setShowRegister(false);
         setName('');
         setEmail('');
@@ -65,16 +75,14 @@ export default function LoginForm() {
         setCompanyName('');
         setSelectedCompanyId('');
       } else {
+        // First user: auto-logged in, navigate to dashboard
         toast.success(t('registerSuccess'));
-        setShowRegister(false);
-        setName('');
-        setEmail('');
-        setPassword('');
-        setCompanyName('');
-        setSelectedCompanyId('');
+        navigate('/dashboard');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('registerError'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -168,16 +176,30 @@ export default function LoginForm() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="company">Company</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="company">{t('companyLabel')}</Label>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-muted-foreground/30 text-xs text-muted-foreground hover:border-muted-foreground hover:text-foreground">?</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-xs">
+                        {t('companyTip')}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
                 <SelectTrigger id="company">
-                  <SelectValue placeholder="Select your company" />
+                  <SelectValue placeholder={t('companyPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {companies.map(c => (
                     <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                   ))}
-                  <SelectItem value="other">Other (new company)</SelectItem>
+                  <SelectItem value="other">{t('newCompanyOption')}</SelectItem>
                 </SelectContent>
               </Select>
               {selectedCompanyId === 'other' && (
@@ -207,12 +229,12 @@ export default function LoginForm() {
                     required
                   />
                 </div>
-                <Button type="button" onClick={handleVerifyCode} className="w-full">
+                <Button type="button" onClick={handleVerifyCode} className="w-full" disabled={isSubmitting}>
                   Verify Email
                 </Button>
               </div>
             )}
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {t('register')}
             </Button>
             <Button
@@ -253,7 +275,7 @@ export default function LoginForm() {
               />
             </div>
             <div className="space-y-3">
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {t('loginBtn')}
               </Button>
               <Button
