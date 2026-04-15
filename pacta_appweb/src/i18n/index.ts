@@ -19,6 +19,7 @@ import esSigners from '../../public/locales/es/signers.json';
 import esCompanies from '../../public/locales/es/companies.json';
 import esPending from '../../public/locales/es/pending.json';
 import esDashboard from '../../public/locales/es/dashboard.json';
+import esDownload from '../../public/locales/es/download.json';
 
 // Import English translations
 import enCommon from '../../public/locales/en/common.json';
@@ -37,6 +38,7 @@ import enSigners from '../../public/locales/en/signers.json';
 import enCompanies from '../../public/locales/en/companies.json';
 import enPending from '../../public/locales/en/pending.json';
 import enDashboard from '../../public/locales/en/dashboard.json';
+import enDownload from '../../public/locales/en/download.json';
 
 i18n
   .use(LanguageDetector)
@@ -60,6 +62,7 @@ i18n
         companies: esCompanies,
         pending: esPending,
         dashboard: esDashboard,
+        download: esDownload,
       },
       en: {
         common: enCommon,
@@ -78,11 +81,12 @@ i18n
         companies: enCompanies,
         pending: enPending,
         dashboard: enDashboard,
+        download: enDownload,
       },
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'es'],
-    ns: ['common', 'landing', 'login', 'setup', 'contracts', 'clients', 'suppliers', 'supplements', 'reports', 'settings', 'documents', 'notifications', 'signers', 'companies', 'pending', 'dashboard'],
+    ns: ['common', 'landing', 'login', 'setup', 'contracts', 'clients', 'suppliers', 'supplements', 'reports', 'settings', 'documents', 'notifications', 'signers', 'companies', 'pending', 'dashboard', 'download'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false,
