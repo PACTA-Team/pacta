@@ -1,0 +1,32 @@
+{
+  "title": "Usuarios",
+  "subtitle": "Gestiona usuarios y sus roles",
+  "addNew": "Agregar nuevo usuario",
+  "editUser": "Editar usuario",
+  "addUser": "Agregar usuario",
+  "updateUser": "Actualizar usuario",
+  "createUser": "Crear usuario",
+  "resetPassword": "Restablecer contraseña",
+  "newPassword": "Nueva contraseña",
+  "noUsers": "No se encontraron usuarios",
+  "loading": "Cargando usuarios...",
+  "rolePermissions": "Matriz de permisos por rol",
+  "role": "Rol",
+  "admin": "Administrador",
+  "manager": "Gerente",
+  "editor": "Editor",
+  "viewer": "Visor",
+  "active": "Activo",
+  "inactive": "Inactivo",
+  "pending": "Pendiente",
+  "name": "Nombre",
+  "email": "Correo electrónico",
+  "status": "Estado",
+  "permissions": {
+    "contracts": "Contratos",
+    "parties": "Partes",
+    "reports": "Reportes",
+    "users": "Usuarios",
+    "settings": "Configuración"
+  }
+}

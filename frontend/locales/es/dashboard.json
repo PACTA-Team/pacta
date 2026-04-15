@@ -1,0 +1,32 @@
+{
+  "title": "Panel de Control",
+  "kpi": {
+    "totalContracts": {
+      "title": "Total Contratos",
+      "desc": "Contratos activos"
+    },
+    "expiringSoon": {
+      "title": "Por Vencer",
+      "desc": "Próximos 30 días"
+    },
+    "activeParties": {
+      "title": "Partes Activas",
+      "desc": "Clientes y proveedores"
+    },
+    "pendingApproval": {
+      "title": "Pendientes",
+      "desc": "Esperando aprobación"
+    }
+  },
+  "expiringTitle": "Contratos por Vencer",
+  "daysLeft": "días restantes",
+  "statusTitle": "Contratos por Estado",
+  "noContracts": "No hay contratos para mostrar",
+  "quickActions": "Acciones Rápidas",
+  "newContract": "Nuevo contrato",
+  "newClient": "Nuevo cliente",
+  "newSupplier": "Nuevo proveedor",
+  "viewReports": "Ver reportes",
+  "manageUsers": "Gestionar usuarios",
+  "settings": "Configuración"
+}
