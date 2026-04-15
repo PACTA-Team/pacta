@@ -1,10 +1,9 @@
 -- +goose Up
 -- Expand status CHECK constraint to include registration states
 -- SQLite doesn't support ALTER TABLE for constraints, so we recreate the table
+-- Note: goose wraps migrations in a transaction, so no explicit BEGIN/COMMIT needed
 
 PRAGMA foreign_keys=off;
-
-BEGIN TRANSACTION;
 
 -- Create new table with updated constraint
 CREATE TABLE users_new (
@@ -34,15 +33,11 @@ ALTER TABLE users_new RENAME TO users;
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 
-COMMIT;
-
 PRAGMA foreign_keys=on;
 
 -- +goose Down
 -- Revert to original constraint (will fail if any pending_email/pending_approval users exist)
 PRAGMA foreign_keys=off;
-
-BEGIN TRANSACTION;
 
 CREATE TABLE users_new (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +61,5 @@ ALTER TABLE users_new RENAME TO users;
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
-
-COMMIT;
 
 PRAGMA foreign_keys=on;
