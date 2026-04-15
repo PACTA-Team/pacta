@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -51,6 +52,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var existing int
 	err := h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ? AND deleted_at IS NULL", req.Email).Scan(&existing)
 	if err != nil {
+		log.Printf("[register] ERROR checking email existence: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to check email")
 		return
 	}
@@ -63,6 +65,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var userCount int
 	err = h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&userCount)
 	if err != nil {
+		log.Printf("[register] ERROR determining role (userCount): %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to determine role")
 		return
 	}
@@ -82,6 +85,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	// Hash password
 	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
+		log.Printf("[register] ERROR hashing password: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to process registration")
 		return
 	}
@@ -92,6 +96,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		req.Name, req.Email, hash, role, status,
 	)
 	if err != nil {
+		log.Printf("[register] ERROR inserting user: %v", err)
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			h.Error(w, http.StatusConflict, "a user with this email already exists")
 			return
@@ -159,12 +164,14 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var companyID int
 	err = h.DB.QueryRow("SELECT id FROM companies LIMIT 1").Scan(&companyID)
 	if err != nil && err != sql.ErrNoRows {
+		log.Printf("[register] ERROR querying company: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
 	}
 
 	session, err := auth.CreateSession(h.DB, int(userID), companyID)
 	if err != nil {
+		log.Printf("[register] ERROR creating session: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
 	}
@@ -184,6 +191,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		FROM users WHERE id = ? AND deleted_at IS NULL
 	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
+		log.Printf("[register] ERROR retrieving created user: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to retrieve created user")
 		return
 	}

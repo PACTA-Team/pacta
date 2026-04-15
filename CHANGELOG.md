@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-04-15
+
+### Fixed
+- **Registration returns 500 error with English alert** — Added detailed error logging to `HandleRegister` to capture root cause of registration failures. Error messages now logged to journalctl for debugging.
+
+### Changed
+- **Error logging in auth handler** — All 500 error paths in `HandleRegister` now log the underlying error with `log.Printf` for production debugging
+
 ## [0.31.0] - 2026-04-15
 
 ### Added
