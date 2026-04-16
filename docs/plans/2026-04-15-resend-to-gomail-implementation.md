@@ -663,7 +663,7 @@ git commit -m "feat: add spam folder hint on verification page"
 On the VPS, edit `/opt/pacta/.env`:
 
 ```diff
--RESEND_API_KEY=re_RNptY9iA_2fn8TGd5N2tHkZbmHG2gypJX
+-RESEND_API_KEY=<REDACTED>
  EMAIL_FROM=PACTA <noreply@pacta.duckdns.org>
 ```
 
