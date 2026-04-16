@@ -17,7 +17,7 @@ PACTA is a local-first contract management platform designed for organizations t
 ## Features
 
 - **Contract Management** — Full CRUD operations with soft delete, version tracking, and status workflows
-- **Hybrid Registration** — Email code verification (via Resend) or admin approval with company assignment
+- **Hybrid Registration** — Email code verification (via local SMTP) or admin approval with company assignment
 - **Party Management** — Centralized registry of clients, suppliers, and authorized signers
 - **Approval Workflows** — Structured supplement approvals with draft, approved, and active states
 - **Document Attachments** — Link supporting documents directly to contracts and parties
@@ -144,6 +144,7 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Version | Date | Type | Highlights |
 |---------|------|------|------------|
+| [v0.33.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.33.0) | 2026-04-15 | 🔄 Migration | Resend → go-mail, i18n email templates, spam folder warnings, language detection |
 | [v0.31.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.31.0) | 2026-04-15 | 🔧 Fix | Login error display, registration UX, admin approval workflow, toast notifications |
 | [v0.28.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.28.0) | 2026-04-13 | 🔧 Fix | Registration endpoint, toast error messages, silent failure fixes |
 | [v0.27.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.27.0) | 2026-04-13 | 🌍 i18n | Full Spanish/English translations, language detection, locale-aware formatting |

@@ -166,7 +166,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
 | Auth System | Complete (v0.28.0 — Registration endpoint, auto-login, error message propagation, toast notifications) |
-| Hybrid Registration | Complete (v0.30.0 — Resend email integration, email code verification with 5-min timeout, admin approval workflow with company assignment, pending approvals UI, SPA routing fix, login bug fix, spaHandler compilation fix, company selection in registration, company assignment in user edit form) |
+| Hybrid Registration | Complete (v0.33.0 — go-mail SMTP integration replacing Resend API, i18n email templates (es/en), language detection from request body + Accept-Language header, email error logging, spam folder warnings in UX) |
 | Login UX Fixes | Complete (v0.31.0 — Error message JSON parsing fix, Sonner Toaster provider, public companies endpoint, first-user dashboard navigation, approval role selection, company tooltip, form loading states) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
 | Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
@@ -449,6 +449,7 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
+| v0.33.0 | Current | Resend → go-mail migration, i18n email templates (es/en), language detection, email error logging, spam folder warnings |
 | v0.31.0 | Current | Login error message fix (res.json vs res.text), Sonner Toaster provider, public companies endpoint, registration company selector fix, first-user auto-navigation to dashboard, admin approval role selection, company tooltip with i18n, isSubmitting state on forms |
 | v0.30.0 | - | Company selection in registration (dropdown + Other), company assignment in user edit form, verify email double-submit fix, accessibility improvements |
 | v0.29.1 | - | spaHandler compilation fix (fs.File not io.ReadSeeker → bytes.NewReader), all v0.29.0 features |
