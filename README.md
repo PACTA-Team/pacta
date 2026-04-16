@@ -144,6 +144,9 @@ PACTA follows a minimalist, self-contained architecture:
 
 | Version | Date | Type | Highlights |
 |---------|------|------|------------|
+| [v0.35.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.35.0) | 2026-04-16 | 🔧 Fix | Sidebar responsive fix, logo icon in collapsed state, theme-adaptive coloring |
+| [v0.34.1](https://github.com/PACTA-Team/pacta/releases/tag/v0.34.1) | 2026-04-16 | 🐛 Fix | Migration goose markers fix |
+| [v0.34.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.34.0) | 2026-04-16 | ✨ Feature | SMTP via env variables, System Settings page, Modern floating sidebar |
 | [v0.33.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.33.0) | 2026-04-15 | 🔄 Migration | Resend → go-mail, i18n email templates, spam folder warnings, language detection |
 | [v0.31.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.31.0) | 2026-04-15 | 🔧 Fix | Login error display, registration UX, admin approval workflow, toast notifications |
 | [v0.28.0](https://github.com/PACTA-Team/pacta/releases/tag/v0.28.0) | 2026-04-13 | 🔧 Fix | Registration endpoint, toast error messages, silent failure fixes |

@@ -32,11 +32,18 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { notificationsAPI } from '@/lib/notifications-api';
 import CompanySelector from '@/components/CompanySelector';
+import ContractIcon from '@/images/contract_icon.svg';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
 const SIDEBAR_WIDTH = '16rem';
 const SIDEBAR_COLLAPSED = '4.5rem';
+
+interface AppSidebarProps {
+  device?: 'desktop' | 'tablet' | 'mobile';
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+}
 
 function useDeviceSize() {
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -74,16 +81,62 @@ const navigation = [
   { nameKey: 'settings', href: '/settings', icon: Settings, roles: ['admin'] as UserRole[] },
 ];
 
-export default function AppSidebar() {
+export default function AppSidebar({ 
+  device: externalDevice, 
+  collapsed: externalCollapsed, 
+  onCollapsedChange 
+}: AppSidebarProps) {
   const location = useLocation();
   const pathname = location.pathname;
   const { user, logout, hasPermission } = useAuth();
-  const deviceSize = useDeviceSize();
-  const isMobile = deviceSize === 'mobile';
-  const isTablet = deviceSize === 'tablet';
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(isTablet);
+  
+  // Use external device if provided, otherwise use internal detection
+  const [internalDevice, setInternalDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const device = externalDevice ?? internalDevice;
+  
+  const isMobile = device === 'mobile';
+  const isTablet = device === 'tablet';
+  
+  // Use external collapsed state if provided, otherwise use internal
+  const [internalCollapsed, setInternalCollapsed] = useState(isTablet);
+  const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
+  
+  // Sync internal collapsed with external when it changes
+  useEffect(() => {
+    if (externalCollapsed !== undefined) {
+      setInternalCollapsed(externalCollapsed);
+    }
+  }, [externalCollapsed]);
+
+  // Update parent when collapsed changes (if callback provided)
+  const handleCollapsedChange = (newCollapsed: boolean) => {
+    if (onCollapsedChange) {
+      onCollapsedChange(newCollapsed);
+    } else {
+      setInternalCollapsed(newCollapsed);
+    }
+  };
+
+  // Internal device detection if no external device provided
+  useEffect(() => {
+    if (externalDevice === undefined) {
+      const handleResize = () => {
+        if (window.innerWidth <= MOBILE_BREAKPOINT) {
+          setInternalDevice('mobile');
+        } else if (window.innerWidth <= TABLET_BREAKPOINT) {
+          setInternalDevice('tablet');
+        } else {
+          setInternalDevice('desktop');
+        }
+      };
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [externalDevice]);
+  
   const [unreadCount, setUnreadCount] = useState(0);
+  
   const { t } = useTranslation('common');
   const { t: tDashboard } = useTranslation('dashboard');
   const { t: tContracts } = useTranslation('contracts');
@@ -227,12 +280,12 @@ export default function AppSidebar() {
             <p className="text-xs text-muted-foreground truncate">Contract Management</p>
           </div>
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold">
-            P
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl text-primary">
+            <ContractIcon className="h-6 w-6" />
           </div>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => handleCollapsedChange(!collapsed)}
           className={cn('flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors', collapsed && 'hidden')}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
