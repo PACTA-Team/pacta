@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +8,9 @@ import AppSidebar from './AppSidebar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import CompanySelector from '@/components/CompanySelector';
+
+const TABLET_BREAKPOINT = 1024;
+const MOBILE_BREAKPOINT = 768;
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -28,6 +32,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = location.pathname;
   const mainRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('common');
+  
+  // Device size detection for responsive sidebar
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= MOBILE_BREAKPOINT) {
+        setDevice('mobile');
+      } else if (window.innerWidth <= TABLET_BREAKPOINT) {
+        setDevice('tablet');
+        setSidebarCollapsed(true);
+      } else {
+        setDevice('desktop');
+        setSidebarCollapsed(false);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = device === 'mobile';
+  const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? 80 : 256); // 0 for mobile drawer, 80px for collapsed, 256px for expanded
 
   // Update document title on route change
   useEffect(() => {
@@ -65,8 +93,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         Skip to main content
       </a>
 
-      <AppSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden ml-72">
+      <AppSidebar 
+        device={device} 
+        collapsed={sidebarCollapsed} 
+        onCollapsedChange={setSidebarCollapsed} 
+      />
+      <div 
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{ marginLeft: isMobile ? 0 : (sidebarCollapsed ? 80 : 256) }}
+      >
         <header role="banner" className="border-b bg-card px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <CompanySelector />

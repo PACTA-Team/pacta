@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-04-16
+
+### Fixed
+- **Sidebar responsive behavior** — Fixed visual bug where sidebar would get stuck in the corner when page shrinks. The content margin now dynamically adapts to sidebar width when collapsed/expanded
+- **Device detection synchronization** — AppLayout now properly detects tablet/desktop/mobile and coordinates with sidebar state
+
+### Added
+- **Logo icon in collapsed sidebar** — Replaced the "P" letter with the project logo SVG when sidebar is collapsed. The icon uses `currentColor` to automatically adapt to light/dark theme
+
+### Technical Details
+- **Files Modified:** 3 (`internal/config/config.go`, `pacta_appweb/src/components/layout/AppLayout.tsx`, `pacta_appweb/src/components/layout/AppSidebar.tsx`, `pacta_appweb/src/images/contract_icon.svg`)
+
 ## [0.34.1] - 2026-04-16
 
 ### Fixed
