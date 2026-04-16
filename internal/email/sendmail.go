@@ -9,6 +9,35 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
+func getMailClient() (*mail.Client, error) {
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpPass := os.Getenv("SMTP_PASS")
+
+	if smtpHost == "" {
+		smtpHost = "localhost"
+	}
+
+	opts := []mail.Option{
+		mail.WithTLSPortPolicy(mail.TLSOpportunistic),
+	}
+
+	if smtpUser != "" && smtpPass != "" {
+		opts = append(opts, mail.WithSMTPAuth(mail.SMTPAuthPlain))
+	}
+
+	client, err := mail.NewClient(smtpHost, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if smtpUser != "" && smtpPass != "" {
+		client = client.WithUsername(smtpUser).WithPassword(smtpPass)
+	}
+
+	return client, nil
+}
+
 // SendVerificationCode sends a verification code email to the user
 func SendVerificationCode(ctx context.Context, to, code, lang string) error {
 	from := os.Getenv("EMAIL_FROM")
@@ -30,10 +59,7 @@ func SendVerificationCode(ctx context.Context, to, code, lang string) error {
 	msg.Subject(template.Subject)
 	msg.SetBodyString(mail.TypeTextHTML, template.HTML)
 
-	client, err := mail.NewClient("localhost",
-		mail.WithPort(25),
-		mail.WithTLSPortPolicy(mail.TLSOpportunistic),
-	)
+	client, err := getMailClient()
 	if err != nil {
 		log.Printf("[email] ERROR creating mail client: %v", err)
 		return err
@@ -72,10 +98,7 @@ func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail,
 	msg.Subject(template.Subject)
 	msg.SetBodyString(mail.TypeTextHTML, template.HTML)
 
-	client, err := mail.NewClient("localhost",
-		mail.WithPort(25),
-		mail.WithTLSPortPolicy(mail.TLSOpportunistic),
-	)
+	client, err := getMailClient()
 	if err != nil {
 		log.Printf("[email] ERROR creating mail client: %v", err)
 		return err

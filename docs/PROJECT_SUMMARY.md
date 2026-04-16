@@ -167,6 +167,8 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
 | Auth System | Complete (v0.28.0 — Registration endpoint, auto-login, error message propagation, toast notifications) |
 | Hybrid Registration | Complete (v0.33.0 — go-mail SMTP integration replacing Resend API, i18n email templates (es/en), language detection from request body + Accept-Language header, email error logging, spam folder warnings in UX) |
+| SMTP Environment Variables | Complete (v0.34.0 — SMTP_HOST, SMTP_USER, SMTP_PASS instead of hardcoded localhost:25) |
+| System Settings | Complete (v0.34.0 — Settings page with tabs (SMTP/Company/Registration/General), GET/PUT /api/system-settings, persistent configuration storage) |
 | Login UX Fixes | Complete (v0.31.0 — Error message JSON parsing fix, Sonner Toaster provider, public companies endpoint, first-user dashboard navigation, approval role selection, company tooltip, form loading states) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
 | Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
@@ -449,7 +451,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.33.0 | Current | Resend → go-mail migration, i18n email templates (es/en), language detection, email error logging, spam folder warnings |
+| v0.34.0 | Current | SMTP via environment variables, System Settings page (SMTP/Company/Registration/General tabs), System Settings API (GET/PUT /api/system-settings), Modern floating sidebar with glassmorphism |
+| v0.33.0 | - | Resend → go-mail migration, i18n email templates (es/en), language detection, email error logging, spam folder warnings |
 | v0.31.0 | Current | Login error message fix (res.json vs res.text), Sonner Toaster provider, public companies endpoint, registration company selector fix, first-user auto-navigation to dashboard, admin approval role selection, company tooltip with i18n, isSubmitting state on forms |
 | v0.30.0 | - | Company selection in registration (dropdown + Other), company assignment in user edit form, verify email double-submit fix, accessibility improvements |
 | v0.29.1 | - | spaHandler compilation fix (fs.File not io.ReadSeeker → bytes.NewReader), all v0.29.0 features |
@@ -780,7 +783,37 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### In Progress
 
-_No active work in progress. Latest PR: [#59 — Automatic language detection (i18n)](https://github.com/PACTA-Team/pacta/pull/59)_
+_No active work in progress. Latest PR: [#82 — System Settings page + Modern Sidebar](https://github.com/PACTA-Team/pacta/pull/82)_
+
+### Completed (v0.34.0)
+
+**SMTP Environment Variables Fix:**
+- [x] SMTP configuration reads from environment variables (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`) instead of hardcoded `localhost:25`
+- [x] Backend `sendmail.go` updated to use config package values
+- [x] Production-ready email delivery now possible
+
+**System Settings Page:**
+- [x] New admin-only settings page at `/settings`
+- [x] Tabbed interface with 4 tabs: SMTP, Company, Registration, General
+- [x] Backend migration `026_system_settings.sql` with SQLite table
+- [x] `SystemSetting` model in `internal/models/models.go`
+- [x] API handlers `GET/PUT /api/system-settings` in `internal/handlers/system_settings.go`
+- [x] Frontend `settings-api.ts` for API communication
+- [x] `SettingsPage.tsx` with full CRUD UI
+- [x] Translations in `en/settings.json` and `es/settings.json`
+- [x] Navigation link in sidebar (admin-only visibility)
+- [x] Design doc: `docs/plans/2026-04-16-system-settings-design.md`
+- [x] Implementation plan: `docs/plans/2026-04-16-system-settings-implementation.md`
+
+**Modern Floating Sidebar:**
+- [x] Glassmorphism effect (backdrop blur, semi-transparent background)
+- [x] Floating design with elevated shadow and rounded corners
+- [x] Integrated scrollbar (no separate scroll container)
+- [x] Responsive: mobile drawer, tablet collapsed icons, desktop expanded
+- [x] Smooth animations for collapse/expand
+- [x] Tooltips on hover for collapsed state
+- [x] Design doc: `docs/plans/2026-04-16-modern-sidebar-design.md`
+- [x] AppLayout margin adjusted to accommodate new sidebar
 
 ### Pending — Backend (Highest Priority)
 

@@ -131,3 +131,12 @@ type UserCompany struct {
 	CompanyName string `json:"company_name"`
 	IsDefault   bool   `json:"is_default"`
 }
+
+type SystemSetting struct {
+	ID        int        `json:"id"`
+	Key      string     `json:"key"`
+	Value    *string    `json:"value,omitempty"`
+	Category string    `json:"category"`
+	UpdatedBy *int       `json:"updated_by,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

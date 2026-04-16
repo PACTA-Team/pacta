@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-04-16
+
+### Fixed
+- **SMTP configuration via environment variables** — SMTP settings were hardcoded to `localhost:25`. The system now reads `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` from environment variables, enabling proper email delivery in production environments
+
+### Added
+- **System Settings page** — New admin-only settings page (`/settings`) with tabbed interface for configuring:
+  - **SMTP tab** — Configure email server (host, port, username, password, from address)
+  - **Company tab** — Configure company information (name, address, tax ID)
+  - **Registration tab** — Toggle registration enabled/disabled, default user role for new registrations
+  - **General tab** — App version display, session timeout settings
+- **System settings API endpoints** — `GET/PUT /api/system-settings` for persistent configuration storage
+- **Modern floating sidebar** — Completely redesigned sidebar with:
+  - Glassmorphism effect (backdrop blur, transparency)
+  - Floating design (elevated with shadow, rounded corners)
+  - Integrated scrollbar (no more separate scroll containers)
+  - Responsive behavior: mobile drawer, tablet collapsed icon-only, desktop expanded
+  - Smooth collapse/expand animations with tooltips on hover
+
+### Technical Details
+- **Files Created:** 7 (`internal/db/migrations/026_system_settings.sql`, `internal/handlers/system_settings.go`, `pacta_appweb/src/lib/settings-api.ts`, `pacta_appweb/src/pages/SettingsPage.tsx`, `pacta_appweb/public/locales/en/settings.json`, `pacta_appweb/public/locales/es/settings.json`, `docs/plans/2026-04-16-system-settings-design.md`)
+- **Files Modified:** 8 (`internal/config/config.go`, `internal/email/sendmail.go`, `internal/server/server.go`, `pacta_appweb/package.json`, `pacta_appweb/src/App.tsx`, `pacta_appweb/src/components/layout/AppSidebar.tsx`, `pacta_appweb/src/components/layout/AppLayout.tsx`)
+
 ## [0.33.0] - 2026-04-15
 
 ### Changed

@@ -66,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </a>
 
       <AppSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden ml-72">
         <header role="banner" className="border-b bg-card px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <CompanySelector />

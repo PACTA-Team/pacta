@@ -28,5 +28,21 @@
     "reports": "Reports",
     "users": "Users",
     "settings": "Settings"
-  }
+  },
+  "systemTitle": "System Settings",
+  "tabs": {
+    "smtp": "SMTP",
+    "company": "Company",
+    "registration": "Registration",
+    "general": "General"
+  },
+  "smtpTitle": "SMTP Configuration",
+  "companyTitle": "Company Information",
+  "registrationTitle": "Registration Options",
+  "generalTitle": "General Settings",
+  "registrationHelp": "Comma-separated: email_verification, admin_approval",
+  "saveSuccess": "Settings saved successfully",
+  "saveError": "Failed to save settings",
+  "saving": "Saving...",
+  "save": "Save Settings"
 }
