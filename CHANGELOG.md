@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-04-16
+
+### Fixed
+- **Migration goose markers** — Added missing `-- +goose Up` and `-- +goose Down` markers to `026_system_settings.sql` migration file
+
 ## [0.34.0] - 2026-04-16
 
 ### Fixed
