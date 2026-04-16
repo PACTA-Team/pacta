@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"pacta/internal/models"
+	"github.com/PACTA-Team/pacta/internal/models"
 )
 
 func (h *Handler) GetSystemSettings(w http.ResponseWriter, r *http.Request) {
