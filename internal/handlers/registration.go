@@ -110,7 +110,7 @@ func generateCode() (string, error) {
 	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
-func sendAdminNotifications(ctx context.Context, db *sql.DB, userName, userEmail, companyName string) error {
+func sendAdminNotifications(ctx context.Context, db *sql.DB, userName, userEmail, companyName, lang string) error {
 	rows, err := db.Query("SELECT email FROM users WHERE role = 'admin' AND status = 'active' AND deleted_at IS NULL")
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func sendAdminNotifications(ctx context.Context, db *sql.DB, userName, userEmail
 		if err := rows.Scan(&adminEmail); err != nil {
 			continue
 		}
-		email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName)
+		email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName, lang)
 	}
 	return nil
 }
