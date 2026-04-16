@@ -21,5 +21,5 @@
   "companyPlaceholder": "Selecciona tu empresa",
   "newCompanyOption": "Otra (nueva empresa)",
   "approvalPendingToast": "¡Registro enviado! Tu cuenta está esperando la aprobación de un administrador. Serás notificado una vez aprobado.",
-  "emailVerificationToast": "Código de verificación enviado a tu correo electrónico"
+  "emailVerificationToast": "¡Código de verificación enviado! Revisa tu bandeja de entrada y la carpeta de spam."
 }

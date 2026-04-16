@@ -14,10 +14,15 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
 }
 
 export const registrationAPI = {
-  register: (name: string, email: string, password: string, mode: 'email' | 'approval', companyName?: string, companyId?: number) =>
+  register: (name: string, email: string, password: string, mode: 'email' | 'approval', companyName?: string, companyId?: number, language?: string) =>
     fetchJSON(`${BASE}/register`, {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, mode, company_name: companyName, company_id: companyId }),
+      body: JSON.stringify({
+        name, email, password, mode,
+        company_name: companyName,
+        company_id: companyId,
+        language: language || 'en',
+      }),
     }),
 
   verifyCode: (email: string, code: string) =>

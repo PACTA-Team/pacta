@@ -62,6 +62,10 @@ export default function VerifyEmailPage() {
             <CardTitle className="text-center">Verify Your Email</CardTitle>
             <CardDescription className="text-center">
               Enter the 6-digit code sent to {email}
+              <br />
+              <span className="text-xs text-muted-foreground">
+                Didn't receive it? Check your spam folder.
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
