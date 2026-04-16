@@ -13,7 +13,7 @@ func (h *Handler) GetSystemSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.db.Query("SELECT id, key, value, category, updated_by, updated_at FROM system_settings ORDER BY category, key")
+	rows, err := h.DB.Query("SELECT id, key, value, category, updated_by, updated_at FROM system_settings ORDER BY category, key")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -53,7 +53,7 @@ func (h *Handler) UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 
 	userID := h.getUserID(r)
 	for _, s := range req {
-		_, err := h.db.Exec(
+		_, err := h.DB.Exec(
 			"UPDATE system_settings SET value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
 			s.Value, userID, s.Key,
 		)
