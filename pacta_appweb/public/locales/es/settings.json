@@ -28,5 +28,21 @@
     "reports": "Reportes",
     "users": "Usuarios",
     "settings": "Configuración"
-  }
+  },
+  "systemTitle": "Configuración del Sistema",
+  "tabs": {
+    "smtp": "SMTP",
+    "company": "Empresa",
+    "registration": "Registro",
+    "general": "General"
+  },
+  "smtpTitle": "Configuración SMTP",
+  "companyTitle": "Información de la Empresa",
+  "registrationTitle": "Opciones de Registro",
+  "generalTitle": "Configuración General",
+  "registrationHelp": "Separados por coma: email_verification, admin_approval",
+  "saveSuccess": "Configuración guardada correctamente",
+  "saveError": "Error al guardar la configuración",
+  "saving": "Guardando...",
+  "save": "Guardar Configuración"
 }

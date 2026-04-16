@@ -19,7 +19,8 @@ import {
   X,
   Building,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,6 +63,7 @@ const navigation = [
   { nameKey: 'notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { nameKey: 'users', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
   { nameKey: 'companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
+  { nameKey: 'settings', href: '/settings', icon: Settings, roles: ['admin'] as UserRole[] },
 ];
 
 export default function AppSidebar() {
@@ -97,6 +99,7 @@ export default function AppSidebar() {
     notifications: tNotifications('title'),
     users: tSettings('title'),
     companies: tCompanies('title'),
+    settings: tSettings('systemTitle'),
   };
 
   useEffect(() => {
