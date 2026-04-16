@@ -40,8 +40,8 @@ export default function PendingUsersTable() {
     setLoading(true);
     try {
       const [approvalsData, companiesData] = await Promise.all([
-        approvalsAPI.listPending(),
-        fetch('/api/companies', { credentials: 'include' }).then(r => r.json()),
+        approvalsAPI.listPending() as Promise<PendingApproval[]>,
+        fetch('/api/companies', { credentials: 'include' }).then(r => r.json()) as Promise<Company[]>,
       ]);
       setApprovals(approvalsData);
       setCompanies(companiesData);

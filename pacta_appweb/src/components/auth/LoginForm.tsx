@@ -42,7 +42,7 @@ export default function LoginForm() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const result = await login(email, password);
+      const result: { user: import('@/types').User | null; error?: string } = await login(email, password);
       if (result.user) {
         toast.success(t('loginTitle'));
         navigate('/dashboard');
@@ -62,7 +62,7 @@ export default function LoginForm() {
       const companyParam = isNewCompany ? companyName : undefined;
       const companyId = isNewCompany ? undefined : (selectedCompanyId ? parseInt(selectedCompanyId) : undefined);
       const currentLang = i18n.language.startsWith('es') ? 'es' : 'en';
-      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam, companyId, currentLang);
+      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam, companyId, currentLang) as { status: 'pending_email' | 'pending_approval' | 'success' };
       if (data.status === 'pending_email') {
         setVerificationEmail(email);
         setShowVerification(true);
