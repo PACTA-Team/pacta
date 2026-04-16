@@ -24,15 +24,13 @@ func getMailClient() (*mail.Client, error) {
 
 	if smtpUser != "" && smtpPass != "" {
 		opts = append(opts, mail.WithSMTPAuth(mail.SMTPAuthPlain))
+		opts = append(opts, mail.WithUsername(smtpUser))
+		opts = append(opts, mail.WithPassword(smtpPass))
 	}
 
 	client, err := mail.NewClient(smtpHost, opts...)
 	if err != nil {
 		return nil, err
-	}
-
-	if smtpUser != "" && smtpPass != "" {
-		client = client.WithUsername(smtpUser).WithPassword(smtpPass)
 	}
 
 	return client, nil
