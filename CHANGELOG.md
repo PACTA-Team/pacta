@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-04-15
+
+### Changed
+- **Migrated from Resend API to go-mail** — Replaced `github.com/resend/resend-go/v3` with `github.com/wneessen/go-mail` for direct SMTP email delivery. No longer requires external API key or internet connection for email sending
+- **Removed Resend API key dependency** — `RESEND_API_KEY` environment variable no longer required. Emails sent via local SMTP (localhost:25, opportunistic TLS)
+
+### Added
+- **i18n email templates** — Verification and admin notification emails now support Spanish (`es`) and English (`en`) based on user's detected language
+- **Language detection for emails** — Language detected from registration request body (`language` field), falling back to `Accept-Language` header, defaulting to `"en"`
+- **Email error logging** — SMTP send failures now logged with full error details and surfaced to user with clear error message instead of silent failure
+- **Spam folder warnings** — Registration toast and verification page now remind users to check their spam folder for verification codes
+
+### Removed
+- **`internal/email/resend.go`** — Resend SDK integration removed
+- **`ResendAPIKey` from config** — Config struct no longer includes Resend API key field
+- **`email.Init()` from server startup** — go-mail requires no initialization
+
+### Technical Details
+- **Files Created:** 2 (`internal/email/sendmail.go`, `internal/email/templates.go`)
+- **Files Deleted:** 1 (`internal/email/resend.go`)
+- **Files Modified:** 10 (`go.mod`, `go.sum`, `internal/config/config.go`, `internal/server/server.go`, `internal/handlers/auth.go`, `internal/handlers/registration.go`, `pacta_appweb/src/lib/registration-api.ts`, `pacta_appweb/src/components/auth/LoginForm.tsx`, `pacta_appweb/src/pages/VerifyEmailPage.tsx`, `pacta_appweb/public/locales/es/login.json`, `pacta_appweb/public/locales/en/login.json`)
+
 ## [0.32.0] - 2026-04-15
 
 ### Fixed

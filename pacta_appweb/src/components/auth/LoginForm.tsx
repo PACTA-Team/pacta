@@ -27,7 +27,7 @@ export default function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation('login');
+  const { t, i18n } = useTranslation('login');
 
   useEffect(() => {
     if (showRegister) {
@@ -42,7 +42,7 @@ export default function LoginForm() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const result = await login(email, password);
+      const result: { user: import('@/types').User | null; error?: string } = await login(email, password);
       if (result.user) {
         toast.success(t('loginTitle'));
         navigate('/dashboard');
@@ -61,7 +61,8 @@ export default function LoginForm() {
       const isNewCompany = selectedCompanyId === 'other';
       const companyParam = isNewCompany ? companyName : undefined;
       const companyId = isNewCompany ? undefined : (selectedCompanyId ? parseInt(selectedCompanyId) : undefined);
-      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam, companyId);
+      const currentLang = i18n.language.startsWith('es') ? 'es' : 'en';
+      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam, companyId, currentLang) as { status: 'pending_email' | 'pending_approval' | 'success' };
       if (data.status === 'pending_email') {
         setVerificationEmail(email);
         setShowVerification(true);

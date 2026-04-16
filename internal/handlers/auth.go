@@ -26,6 +26,7 @@ type RegisterRequest struct {
 	Mode        string `json:"mode"`
 	CompanyName string `json:"company_name"`
 	CompanyID   *int   `json:"company_id,omitempty"`
+	Language    string `json:"language"`
 }
 
 func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +108,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	userID, _ := result.LastInsertId()
 
 	if userCount > 0 {
-		if req.Mode == "email" && email.IsEnabled() {
+		if req.Mode == "email" {
 			code, err := generateCode()
 			if err != nil {
 				h.Error(w, http.StatusInternalServerError, "failed to generate code")
@@ -119,15 +120,22 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 				userID, codeHash, time.Now().Add(5*time.Minute),
 			)
 
+			lang := detectLanguage(req.Language, r.Header.Get("Accept-Language"))
 			ctx := context.Background()
-			email.SendVerificationCode(ctx, req.Email, code)
+			err = email.SendVerificationCode(ctx, req.Email, code, lang)
+			if err != nil {
+				log.Printf("[register] ERROR sending verification email to %s: %v", req.Email, err)
+				h.Error(w, http.StatusInternalServerError, "failed to send verification email. Please try again or contact support.")
+				return
+			}
 
 			h.JSON(w, http.StatusCreated, map[string]interface{}{
-				"id":     userID,
-				"name":   req.Name,
-				"email":  req.Email,
-				"role":   role,
-				"status": "pending_email",
+				"id":      userID,
+				"name":    req.Name,
+				"email":   req.Email,
+				"role":    role,
+				"status":  "pending_email",
+				"message": "Verification code sent. Check your inbox and spam folder.",
 			})
 			return
 		}
@@ -146,8 +154,9 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 				userID, companyName, req.CompanyID, "viewer",
 			)
 
+			lang := detectLanguage(req.Language, r.Header.Get("Accept-Language"))
 			ctx := context.Background()
-			sendAdminNotifications(ctx, h.DB, req.Name, req.Email, companyName)
+			sendAdminNotifications(ctx, h.DB, req.Name, req.Email, companyName, lang)
 
 			h.JSON(w, http.StatusCreated, map[string]interface{}{
 				"id":     userID,
@@ -295,4 +304,24 @@ func sanitizeUser(u *models.User) map[string]interface{} {
 		"email": u.Email,
 		"role":  u.Role,
 	}
+}
+
+func detectLanguage(reqLang string, acceptLangHeader string) string {
+	if reqLang != "" {
+		if reqLang == "es" || reqLang == "en" {
+			return reqLang
+		}
+	}
+	if acceptLangHeader != "" {
+		for _, lang := range strings.Split(acceptLangHeader, ",") {
+			code := strings.TrimSpace(strings.Split(lang, ";")[0])
+			if strings.HasPrefix(code, "es") {
+				return "es"
+			}
+			if strings.HasPrefix(code, "en") {
+				return "en"
+			}
+		}
+	}
+	return "en"
 }
