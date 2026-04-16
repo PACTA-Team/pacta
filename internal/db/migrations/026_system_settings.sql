@@ -1,3 +1,4 @@
+-- +goose Up
 -- Migration: System Settings
 -- Date: 2026-04-16
 
@@ -21,3 +22,6 @@ INSERT INTO system_settings (key, value, category) VALUES
 ('registration_methods', 'email_verification', 'registration'),
 ('default_language', 'en', 'general'),
 ('timezone', 'UTC', 'general');
+
+-- +goose Down
+DROP TABLE IF EXISTS system_settings;
