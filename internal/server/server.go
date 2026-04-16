@@ -140,6 +140,10 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			// Approval routes
 			r.Get("/api/approvals/pending", h.HandlePendingApprovals)
 			r.Post("/api/approvals", h.HandlePendingApprovals)
+
+			// System settings
+			r.Get("/api/system-settings", h.GetSystemSettings)
+			r.Put("/api/system-settings", h.UpdateSystemSettings)
 		})
 	})
 
