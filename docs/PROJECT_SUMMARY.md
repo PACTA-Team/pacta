@@ -170,6 +170,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | SMTP Environment Variables | Complete (v0.35.0 — SMTP_HOST, SMTP_USER, SMTP_PASS instead of hardcoded localhost:25) |
 | System Settings | Complete (v0.35.0 — Settings page with tabs (SMTP/Company/Registration/General), GET/PUT /api/system-settings, persistent configuration storage) |
 | Email Fallback (Brevo + Gmail) | Complete (v0.36.0 — Brevo primary SMTP relay with automatic Gmail fallback; `sendWithBrevo()` + `sendWithGmail()` + `sendEmailWithFallback()`; port 587 TLSMandatory; clear provider logging; env vars: SMTP_HOST/USER/PASS, GMAIL_USER/APP_PASSWORD) |
+| Email Settings from Database | Complete (v0.36.0 — 5 database-driven settings with UI toggles: email_notifications_enabled, email_contract_expiry_enabled, smtp_enabled, brevo_enabled, brevo_api_key; backend helpers: GetSetting, GetSettingBool, IsSMTPEnabled, IsBrevoEnabled; toggle checks in contract expiry worker; new Email Services tab in Settings page; i18n tooltips for all settings) |
 | Modern Sidebar | Complete (v0.35.0 — Responsive sidebar with glassmorphism, dynamic margin, logo icon in collapsed state) |
 | Login UX Fixes | Complete (v0.31.0 — Error message JSON parsing fix, Sonner Toaster provider, public companies endpoint, first-user dashboard navigation, approval role selection, company tooltip, form loading states) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
@@ -453,10 +454,11 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.35.1 | Current | Sidebar mobile drawer state fix (blank pages bug) |
+| v0.36.0 | Current | Email Settings from Database with UI Toggles (email_notifications_enabled, email_contract_expiry_enabled, smtp_enabled, brevo_enabled, brevo_api_key), backend helper functions (GetSetting, GetSettingBool, IsSMTPEnabled, IsBrevoEnabled), toggle checks in contract expiry worker, new Email Services tab in Settings page with toggle switches, i18n tooltips for all email settings |
+| v0.35.1 | - | Sidebar mobile drawer state fix (blank pages bug) |
 | v0.35.0 | - | Sidebar responsive fix (dynamic margin), logo icon in collapsed state, theme-adaptive coloring |
 | v0.34.0 | - | SMTP via environment variables, System Settings page (SMTP/Company/Registration/General tabs), System Settings API (GET/PUT /api/system-settings), Modern floating sidebar with glassmorphism |
-| v0.31.0 | Current | Login error message fix (res.json vs res.text), Sonner Toaster provider, public companies endpoint, registration company selector fix, first-user auto-navigation to dashboard, admin approval role selection, company tooltip with i18n, isSubmitting state on forms |
+| v0.31.0 | - | Login error message fix (res.json vs res.text), Sonner Toaster provider, public companies endpoint, registration company selector fix, first-user auto-navigation to dashboard, admin approval role selection, company tooltip with i18n, isSubmitting state on forms |
 | v0.30.0 | - | Company selection in registration (dropdown + Other), company assignment in user edit form, verify email double-submit fix, accessibility improvements |
 | v0.29.1 | - | spaHandler compilation fix (fs.File not io.ReadSeeker → bytes.NewReader), all v0.29.0 features |
 | v0.29.0 | - | Hybrid registration (Resend email code + admin approval), email verification with 5-min timeout, admin approval workflow with company assignment, pending approvals UI, SPA routing fix (back button + F5), login bug fix, role constants, user company assignment from admin panel |

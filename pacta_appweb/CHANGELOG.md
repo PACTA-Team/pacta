@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-17
+
+### Added (Frontend)
+- **Email Settings tab with toggle switches** — New Email Services tab in Settings page with toggle switches for:
+  - `email_notifications_enabled` — Master toggle for all email notifications
+  - `email_contract_expiry_enabled` — Toggle for contract expiry notifications
+  - `smtp_enabled` — Enable/disable SMTP server usage
+  - `brevo_enabled` — Force enable Brevo SMTP
+  - `brevo_api_key` — API key input field for Brevo
+- **i18n tooltips** — All email settings include descriptive tooltips in English and Spanish
+
+### Changed (Frontend)
+- **Settings page** — Updated to use database settings with real-time save
+
+### Technical Details (Frontend)
+- **Files Created:** `src/pages/SettingsPage/EmailSettingsTab.tsx`
+- **Files Modified:** `src/pages/SettingsPage.tsx`, `public/locales/en/settings.json`, `public/locales/es/settings.json`
+- **Backend version:** v0.38.0 synchronized with frontend
+
 ## [0.6.0] - 2026-04-17
 
 ### Changed (Backend)
