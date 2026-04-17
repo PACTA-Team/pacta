@@ -139,7 +139,7 @@ type contractInfo struct {
 func (w *ContractExpiryWorker) queryExpiringContracts(thresholdDays int) ([]contractInfo, error) {
 	rows, err := w.config.DB.Query(`
 		SELECT c.id, c.contract_number, c.title, c.end_date, c.created_by,
-		       cl.legal_name AS client_name, co.name AS company_name, cl.company_id
+		       cl.name AS client_name, co.name AS company_name, cl.company_id
 		FROM contracts c
 		JOIN clients cl ON c.client_id = cl.id
 		JOIN companies co ON cl.company_id = co.id
