@@ -452,8 +452,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.35.0 | Current | Sidebar responsive fix (dynamic margin), logo icon in collapsed state, theme-adaptive coloring |
-| v0.34.1 | - | Fix: add goose markers to migration (v0.34.1) |
+| v0.35.1 | Current | Sidebar mobile drawer state fix (blank pages bug) |
+| v0.35.0 | - | Sidebar responsive fix (dynamic margin), logo icon in collapsed state, theme-adaptive coloring |
 | v0.34.0 | - | SMTP via environment variables, System Settings page (SMTP/Company/Registration/General tabs), System Settings API (GET/PUT /api/system-settings), Modern floating sidebar with glassmorphism |
 | v0.31.0 | Current | Login error message fix (res.json vs res.text), Sonner Toaster provider, public companies endpoint, registration company selector fix, first-user auto-navigation to dashboard, admin approval role selection, company tooltip with i18n, isSubmitting state on forms |
 | v0.30.0 | - | Company selection in registration (dropdown + Other), company assignment in user edit form, verify email double-submit fix, accessibility improvements |
@@ -785,7 +785,14 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### In Progress
 
-_No active work in progress. Latest PR: [#83 — Sidebar responsive fix + Logo icon](https://github.com/PACTA-Team/pacta/pull/83)_
+_No active work in progress. Latest PR: [#84 — Sidebar mobile drawer fix](https://github.com/PACTA-Team/pacta/pull/84)_
+
+### Completed (v0.35.1)
+
+**Sidebar Mobile Drawer Fix:**
+- [x] Added missing `sidebarOpen` state declaration in AppSidebar component
+- [x] Root cause: mobile drawer code used `setSidebarOpen()` without declaring state with `useState()`
+- [x] This fix resolves the "blank pages" issue in v0.35.0
 
 ### Completed (v0.35.0)
 

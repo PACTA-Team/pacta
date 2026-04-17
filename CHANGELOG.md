@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-04-16
+
+### Fixed
+- **Sidebar mobile drawer state** — Added missing `sidebarOpen` state declaration in AppSidebar component. This was causing runtime JavaScript errors that rendered the entire application unusable (blank pages on all routes)
+
+### Technical Details
+- **Root Cause:** The mobile drawer code in AppSidebar.tsx used `setSidebarOpen()` in multiple places but never declared the state with `useState()`
+- **Files Modified:** 1 (`pacta_appweb/src/components/layout/AppSidebar.tsx`)
+
 ## [0.35.0] - 2026-04-16
 
 ### Fixed
