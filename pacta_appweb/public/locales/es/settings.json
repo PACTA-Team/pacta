@@ -35,13 +35,15 @@
      "company": "Empresa",
      "registration": "Registro",
      "general": "General",
-     "notifications": "Notificaciones"
+     "notifications": "Notificaciones",
+     "email": "Servicios de Email"
    },
   "smtpTitle": "Configuración SMTP",
   "companyTitle": "Información de la Empresa",
   "registrationTitle": "Opciones de Registro",
    "generalTitle": "Configuración General",
    "notificationsTitle": "Notificaciones de Expiración de Contratos",
+   "emailServicesTitle": "Servicios de Email",
    "thresholdsLabel": "Umbrales de Notificación (días antes del vencimiento)",
    "thresholdHelp": "Los contratos que venzan en estos días enviarán notificaciones por correo al propietario y administradores. Agregue múltiples umbrales para advertencias anticipadas.",
    "addThreshold": "Agregar Umbral",
@@ -50,5 +52,16 @@
   "saveSuccess": "Configuración guardada correctamente",
   "saveError": "Error al guardar la configuración",
   "saving": "Guardando...",
-  "save": "Guardar Configuración"
+  "save": "Guardar Configuración",
+   "email_notifications_enabled": "Activar todas las notificaciones",
+   "email_notifications_enabledTooltip": "Activar/desactivar todas las notificaciones por email del sistema",
+   "email_contract_expiry_enabled": "Notificaciones de vencimiento",
+   "email_contract_expiry_enabledTooltip": "Enviar alertas de vencimiento a propietarios y administradores",
+   "smtp_enabled": "Servidor SMTP",
+   "smtp_enabledTooltip": "Usar servidor SMTP estándar para envío de emails",
+   "brevo_enabled": "API de Brevo",
+   "brevo_enabledTooltip": "Usar API transaccional de Brevo (requiere clave API)",
+   "brevo_api_key": "Clave API de Brevo",
+   "brevo_api_keyPlaceholder": "Ingrese su clave API de Brevo",
+   "brevo_api_keyTooltip": "Obtener en: Dashboard → SMTP & APIs → API"
 }
