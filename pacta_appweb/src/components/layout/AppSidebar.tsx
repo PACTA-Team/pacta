@@ -136,6 +136,7 @@ export default function AppSidebar({
   }, [externalDevice]);
   
   const [unreadCount, setUnreadCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const { t } = useTranslation('common');
   const { t: tDashboard } = useTranslation('dashboard');
