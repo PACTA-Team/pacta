@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,19 @@ import (
 
 	"github.com/wneessen/go-mail"
 )
+
+// IsSMTPEnabled checks if SMTP is enabled in settings
+func IsSMTPEnabled(db *sql.DB) bool {
+	if db == nil {
+		return true // default to enabled if no DB
+	}
+	var enabled string
+	err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'smtp_enabled'").Scan(&enabled)
+	if err != nil || enabled == "false" {
+		return false
+	}
+	return true
+}
 
 // sendWithBrevo sends the email using Brevo SMTP relay
 func sendWithBrevo(ctx context.Context, msg *mail.Msg) error {
