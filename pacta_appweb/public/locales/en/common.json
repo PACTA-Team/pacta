@@ -30,6 +30,10 @@
   "error": "Error",
   "close": "Close",
   "selectCompany": "Select company",
+  "notifications": "Notifications",
+  "markAllRead": "Mark all as read",
+  "viewAllNotifications": "View all notifications",
+  "noNotifications": "No notifications",
   "footer": {
     "rights": "All rights reserved."
   }

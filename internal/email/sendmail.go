@@ -78,8 +78,8 @@ func sendWithGmail(ctx context.Context, msg *mail.Msg) error {
 	return nil
 }
 
-// sendEmailWithFallback attempts to send via Brevo first, then Gmail on failure
-func sendEmailWithFallback(ctx context.Context, msg *mail.Msg) error {
+// SendEmailWithFallback attempts to send via Brevo first, then Gmail on failure
+func SendEmailWithFallback(ctx context.Context, msg *mail.Msg) error {
 	// Check if Brevo is fully configured (all three vars must be non-empty)
 	hasBrevo := os.Getenv("SMTP_HOST") != "" && os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""
 
@@ -127,7 +127,7 @@ func SendVerificationCode(ctx context.Context, to, code, lang string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := sendEmailWithFallback(ctx, msg); err != nil {
+	if err := SendEmailWithFallback(ctx, msg); err != nil {
 		log.Printf("[email] ERROR sending verification code to %s: %v", to, err)
 		return err
 	}
@@ -160,7 +160,7 @@ func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail,
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := sendEmailWithFallback(ctx, msg); err != nil {
+	if err := SendEmailWithFallback(ctx, msg); err != nil {
 		log.Printf("[email] ERROR sending admin notification to %s: %v", adminEmail, err)
 		return err
 	}

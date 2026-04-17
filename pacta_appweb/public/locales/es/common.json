@@ -28,9 +28,13 @@
   "confirmDelete": "Confirmar eliminación",
   "success": "Éxito",
   "error": "Error",
-  "close": "Cerrar",
-  "selectCompany": "Seleccionar empresa",
-  "footer": {
-    "rights": "Todos los derechos reservados."
-  }
+   "close": "Cerrar",
+   "selectCompany": "Seleccionar empresa",
+   "notifications": "Notificaciones",
+   "markAllRead": "Marcar todas como leídas",
+   "viewAllNotifications": "Ver todas las notificaciones",
+   "noNotifications": "Sin notificaciones",
+   "footer": {
+     "rights": "Todos los derechos reservados."
+   }
 }

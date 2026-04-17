@@ -1,13 +1,14 @@
-
-import { useState } from 'react';
-import { useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
-import AppSidebar from './AppSidebar';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageToggle } from '@/components/LanguageToggle';
-import CompanySelector from '@/components/CompanySelector';
+ 
+ import { useState } from 'react';
+ import { useEffect, useRef } from 'react';
+ import { useNavigate, useLocation } from 'react-router-dom';
+ import { useTranslation } from 'react-i18next';
+ import { useAuth } from '@/contexts/AuthContext';
+ import AppSidebar from './AppSidebar';
+ import { ThemeToggle } from '@/components/ThemeToggle';
+ import { LanguageToggle } from '@/components/LanguageToggle';
+ import CompanySelector from '@/components/CompanySelector';
+ import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
@@ -33,9 +34,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const mainRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('common');
   
-  // Device size detection for responsive sidebar
-  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+   // Device size detection for responsive sidebar
+   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -65,14 +66,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     mainRef.current?.focus();
   }, [pathname]);
 
-  // Redirect if not authenticated (backup guard)
-  useEffect(() => {
-    if (!isAuthenticated && pathname !== '/') {
-      navigate('/login', { replace: true });
-    }
-  }, [isAuthenticated, pathname, navigate]);
+    // Redirect if not authenticated (backup guard)
+    useEffect(() => {
+      if (!isAuthenticated && pathname !== '/') {
+        navigate('/login', { replace: true });
+      }
+    }, [isAuthenticated, pathname, navigate]);
 
-  if (!isAuthenticated) {
+    if (!isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
         <div className="text-center">
@@ -102,18 +103,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         className="flex-1 flex flex-col overflow-hidden"
         style={{ marginLeft: isMobile ? 0 : (sidebarCollapsed ? 80 : 256) }}
       >
-        <header role="banner" className="border-b bg-card px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <CompanySelector />
-            <h1 className="text-xl font-semibold tracking-tight">
-              {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <LanguageToggle />
-            <ThemeToggle />
-          </div>
-        </header>
+         <header role="banner" className="border-b bg-card px-6 py-3 flex items-center justify-between">
+           <div className="flex items-center gap-4">
+             <CompanySelector />
+             <h1 className="text-xl font-semibold tracking-tight">
+               {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
+             </h1>
+           </div>
+            <div className="flex items-center gap-2">
+              <LanguageToggle />
+              <ThemeToggle />
+              <NotificationsDropdown />
+            </div>
+         </header>
         <main
           ref={mainRef}
           id="main-content"

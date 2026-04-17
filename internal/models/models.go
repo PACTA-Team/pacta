@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type User struct {
 	ID           int        `json:"id"`
@@ -9,6 +14,7 @@ type User struct {
 	PasswordHash string     `json:"-"`
 	Role         string     `json:"role"`
 	Status       string     `json:"status"`
+	CompanyID    *int       `json:"company_id,omitempty"`
 	LastAccess   *time.Time `json:"last_access,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
@@ -139,4 +145,38 @@ type SystemSetting struct {
 	Category string    `json:"category"`
 	UpdatedBy *int       `json:"updated_by,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// IntArray is a custom type for storing []int as JSON in SQLite
+type IntArray []int
+
+// Scan implements sql.Scanner interface
+func (a *IntArray) Scan(value interface{}) error {
+	if value == nil {
+		*a = nil
+		return nil
+	}
+	var data []int
+	switch v := value.(type) {
+	case []byte:
+		if err := json.Unmarshal(v, &data); err != nil {
+			return fmt.Errorf("unmarshal IntArray: %w", err)
+		}
+	case string:
+		if err := json.Unmarshal([]byte(v), &data); err != nil {
+			return fmt.Errorf("unmarshal IntArray: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported type %T for IntArray", value)
+	}
+	*a = data
+	return nil
+}
+
+// Value implements driver.Valuer interface
+func (a IntArray) Value() (driver.Value, error) {
+	if a == nil {
+		return nil, nil
+	}
+	return json.Marshal(a)
 }

@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-04-17
+
+### Added
+- **Contract expiry email notifications** — Automated email alerts sent to contract owners and company admins when contracts approach expiration
+  - Configurable threshold days (e.g., 30, 60, 90 days before expiry) via Settings → Notifications
+  - Brevo SDK integration (`github.com/getbrevo/brevo-go v1.0.0`) as primary email provider with automatic Gmail SMTP fallback
+  - Scheduled worker (`internal/worker/contract_expiry.go`) with configurable ticker interval that queries expiring contracts and sends notifications
+  - Duplicate prevention via `contract_expiry_notification_log` table ensuring each contract-threshold combination is notified only once
+- **Notifications dropdown in header** — Bell icon with unread counter in AppLayout header, showing preview of unread notifications with:
+  - Type-specific icons (contract_expiry, approval, system, success)
+  - Relative timestamps (e.g., "2 hours ago", "3 days ago")
+  - Click-to-mark-read with navigation to related entity (contract, supplement, client, supplier, company)
+  - "Mark all as read" button and "View all notifications" link
+- **Admin notification settings API** — `GET/PUT /api/admin/settings/notifications` endpoints for configuring:
+  - Threshold days array (e.g., `[30,60,90]`) defining when to send expiry alerts
+  - Worker interval in hours (how often the scheduler runs)
+  - Settings stored in `contract_expiry_notification_settings` table scoped to company
+- **Frontend settings tab** — New "Notifications" tab in Settings page (`NotificationsTab.tsx`) with:
+  - Numeric threshold inputs with strict positive integer validation
+  - Add/remove threshold controls with auto-sorting (descending)
+  - Debounced autosave (500ms) with loading indicators
+  - i18n support (English/Spanish)
+
+### Changed
+- **Layout** — Notifications moved from sidebar to header dropdown for better visibility and UX
+- **Email service** — Extended `SendEmailWithFallback` to support transactional alerts (expiry notifications) alongside existing verification/admin emails
+
+### Technical Details
+- **Database migrations:** `027_contract_expiry_notifications.sql` — creates `contract_expiry_notification_settings` and `contract_expiry_notification_log` tables
+- **Backend files created:** `internal/email/brevo.go`, `internal/worker/contract_expiry.go`, `internal/handlers/contract_expiry_settings.go`, `internal/models/settings.go` (ContractExpirySettings), model updates (IntArray type, CompanyID in User)
+- **Backend files modified:** `internal/email/sendmail.go` (exported SendEmailWithFallback), `internal/config/config.go` (Service.DB method), `internal/server/server.go` (routes + worker init), `internal/models/models.go` (type definitions)
+- **Frontend files created:** `src/lib/contract-expiry-settings-api.ts`, `src/pages/SettingsPage/NotificationsTab.tsx`, `src/components/notifications/NotificationsDropdown.tsx`
+- **Frontend files modified:** `src/pages/SettingsPage.tsx` (tab integration, 5-column grid, title fix), `src/components/layout/AppLayout.tsx` (dropdown integration), `src/components/layout/AppSidebar.tsx` (notifications item removed)
+- **i18n updates:** `public/locales/{en,es}/settings.json` (notification thresholds keys, title fix), `public/locales/{en,es}/common.json` (dropdown actions: markAllRead, viewAllNotifications, noNotifications)
+- **Environment variables:** `BREVO_API_KEY` (optional), `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo), `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail fallback), `NOTIFICATION_WORKER_INTERVAL_HOURS` (default 24)
+- **API endpoints:**
+  - `GET /api/admin/settings/notifications` — admin-only, returns company settings
+  - `PUT /api/admin/settings/notifications` — admin-only, updates thresholds and interval
+- **No breaking changes** — existing email flows (verification, admin notifications) unaffected; new functionality additive
+
 ## [0.36.0] - 2026-04-17
 
 ### Added

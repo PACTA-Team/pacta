@@ -8,7 +8,6 @@ import {
   FileText,
   FilePlus,
   FolderOpen,
-  Bell,
   Users,
   LogOut,
   BarChart3,
@@ -30,7 +29,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { notificationsAPI } from '@/lib/notifications-api';
 import CompanySelector from '@/components/CompanySelector';
 import ContractIcon from '@/images/contract_icon.svg';
 
@@ -75,7 +73,7 @@ const navigation = [
   { nameKey: 'signers', href: '/authorized-signers', icon: UserCheck, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { nameKey: 'documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { nameKey: 'reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
-  { nameKey: 'notifications', href: '/notifications', icon: Bell, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
+  // Notifications moved to header — removed from sidebar
   { nameKey: 'users', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
   { nameKey: 'companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
   { nameKey: 'settings', href: '/settings', icon: Settings, roles: ['admin'] as UserRole[] },
@@ -135,10 +133,9 @@ export default function AppSidebar({
     }
   }, [externalDevice]);
   
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  const { t } = useTranslation('common');
+   const [sidebarOpen, setSidebarOpen] = useState(false);
+   
+   const { t } = useTranslation('common');
   const { t: tDashboard } = useTranslation('dashboard');
   const { t: tContracts } = useTranslation('contracts');
   const { t: tSupplements } = useTranslation('supplements');
@@ -146,10 +143,9 @@ export default function AppSidebar({
   const { t: tSuppliers } = useTranslation('suppliers');
   const { t: tSigners } = useTranslation('signers');
   const { t: tDocuments } = useTranslation('documents');
-  const { t: tReports } = useTranslation('reports');
-  const { t: tNotifications } = useTranslation('notifications');
-  const { t: tSettings } = useTranslation('settings');
-  const { t: tCompanies } = useTranslation('companies');
+   const { t: tReports } = useTranslation('reports');
+   const { t: tSettings } = useTranslation('settings');
+   const { t: tCompanies } = useTranslation('companies');
 
   const navLabels: Record<string, string> = {
     dashboard: tDashboard('title'),
@@ -160,32 +156,17 @@ export default function AppSidebar({
     signers: tSigners('title'),
     documents: tDocuments('title'),
     reports: tReports('title'),
-    notifications: tNotifications('title'),
     users: tSettings('title'),
     companies: tCompanies('title'),
     settings: tSettings('systemTitle'),
   };
 
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const data = await notificationsAPI.count();
-        setUnreadCount(data.unread);
-      } catch {
-        // Silently fail - badge is non-critical
-      }
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const filteredNavigation = useMemo(() =>
-    navigation.filter(item =>
-      item.roles.some(role => hasPermission(role))
-    ),
-    [hasPermission]
-  );
+   const filteredNavigation = useMemo(() =>
+     navigation.filter(item =>
+       item.roles.some(role => hasPermission(role))
+     ),
+     [hasPermission]
+   );
 
   // Mobile drawer sidebar
   if (isMobile) {
@@ -308,25 +289,20 @@ export default function AppSidebar({
             const label = navLabels[item.nameKey];
 
             const linkContent = (
-              <Link
-                key={item.nameKey}
-                to={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                  isActive
-                    ? 'bg-primary/10 text-primary border-l-2 border-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )}
-              >
-                <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                {!collapsed && <span className="truncate">{label}</span>}
-                {item.href === '/notifications' && unreadCount > 0 && (
-                  <span className={cn('ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white', collapsed && 'absolute -top-1 -right-1')}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Link>
+               <Link
+                 key={item.nameKey}
+                 to={item.href}
+                 aria-current={isActive ? 'page' : undefined}
+                 className={cn(
+                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                   isActive
+                     ? 'bg-primary/10 text-primary border-l-2 border-primary'
+                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                 )}
+               >
+                 <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                 {!collapsed && <span className="truncate">{label}</span>}
+               </Link>
             );
 
             if (collapsed) {
