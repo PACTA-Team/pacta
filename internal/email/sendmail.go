@@ -11,7 +11,7 @@ import (
 )
 
 // sendWithBrevo sends the email using Brevo SMTP relay
-func sendWithBrevo(ctx context.Context, msg *mail.Message) error {
+func sendWithBrevo(ctx context.Context, msg *mail.Msg) error {
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpUser := os.Getenv("SMTP_USER")
 	smtpPass := os.Getenv("SMTP_PASS")
@@ -48,7 +48,7 @@ func sendWithBrevo(ctx context.Context, msg *mail.Message) error {
 }
 
 // sendWithGmail sends the email using Gmail SMTP as fallback
-func sendWithGmail(ctx context.Context, msg *mail.Message) error {
+func sendWithGmail(ctx context.Context, msg *mail.Msg) error {
 	gmailUser := os.Getenv("GMAIL_USER")
 	gmailPass := os.Getenv("GMAIL_APP_PASSWORD")
 
@@ -79,7 +79,7 @@ func sendWithGmail(ctx context.Context, msg *mail.Message) error {
 }
 
 // sendEmailWithFallback attempts to send via Brevo first, then Gmail on failure
-func sendEmailWithFallback(ctx context.Context, msg *mail.Message) error {
+func sendEmailWithFallback(ctx context.Context, msg *mail.Msg) error {
 	// Check if Brevo is fully configured (all three vars must be non-empty)
 	hasBrevo := os.Getenv("SMTP_HOST") != "" && os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""
 
