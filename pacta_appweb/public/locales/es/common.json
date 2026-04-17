@@ -31,6 +31,9 @@
    "close": "Cerrar",
    "selectCompany": "Seleccionar empresa",
    "notifications": "Notificaciones",
+   "markAllRead": "Marcar todas como leídas",
+   "viewAllNotifications": "Ver todas las notificaciones",
+   "noNotifications": "Sin notificaciones",
    "footer": {
      "rights": "Todos los derechos reservados."
    }

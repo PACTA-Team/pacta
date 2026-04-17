@@ -1,16 +1,14 @@
-
-import { useState } from 'react';
-import { useEffect, useRef } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
-import AppSidebar from './AppSidebar';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageToggle } from '@/components/LanguageToggle';
-import CompanySelector from '@/components/CompanySelector';
-import { Bell } from 'lucide-react';
-import { notificationsAPI } from '@/lib/notifications-api';
-import { cn } from '@/lib/utils';
+ 
+ import { useState } from 'react';
+ import { useEffect, useRef } from 'react';
+ import { useNavigate, useLocation } from 'react-router-dom';
+ import { useTranslation } from 'react-i18next';
+ import { useAuth } from '@/contexts/AuthContext';
+ import AppSidebar from './AppSidebar';
+ import { ThemeToggle } from '@/components/ThemeToggle';
+ import { LanguageToggle } from '@/components/LanguageToggle';
+ import CompanySelector from '@/components/CompanySelector';
+ import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
@@ -36,10 +34,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const mainRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('common');
   
-  // Device size detection for responsive sidebar
-  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+   // Device size detection for responsive sidebar
+   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -69,29 +66,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     mainRef.current?.focus();
   }, [pathname]);
 
-   // Redirect if not authenticated (backup guard)
-   useEffect(() => {
-     if (!isAuthenticated && pathname !== '/') {
-       navigate('/login', { replace: true });
-     }
-   }, [isAuthenticated, pathname, navigate]);
+    // Redirect if not authenticated (backup guard)
+    useEffect(() => {
+      if (!isAuthenticated && pathname !== '/') {
+        navigate('/login', { replace: true });
+      }
+    }, [isAuthenticated, pathname, navigate]);
 
-   // Fetch unread notifications count for header badge
-   useEffect(() => {
-     const fetchCount = async () => {
-       try {
-         const data = await notificationsAPI.count();
-         setUnreadCount(data.unread);
-       } catch {
-         // Silently fail - badge is non-critical
-       }
-     };
-     fetchCount();
-     const interval = setInterval(fetchCount, 30000);
-     return () => clearInterval(interval);
-   }, []);
-
-   if (!isAuthenticated) {
+    if (!isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
         <div className="text-center">
@@ -128,23 +110,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
              </h1>
            </div>
-           <div className="flex items-center gap-2">
-             <LanguageToggle />
-             <ThemeToggle />
-             <Link
-               to="/notifications"
-               className="relative p-2 rounded-md hover:bg-muted transition-colors"
-               aria-label={t('notifications')}
-               title={t('notifications')}
-             >
-               <Bell className="h-5 w-5" />
-               {unreadCount > 0 && (
-                 <span className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1">
-                   {unreadCount > 99 ? '99+' : unreadCount}
-                 </span>
-               )}
-             </Link>
-           </div>
+            <div className="flex items-center gap-2">
+              <LanguageToggle />
+              <ThemeToggle />
+              <NotificationsDropdown />
+            </div>
          </header>
         <main
           ref={mainRef}
