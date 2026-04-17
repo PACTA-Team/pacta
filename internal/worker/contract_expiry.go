@@ -107,7 +107,7 @@ type contractInfo struct {
 	ID             int64
 	ContractNumber string
 	Name           string
-	ExpiryDateStr  string // end_date as string "2006-01-02"
+	ExpiryDate     time.Time // end_date parsed as time.Time
 	CreatedBy      int64
 	ClientName     string
 	CompanyName    string
@@ -139,10 +139,16 @@ func (w *ContractExpiryWorker) queryExpiringContracts(thresholdDays int) ([]cont
 	var contracts []contractInfo
 	for rows.Next() {
 		var c contractInfo
-		err := rows.Scan(&c.ID, &c.ContractNumber, &c.Name, &c.ExpiryDate, &c.CreatedBy,
+		var expiryDateStr string
+		err := rows.Scan(&c.ID, &c.ContractNumber, &c.Name, &expiryDateStr, &c.CreatedBy,
 			&c.ClientName, &c.CompanyName, &c.CompanyID)
 		if err != nil {
 			return nil, err
+		}
+		// Parse expiry date from "2006-01-02" format
+		c.ExpiryDate, err = time.Parse("2006-01-02", expiryDateStr)
+		if err != nil {
+			return nil, fmt.Errorf("parsing expiry date %s: %w", expiryDateStr, err)
 		}
 		contracts = append(contracts, c)
 	}
