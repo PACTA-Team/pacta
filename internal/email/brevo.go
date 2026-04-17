@@ -106,7 +106,7 @@ func (bc *BrevoClient) SendContractExpiryViaBrevo(
 	sendSmtpEmail.To = toList
 
 	// Call Brevo API
-	_, _, err := bc.client.TransactionalEmailsApi.SendTransacEmail(ctx, &sendSmtpEmail)
+	_, _, err := bc.client.TransactionalEmailsApi.SendTransacEmail(ctx, sendSmtpEmail)
 	if err != nil {
 		log.Printf("[email-brevo] failed for contract %s: %v", contractNumber, err)
 		return fmt.Errorf("brevo send failed: %w", err)
