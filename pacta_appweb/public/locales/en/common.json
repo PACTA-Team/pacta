@@ -30,6 +30,7 @@
   "error": "Error",
   "close": "Close",
   "selectCompany": "Select company",
+  "notifications": "Notifications",
   "footer": {
     "rights": "All rights reserved."
   }

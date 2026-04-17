@@ -28,9 +28,10 @@
   "confirmDelete": "Confirmar eliminación",
   "success": "Éxito",
   "error": "Error",
-  "close": "Cerrar",
-  "selectCompany": "Seleccionar empresa",
-  "footer": {
-    "rights": "Todos los derechos reservados."
-  }
+   "close": "Cerrar",
+   "selectCompany": "Seleccionar empresa",
+   "notifications": "Notificaciones",
+   "footer": {
+     "rights": "Todos los derechos reservados."
+   }
 }
