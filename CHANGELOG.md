@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-04-17
+
+### Added
+- **Brevo SMTP primary with Gmail fallback** — Email service now uses Brevo as primary SMTP relay with automatic Gmail fallback for reliability
+  - `sendWithBrevo()` — sends via `smtp-relay.brevo.com:587` with mandatory TLS, using `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`
+  - `sendWithGmail()` — fallback via `smtp.gmail.com:587` with mandatory TLS, using `GMAIL_USER`, `GMAIL_APP_PASSWORD`
+  - `sendEmailWithFallback()` — orchestrator: tries Brevo first if configured; on any error (connection, auth, send, invalid recipient) automatically retries with Gmail; if Brevo unconfigured, uses Gmail directly
+  - Clear logging indicating which provider is used and when fallback occurs
+  - Both providers use `mail.TLSMandatory` on port 587 (STARTTLS)
+  - Error returns only if both providers fail
+
+### Changed
+- **Email configuration documentation** — Renamed and rewrote `docs/RESEND-CONFIGURATION.md` → `docs/EMAIL-CONFIGURATION.md` to cover both Brevo and Gmail providers, including setup instructions for Linux systemd (3 options), Windows (3 options), and development `.env` usage
+
+### Technical Details
+- **Files Modified:** 2 (`internal/email/sendmail.go`, `docs/EMAIL-CONFIGURATION.md`)
+- **Lines Added:** ~74 (code) + ~373 (docs)
+- **Lines Removed:** ~175 (removed old `getMailClient()` and old RESEND doc)
+- **No breaking changes** — function signatures (`SendVerificationCode`, `SendAdminNotification`) unchanged; `internal/email/templates.go` and `internal/handlers/auth.go` untouched
+- **Environment variables:** `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo); `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail); `EMAIL_FROM` (sender, unchanged)
+- **Backward compatible:** Existing single-provider setups continue working (Brevo or Gmail alone)
+
+### Backend Integration
+- `internal/email.SendVerificationCode(ctx, email, code, lang)` — unchanged API, now uses fallback orchestrator
+- `internal/email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName, lang)` — unchanged API, now uses fallback orchestrator
+
 ## [0.35.1] - 2026-04-16
 
 ### Fixed

@@ -169,6 +169,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Hybrid Registration | Complete (v0.33.0 — go-mail SMTP integration replacing Resend API, i18n email templates (es/en), language detection from request body + Accept-Language header, email error logging, spam folder warnings in UX) |
 | SMTP Environment Variables | Complete (v0.35.0 — SMTP_HOST, SMTP_USER, SMTP_PASS instead of hardcoded localhost:25) |
 | System Settings | Complete (v0.35.0 — Settings page with tabs (SMTP/Company/Registration/General), GET/PUT /api/system-settings, persistent configuration storage) |
+| Email Fallback (Brevo + Gmail) | Complete (v0.36.0 — Brevo primary SMTP relay with automatic Gmail fallback; `sendWithBrevo()` + `sendWithGmail()` + `sendEmailWithFallback()`; port 587 TLSMandatory; clear provider logging; env vars: SMTP_HOST/USER/PASS, GMAIL_USER/APP_PASSWORD) |
 | Modern Sidebar | Complete (v0.35.0 — Responsive sidebar with glassmorphism, dynamic margin, logo icon in collapsed state) |
 | Login UX Fixes | Complete (v0.31.0 — Error message JSON parsing fix, Sonner Toaster provider, public companies endpoint, first-user dashboard navigation, approval role selection, company tooltip, form loading states) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |

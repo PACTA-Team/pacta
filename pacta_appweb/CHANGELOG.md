@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-17
+
+### Changed (Backend)
+- **Email service Brevo + Gmail fallback** — Backend email now uses Brevo SMTP primary with automatic Gmail fallback; environment variables: `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo) and `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail); mandatory TLS on port 587; comprehensive logging for provider selection and failures
+
+### Technical Details (Backend)
+- **Files Modified:** `internal/email/sendmail.go` (replaced `getMailClient` with `sendWithBrevo`, `sendWithGmail`, `sendEmailWithFallback`)
+- **Lines Added:** ~74 new code lines, ~373 new docs
+- **No frontend changes** — API signatures unchanged, templates untouched
+- **Backend version:** v0.36.0 synchronized with frontend
+
 ## [0.5.0] - 2026-04-08
 
 ### Added
