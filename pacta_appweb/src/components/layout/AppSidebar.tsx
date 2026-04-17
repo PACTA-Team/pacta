@@ -41,6 +41,8 @@ interface AppSidebarProps {
   device?: 'desktop' | 'tablet' | 'mobile';
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  mobileMenuOpen?: boolean;
+  onMobileMenuClose?: () => void;
 }
 
 function useDeviceSize() {
@@ -82,7 +84,9 @@ const navigation = [
 export default function AppSidebar({ 
   device: externalDevice, 
   collapsed: externalCollapsed, 
-  onCollapsedChange 
+  onCollapsedChange,
+  mobileMenuOpen,
+  onMobileMenuClose
 }: AppSidebarProps) {
   const location = useLocation();
   const pathname = location.pathname;
@@ -131,11 +135,21 @@ export default function AppSidebar({
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [externalDevice]);
-  
-   const [sidebarOpen, setSidebarOpen] = useState(false);
+   }, [externalDevice]);
    
-   const { t } = useTranslation('common');
+   // Mobile drawer state: controlled by parent if prop provided, else internal
+   const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
+   const sidebarOpen = mobileMenuOpen !== undefined ? mobileMenuOpen : internalSidebarOpen;
+
+   const closeSidebar = () => {
+     if (onMobileMenuClose) {
+       onMobileMenuClose();
+     } else {
+       setInternalSidebarOpen(false);
+     }
+   };
+
+    const { t } = useTranslation('common');
   const { t: tDashboard } = useTranslation('dashboard');
   const { t: tContracts } = useTranslation('contracts');
   const { t: tSupplements } = useTranslation('supplements');
@@ -168,24 +182,15 @@ export default function AppSidebar({
      [hasPermission]
    );
 
-  // Mobile drawer sidebar
-  if (isMobile) {
-    return (
-      <>
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed top-4 left-4 z-40"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open navigation menu"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </Button>
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          >
+   // Mobile drawer sidebar
+   if (isMobile) {
+     return (
+       <>
+         {sidebarOpen && (
+           <div
+             className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
+             onClick={closeSidebar}
+           >
             <div
               className="fixed left-0 top-0 bottom-0 w-72 bg-card border-r shadow-xl flex flex-col"
               onClick={(e) => e.stopPropagation()}
@@ -195,7 +200,7 @@ export default function AppSidebar({
                   <h1 className="text-xl font-bold text-primary">PACTA</h1>
                   <p className="text-xs text-muted-foreground">Contract Management</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+                 <Button variant="ghost" size="icon" onClick={closeSidebar}>
                   <X className="h-5 w-5" />
                 </Button>
               </div>
@@ -212,7 +217,7 @@ export default function AppSidebar({
                           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                           isActive ? 'bg-primary/10 text-primary border-l-2 border-primary' : 'text-muted-foreground hover:bg-muted'
                         )}
-                        onClick={() => setSidebarOpen(false)}
+                         onClick={closeSidebar}
                       >
                         <item.icon className="h-5 w-5" />
                         {navLabels[item.nameKey]}
