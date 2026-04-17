@@ -3,13 +3,13 @@ CREATE TABLE contract_expiry_notification_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     enabled BOOLEAN NOT NULL DEFAULT true,
     frequency_hours INTEGER NOT NULL DEFAULT 6,
-    thresholds_days INTEGER[] NOT NULL DEFAULT '{30,14,7,1}'::integer[],
+    thresholds_days TEXT NOT NULL DEFAULT '[30,14,7,1]',
     updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE contract_expiry_notification_log (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     contract_id INTEGER NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
     threshold_days INTEGER NOT NULL,
     sent_to_user BOOLEAN NOT NULL DEFAULT false,
@@ -18,7 +18,7 @@ CREATE TABLE contract_expiry_notification_log (
     delivery_status VARCHAR(20) NOT NULL DEFAULT 'failed',
     error_message TEXT,
     channel VARCHAR(10) NOT NULL DEFAULT 'smtp',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(contract_id, threshold_days)
 );
 

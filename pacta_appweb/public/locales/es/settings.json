@@ -1,5 +1,5 @@
 {
-  "title": "Usuarios",
+  "title": "Configuración del Sistema",
   "subtitle": "Gestiona usuarios y sus roles",
   "addNew": "Agregar nuevo usuario",
   "editUser": "Editar usuario",
@@ -30,17 +30,23 @@
     "settings": "Configuración"
   },
   "systemTitle": "Configuración del Sistema",
-  "tabs": {
-    "smtp": "SMTP",
-    "company": "Empresa",
-    "registration": "Registro",
-    "general": "General"
-  },
+   "tabs": {
+     "smtp": "SMTP",
+     "company": "Empresa",
+     "registration": "Registro",
+     "general": "General",
+     "notifications": "Notificaciones"
+   },
   "smtpTitle": "Configuración SMTP",
   "companyTitle": "Información de la Empresa",
   "registrationTitle": "Opciones de Registro",
-  "generalTitle": "Configuración General",
-  "registrationHelp": "Separados por coma: email_verification, admin_approval",
+   "generalTitle": "Configuración General",
+   "notificationsTitle": "Notificaciones de Expiración de Contratos",
+   "thresholdsLabel": "Umbrales de Notificación (días antes del vencimiento)",
+   "thresholdHelp": "Los contratos que venzan en estos días enviarán notificaciones por correo al propietario y administradores. Agregue múltiples umbrales para advertencias anticipadas.",
+   "addThreshold": "Agregar Umbral",
+   "removeThreshold": "Eliminar",
+   "registrationHelp": "Separados por coma: email_verification, admin_approval",
   "saveSuccess": "Configuración guardada correctamente",
   "saveError": "Error al guardar la configuración",
   "saving": "Guardando...",

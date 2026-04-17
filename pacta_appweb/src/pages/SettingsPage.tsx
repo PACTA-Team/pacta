@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { settingsAPI, SystemSetting } from "@/lib/settings-api";
 import { toast } from "sonner";
+import { NotificationsTab } from "./SettingsPage/NotificationsTab";
 
 const SETTINGS_BY_CATEGORY: Record<string, string[]> = {
   smtp: ["smtp_host", "smtp_user", "smtp_pass", "email_from"],
@@ -94,13 +95,14 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
       </div>
 
-      <Tabs defaultValue="smtp">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
-          <TabsTrigger value="smtp">{t("tabs.smtp")}</TabsTrigger>
-          <TabsTrigger value="company">{t("tabs.company")}</TabsTrigger>
-          <TabsTrigger value="registration">{t("tabs.registration")}</TabsTrigger>
-          <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
-        </TabsList>
+       <Tabs defaultValue="smtp">
+         <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
+           <TabsTrigger value="smtp">{t("tabs.smtp")}</TabsTrigger>
+           <TabsTrigger value="company">{t("tabs.company")}</TabsTrigger>
+           <TabsTrigger value="registration">{t("tabs.registration")}</TabsTrigger>
+           <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+           <TabsTrigger value="notifications">{t("tabs.notifications")}</TabsTrigger>
+         </TabsList>
 
         <TabsContent value="smtp">
           <Card>
@@ -191,8 +193,12 @@ export default function SettingsPage() {
               ))}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+         </TabsContent>
+
+         <TabsContent value="notifications">
+           <NotificationsTab />
+         </TabsContent>
+       </Tabs>
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} size="lg">

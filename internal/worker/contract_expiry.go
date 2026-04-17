@@ -96,7 +96,7 @@ func (w *ContractExpiryWorker) loadSettings() (*models.ContractExpirySettings, e
 			ID:              1,
 			Enabled:         true,
 			FrequencyHours:  6,
-			ThresholdsDays:  []int{30, 14, 7, 1},
+			ThresholdsDays:  models.IntArray{30, 14, 7, 1},
 		}, nil
 	}
 	return &s, err
@@ -107,7 +107,7 @@ type contractInfo struct {
 	ID             int64
 	ContractNumber string
 	Name           string
-	ExpiryDate     time.Time
+	ExpiryDateStr  string // end_date as string "2006-01-02"
 	CreatedBy      int64
 	ClientName     string
 	CompanyName    string

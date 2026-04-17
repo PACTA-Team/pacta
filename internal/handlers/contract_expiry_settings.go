@@ -39,7 +39,7 @@ func (h *ContractExpirySettingsHandler) GetSettings(w http.ResponseWriter, r *ht
 				ID:             1,
 				Enabled:        true,
 				FrequencyHours: 6,
-				ThresholdsDays: []int{30, 14, 7, 1},
+				ThresholdsDays: models.IntArray{30, 14, 7, 1},
 			}
 		} else {
 			http.Error(w, "failed to load settings: "+err.Error(), http.StatusInternalServerError)
@@ -92,6 +92,13 @@ func (h *ContractExpirySettingsHandler) UpdateSettings(w http.ResponseWriter, r 
 		seen[d] = true
 	}
 
+	// Convert thresholds to JSON for storage
+	thresholdsJSON, err := json.Marshal(req.ThresholdsDays)
+	if err != nil {
+		http.Error(w, "failed to encode thresholds: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Get user ID from context
 	userIDVal := r.Context().Value(ctxUserID)
 	var userID *int64
@@ -102,7 +109,7 @@ func (h *ContractExpirySettingsHandler) UpdateSettings(w http.ResponseWriter, r 
 	}
 
 	// Upsert singleton row (id=1)
-	_, err := h.cfg.DB.Exec(`
+	_, err = h.cfg.DB.Exec(`
 		INSERT INTO contract_expiry_notification_settings (id, enabled, frequency_hours, thresholds_days, updated_by, updated_at)
 		VALUES (1, ?, ?, ?, ?, NOW())
 		ON CONFLICT (id) DO UPDATE SET
@@ -111,7 +118,7 @@ func (h *ContractExpirySettingsHandler) UpdateSettings(w http.ResponseWriter, r 
 			thresholds_days = excluded.thresholds_days,
 			updated_by = excluded.updated_by,
 			updated_at = excluded.updated_at
-	`, req.Enabled, req.FrequencyHours, req.ThresholdsDays, userID)
+	`, req.Enabled, req.FrequencyHours, thresholdsJSON, userID)
 
 	if err != nil {
 		http.Error(w, "database error: "+err.Error(), http.StatusInternalServerError)
