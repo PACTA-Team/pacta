@@ -3,9 +3,34 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/models"
 )
+
+// GetSetting retrieves a single setting by key, returns defaultValue if not found
+func (h *Handler) GetSetting(key string, defaultValue string) string {
+	var value string
+	err := h.DB.QueryRow("SELECT value FROM system_settings WHERE key = ?", key).Scan(&value)
+	if err != nil || value == "" {
+		// Fallback to environment variable
+		if envValue := os.Getenv(strings.ToUpper(key)); envValue != "" {
+			return envValue
+		}
+		return defaultValue
+	}
+	return value
+}
+
+// GetSettingBool retrieves a boolean setting
+func (h *Handler) GetSettingBool(key string, defaultValue bool) bool {
+	value := h.GetSetting(key, "")
+	if value == "" {
+		return defaultValue
+	}
+	return value == "true"
+}
 
 func (h *Handler) GetSystemSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
