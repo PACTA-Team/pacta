@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-04-17
+
+### Added
+- **Header Profile Dropdown** — User profile moved from sidebar to header with modern dropdown menu design
+  - **Profile dropdown component** — New `ProfileDropdown` component in `src/components/header/` with avatar, user name, and dropdown actions (Profile, Settings, Logout)
+  - **AppSidebar cleanup** — Removed user profile section from sidebar; sidebar now focused on navigation only
+  - **AppLayout header integration** — ProfileDropdown integrated into AppLayout header with proper positioning and responsive behavior
+  - **Design consistency** — Profile dropdown matches header styling with proper theme support (light/dark)
+
+### Changed
+- **CompanySelector moved to header** — Company selector now resides in header alongside profile dropdown for better space utilization in collapsed sidebar
+- **Sidebar user card removed** — Eliminated duplicate user info display; all user-facing actions consolidated in header dropdown
+
+### Technical Details
+- **Files Created:** 1 (`pacta_appweb/src/components/header/ProfileDropdown.tsx`)
+- **Files Modified:** 3 (`pacta_appweb/src/components/CompanySelector.tsx`, `pacta_appweb/src/components/layout/AppLayout.tsx`, `pacta_appweb/src/components/layout/AppSidebar.tsx`)
+- **No breaking changes** — All existing user functionality preserved; UI reorganization only
+
 ## [0.38.0] - 2026-04-17
 
 ### Added
