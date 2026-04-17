@@ -85,30 +85,28 @@ func (bc *BrevoClient) SendContractExpiryViaBrevo(
 		contractName, clientName, companyName, expiryDate.Format("2006-01-02"),
 		contractID, adminEmail, adminEmail)
 
-	// Build Brevo send email props
-	sendProps := brevo.SendEmailProps{
-		Subject: subject,
+	// Build Brevo SendSmtpEmail payload
+	sendSmtpEmail := &brevo.SendSmtpEmail{
+		Subject:     &subject,
 		HtmlContent: &html,
-		Sender: &brevo.SendEmailPropsSender{
+		Sender: &brevo.SendSmtpEmailSender{
 			Name:  "PACTA",
 			Email: os.Getenv("EMAIL_FROM"),
 		},
-		To:           make([]brevo.SendEmailPropsTo, 0, len(recipients)),
-		ReplyTo:      "",
-		Bcc:          nil,
-		Cc:           nil,
-		Attachment:   nil,
-		Headers:      nil,
-		CustomParams: nil,
-		IsTransactional: brevo.PtrBool(true),
+		ReplyTo: nil,
+		Bcc:     nil,
+		Cc:      nil,
 	}
 
+	// Build To recipients list
+	toList := make([]brevo.SendSmtpEmailTo, 0, len(recipients))
 	for _, email := range recipients {
-		sendProps.To = append(sendProps.To, brevo.SendEmailPropsTo{Email: email})
+		toList = append(toList, brevo.SendSmtpEmailTo{Email: email})
 	}
+	sendSmtpEmail.To = toList
 
 	// Call Brevo API
-	_, _, err := bc.client.TransactionalEmailsApi.SendEmail(ctx, sendProps)
+	_, _, err := bc.client.TransactionalEmailsApi.SendTransacEmail(ctx, sendSmtpEmail)
 	if err != nil {
 		log.Printf("[email-brevo] failed for contract %s: %v", contractNumber, err)
 		return fmt.Errorf("brevo send failed: %w", err)
