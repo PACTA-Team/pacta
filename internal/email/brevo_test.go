@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/getbrevo/brevo-go/lib"
+	brevo "github.com/getbrevo/brevo-go/lib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -15,15 +15,16 @@ type MockTransactionalEmailsApi struct {
 	mock.Mock
 }
 
-func (m *MockTransactionalEmailsApi) SendEmail(ctx context.Context, sendEmailProps lib.SendEmailProps) (lib.SendEmailResponse, error) {
-	args := m.Called(ctx, sendEmailProps)
-	return args.Get(0).(lib.SendEmailResponse), args.Error(1)
+// SendTransacEmail matches the brevo-go v1.0.0+ signature
+func (m *MockTransactionalEmailsApi) SendTransacEmail(ctx context.Context, sendSmtpEmail brevo.SendSmtpEmail) (brevo.CreateSmtpEmail, error) {
+	args := m.Called(ctx, sendSmtpEmail)
+	return args.Get(0).(brevo.CreateSmtpEmail), args.Error(1)
 }
 
 func TestSendContractExpiryViaBrevo_Success(t *testing.T) {
 	// Setup
 	mockAPI := &MockTransactionalEmailsApi{}
-	mockClient := &lib.APIClient{}
+	mockClient := &brevo.APIClient{}
 	mockClient.TransactionalEmailsApi = mockAPI
 
 	bc := &BrevoClient{client: mockClient}
@@ -32,8 +33,8 @@ func TestSendContractExpiryViaBrevo_Success(t *testing.T) {
 	contractID := int64(123)
 	recipients := []string{"user@example.com", "admin@example.com"}
 
-	// Expect SendEmail to be called once
-	mockAPI.On("SendEmail", mock.Anything, mock.Anything).Return(lib.SendEmailResponse{}, nil)
+	// Expect SendTransacEmail to be called once
+	mockAPI.On("SendTransacEmail", mock.Anything, mock.Anything).Return(brevo.CreateSmtpEmail{}, nil)
 
 	// Call
 	err := bc.SendContractExpiryViaBrevo(
