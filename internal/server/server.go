@@ -165,7 +165,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	r.Handle("/*", spaHandler(staticSub))
 
 	// --- Initialize Brevo email client and contract expiry worker ---
-	brevoClient, err := email.NewBrevoClient()
+	brevoClient, err := email.NewBrevoClient(svc.DB)
 	if err != nil {
 		log.Printf("[email-worker] Brevo client not initialized: %v — contract expiry notifications will use SMTP only", err)
 		brevoClient = nil

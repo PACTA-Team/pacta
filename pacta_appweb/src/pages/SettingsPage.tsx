@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { settingsAPI, SystemSetting } from "@/lib/settings-api";
 import { toast } from "sonner";
 import { NotificationsTab } from "./SettingsPage/NotificationsTab";
+import { EmailSettingsTab } from "./SettingsPage/EmailSettingsTab";
 
 const SETTINGS_BY_CATEGORY: Record<string, string[]> = {
   smtp: ["smtp_host", "smtp_user", "smtp_pass", "email_from"],
@@ -96,13 +97,14 @@ export default function SettingsPage() {
       </div>
 
        <Tabs defaultValue="smtp">
-         <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
-           <TabsTrigger value="smtp">{t("tabs.smtp")}</TabsTrigger>
-           <TabsTrigger value="company">{t("tabs.company")}</TabsTrigger>
-           <TabsTrigger value="registration">{t("tabs.registration")}</TabsTrigger>
-           <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
-           <TabsTrigger value="notifications">{t("tabs.notifications")}</TabsTrigger>
-         </TabsList>
+<TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
+            <TabsTrigger value="smtp">{t("tabs.smtp")}</TabsTrigger>
+            <TabsTrigger value="company">{t("tabs.company")}</TabsTrigger>
+            <TabsTrigger value="registration">{t("tabs.registration")}</TabsTrigger>
+            <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+            <TabsTrigger value="notifications">{t("tabs.notifications")}</TabsTrigger>
+            <TabsTrigger value="email">{t("tabs.email")}</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="smtp">
           <Card>
@@ -195,10 +197,14 @@ export default function SettingsPage() {
           </Card>
          </TabsContent>
 
-         <TabsContent value="notifications">
-           <NotificationsTab />
-         </TabsContent>
-       </Tabs>
+<TabsContent value="notifications">
+            <NotificationsTab />
+          </TabsContent>
+
+          <TabsContent value="email">
+            <EmailSettingsTab />
+          </TabsContent>
+        </Tabs>
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} size="lg">

@@ -7,49 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.37.0] - 2026-04-17
+## [0.38.0] - 2026-04-17
 
 ### Added
-- **Contract expiry email notifications** — Automated email alerts sent to contract owners and company admins when contracts approach expiration
-  - Configurable threshold days (e.g., 30, 60, 90 days before expiry) via Settings → Notifications
-  - Brevo SDK integration (`github.com/getbrevo/brevo-go v1.0.0`) as primary email provider with automatic Gmail SMTP fallback
-  - Scheduled worker (`internal/worker/contract_expiry.go`) with configurable ticker interval that queries expiring contracts and sends notifications
-  - Duplicate prevention via `contract_expiry_notification_log` table ensuring each contract-threshold combination is notified only once
-- **Notifications dropdown in header** — Bell icon with unread counter in AppLayout header, showing preview of unread notifications with:
-  - Type-specific icons (contract_expiry, approval, system, success)
-  - Relative timestamps (e.g., "2 hours ago", "3 days ago")
-  - Click-to-mark-read with navigation to related entity (contract, supplement, client, supplier, company)
-  - "Mark all as read" button and "View all notifications" link
-- **Admin notification settings API** — `GET/PUT /api/admin/settings/notifications` endpoints for configuring:
-  - Threshold days array (e.g., `[30,60,90]`) defining when to send expiry alerts
-  - Worker interval in hours (how often the scheduler runs)
-  - Settings stored in `contract_expiry_notification_settings` table scoped to company
-- **Frontend settings tab** — New "Notifications" tab in Settings page (`NotificationsTab.tsx`) with:
-  - Numeric threshold inputs with strict positive integer validation
-  - Add/remove threshold controls with auto-sorting (descending)
-  - Debounced autosave (500ms) with loading indicators
-  - i18n support (English/Spanish)
-
-### Changed
-- **Layout** — Notifications moved from sidebar to header dropdown for better visibility and UX
-- **Email service** — Extended `SendEmailWithFallback` to support transactional alerts (expiry notifications) alongside existing verification/admin emails
-
-### Technical Details
-- **Database migrations:** `027_contract_expiry_notifications.sql` — creates `contract_expiry_notification_settings` and `contract_expiry_notification_log` tables
-- **Backend files created:** `internal/email/brevo.go`, `internal/worker/contract_expiry.go`, `internal/handlers/contract_expiry_settings.go`, `internal/models/settings.go` (ContractExpirySettings), model updates (IntArray type, CompanyID in User)
-- **Backend files modified:** `internal/email/sendmail.go` (exported SendEmailWithFallback), `internal/config/config.go` (Service.DB method), `internal/server/server.go` (routes + worker init), `internal/models/models.go` (type definitions)
-- **Frontend files created:** `src/lib/contract-expiry-settings-api.ts`, `src/pages/SettingsPage/NotificationsTab.tsx`, `src/components/notifications/NotificationsDropdown.tsx`
-- **Frontend files modified:** `src/pages/SettingsPage.tsx` (tab integration, 5-column grid, title fix), `src/components/layout/AppLayout.tsx` (dropdown integration), `src/components/layout/AppSidebar.tsx` (notifications item removed)
-- **i18n updates:** `public/locales/{en,es}/settings.json` (notification thresholds keys, title fix), `public/locales/{en,es}/common.json` (dropdown actions: markAllRead, viewAllNotifications, noNotifications)
-- **Environment variables:** `BREVO_API_KEY` (optional), `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo), `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail fallback), `NOTIFICATION_WORKER_INTERVAL_HOURS` (default 24)
-- **API endpoints:**
-  - `GET /api/admin/settings/notifications` — admin-only, returns company settings
-  - `PUT /api/admin/settings/notifications` — admin-only, updates thresholds and interval
-- **No breaking changes** — existing email flows (verification, admin notifications) unaffected; new functionality additive
-
-## [0.36.0] - 2026-04-17
-
-### Added
+- **Email Settings from Database with UI Toggles** — Email service configuration now fully managed through database-driven settings with toggle switches in Settings UI (PR #88)
+  - **5 new system settings:**
+    - `email_notifications_enabled` — Master toggle for all email notifications (verification, admin alerts, contract expiry)
+    - `email_contract_expiry_enabled` — Toggle specifically for contract expiry notifications
+    - `smtp_enabled` — Enable/disable SMTP server usage (Brevo/Gmail fallback chain)
+    - `brevo_enabled` — Force enable Brevo SMTP (overrides auto-detection)
+    - `brevo_api_key` — API key for Brevo transactional platform (optional, stored as sensitive setting)
+  - **Backend helper functions:**
+    - `GetSetting(key string, defaultValue string)` — Generic setting getter with fallback
+    - `GetSettingBool(key string, defaultValue bool)` — Boolean setting getter with type conversion
+    - `IsSMTPEnabled()` — Checks if SMTP is enabled globally
+    - `IsBrevoEnabled()` — Checks if Brevo is enabled (Brevo enabled + API key configured)
+  - **Toggle checks in contract expiry worker** — Worker now respects `email_contract_expiry_enabled` and `email_notifications_enabled` before sending notifications
+  - **New Email Services tab in Settings page** — Settings → Email Services tab with toggle switches for all 5 settings, each with:
+    - Clear on/off toggle UI with visual feedback
+    - Real-time save with debounced updates
+    - Tooltip explanations for each setting
+    - Admin-only visibility
+  - **i18n tooltips for all email settings** — All 5 settings include descriptive tooltips in English and Spanish explaining purpose and behavior
 - **Brevo SMTP primary with Gmail fallback** — Email service now uses Brevo as primary SMTP relay with automatic Gmail fallback for reliability
   - `sendWithBrevo()` — sends via `smtp-relay.brevo.com:587` with mandatory TLS, using `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`
   - `sendWithGmail()` — fallback via `smtp.gmail.com:587` with mandatory TLS, using `GMAIL_USER`, `GMAIL_APP_PASSWORD`
@@ -59,17 +38,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Error returns only if both providers fail
 
 ### Changed
+- **Settings API** — Extended `GET/POST /api/system-settings` to handle email-specific keys alongside existing system settings
+- **SMTP initialization** — Now respects `smtp_enabled` toggle; Brevo used only when `brevo_enabled` is true AND `brevo_api_key` is configured
+- **Email sending logic** — All email functions (verification, admin notifications, contract expiry) check `email_notifications_enabled` before attempting to send
 - **Email configuration documentation** — Renamed and rewrote `docs/RESEND-CONFIGURATION.md` → `docs/EMAIL-CONFIGURATION.md` to cover both Brevo and Gmail providers, including setup instructions for Linux systemd (3 options), Windows (3 options), and development `.env` usage
 - **Brevo step-by-step setup guide** — Added `docs/BREVO-SETUP.md` with detailed walkthrough: account creation, transactional platform activation, SMTP key generation, sender `pactateam@gmail.com` verification, connectivity testing from VPS, and troubleshooting
 
 ### Technical Details
-- **Files Modified:** 3 (`internal/email/sendmail.go`, `docs/EMAIL-CONFIGURATION.md`, `docs/PROJECT_SUMMARY.md`)
-- **Files Created:** 1 (`docs/BREVO-SETUP.md`)
-- **Lines Added:** ~74 (code) + ~373 (EMAIL-CONFIGURATION.md) + ~373 (BREVO-SETUP.md)
-- **Lines Removed:** ~176 (old `getMailClient()` + `docs/RESEND-CONFIGURATION.md`)
-- **No breaking changes** — function signatures (`SendVerificationCode`, `SendAdminNotification`) unchanged; `internal/email/templates.go` and `internal/handlers/auth.go` untouched
-- **Environment variables:** `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo); `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail); `EMAIL_FROM` (sender, unchanged)
-- **Backward compatible:** Existing single-provider setups continue working (Brevo or Gmail alone)
+- **Database migrations:** 
+  - `027_contract_expiry_notifications.sql` — creates `contract_expiry_notification_settings` and `contract_expiry_notification_log` tables
+  - `028_email_settings.sql` — adds 5 new keys to `system_settings` table with default values
+- **Backend files created:** `internal/email/brevo.go`, `internal/worker/contract_expiry.go`, `internal/handlers/contract_expiry_settings.go`, `internal/models/settings.go` (ContractExpirySettings), model updates (IntArray type, CompanyID in User)
+- **Backend files modified:**
+  - `internal/config/config.go` — added `GetSetting`, `GetSettingBool`, `IsSMTPEnabled`, `IsBrevoEnabled` helper methods to `Service` struct
+  - `internal/email/sendmail.go` — exported `SendEmailWithFallback`, added global toggle checks in `SendVerificationCode`, `SendAdminNotification`, and `SendContractExpiryNotification`
+  - `internal/worker/contract_expiry.go` — added pre-send checks for `email_contract_expiry_enabled` and `email_notifications_enabled`
+  - `internal/handlers/system_settings.go` — extended to include email setting keys in GET/PUT handlers
+  - `internal/server/server.go` (routes + worker init)
+  - `internal/models/models.go` (type definitions)
+- **Frontend files created:**
+  - `src/lib/contract-expiry-settings-api.ts`
+  - `src/pages/SettingsPage/NotificationsTab.tsx`
+  - `src/components/notifications/NotificationsDropdown.tsx`
+  - `src/pages/SettingsPage/EmailServicesTab.tsx` — new tab component with toggle switches for all 5 settings
+  - `src/lib/email-settings-api.ts` — API client for email settings (reuses existing system settings endpoint)
+- **Frontend files modified:**
+  - `src/pages/SettingsPage.tsx` — added Email Services tab to tab list, tab integration, 5-column grid
+  - `src/components/layout/AppLayout.tsx` (dropdown integration)
+  - `src/components/layout/AppSidebar.tsx` (notifications item removed)
+  - `public/locales/{en,es}/settings.json` — added notification thresholds keys, email settings keys and tooltips, title fix
+  - `public/locales/{en,es}/common.json` (dropdown actions: markAllRead, viewAllNotifications, noNotifications)
+- **Documentation files created:** `docs/BREVO-SETUP.md`
+- **Documentation files modified:** `docs/EMAIL-CONFIGURATION.md`, `docs/PROJECT_SUMMARY.md`
+- **Environment variables:** `BREVO_API_KEY` (optional), `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo), `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail fallback), `NOTIFICATION_WORKER_INTERVAL_HOURS` (default 24)
+- **API endpoints:**
+  - `GET /api/admin/settings/notifications` — admin-only, returns company settings
+  - `PUT /api/admin/settings/notifications` — admin-only, updates thresholds and interval
+- **Default values:**
+  - `email_notifications_enabled`: `true`
+  - `email_contract_expiry_enabled`: `true`
+  - `smtp_enabled`: `true`
+  - `brevo_enabled`: `false`
+  - `brevo_api_key`: `""` (empty string)
+- **No breaking changes** — All existing email functionality preserved; new toggles default to enabled state
 
 ### Backend Integration
 - `internal/email.SendVerificationCode(ctx, email, code, lang)` — unchanged API, now uses fallback orchestrator
