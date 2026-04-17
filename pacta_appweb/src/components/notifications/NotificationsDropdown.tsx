@@ -48,7 +48,7 @@ function timeAgo(dateString: string, locale: string = "en"): string {
   return date.toLocaleDateString(locale);
 }
 
-export function NotificationsDropdown() {
+export default function NotificationsDropdown() {
   const { t, i18n } = useTranslation("common");
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
