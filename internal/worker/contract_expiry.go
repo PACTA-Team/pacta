@@ -34,6 +34,28 @@ func NewContractExpiryWorker(cfg *config.Service, brevo *email.BrevoClient) *Con
 	}
 }
 
+// checkEmailEnabled checks if global email notifications are enabled
+func (w *ContractExpiryWorker) checkEmailEnabled() bool {
+	var enabled string
+	err := w.config.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'email_notifications_enabled'").Scan(&enabled)
+	if err != nil || enabled == "false" {
+		w.logger.Printf("[worker] email_notifications disabled in settings")
+		return false
+	}
+	return true
+}
+
+// checkContractExpiryEnabled checks if contract expiry notifications are enabled
+func (w *ContractExpiryWorker) checkContractExpiryEnabled() bool {
+	var enabled string
+	err := w.config.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'email_contract_expiry_enabled'").Scan(&enabled)
+	if err != nil || enabled == "false" {
+		w.logger.Printf("[worker] contract_expiry notifications disabled in settings")
+		return false
+	}
+	return true
+}
+
 func (w *ContractExpiryWorker) Start() {
 	w.mu.Lock()
 	if w.running {
@@ -298,6 +320,18 @@ func (w *ContractExpiryWorker) logSend(
 
 func (w *ContractExpiryWorker) runCycle() {
 	w.logger.Println("cycle start")
+
+	// Check global email toggle
+	if !w.checkEmailEnabled() {
+		w.logger.Println("email notifications disabled — skipping cycle")
+		return
+	}
+
+	// Check contract expiry specific toggle
+	if !w.checkContractExpiryEnabled() {
+		w.logger.Println("contract expiry notifications disabled — skipping cycle")
+		return
+	}
 
 	// 1. Load settings
 	settings, err := w.loadSettings()
