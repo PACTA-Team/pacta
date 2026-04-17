@@ -18,7 +18,9 @@ import (
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
+	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/handlers"
+	"github.com/PACTA-Team/pacta/internal/worker"
 )
 
 func Start(cfg *config.Config, staticFS fs.FS) error {
@@ -33,6 +35,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	}
 
 	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir}
+
+	// Create a service that bundles config and DB for worker and settings handler
+	svc := &config.Service{Config: cfg, DB: database}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -141,10 +146,15 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Get("/api/approvals/pending", h.HandlePendingApprovals)
 			r.Post("/api/approvals", h.HandlePendingApprovals)
 
-			// System settings
-			r.Get("/api/system-settings", h.GetSystemSettings)
-			r.Put("/api/system-settings", h.UpdateSystemSettings)
-		})
+		// System settings
+		r.Get("/api/system-settings", h.GetSystemSettings)
+		r.Put("/api/system-settings", h.UpdateSystemSettings)
+
+		// Contract expiry notification settings (Brevo worker)
+		expirySettingsHandler := handlers.NewContractExpirySettingsHandler(svc)
+		r.Get("/api/admin/settings/notifications", expirySettingsHandler.GetSettings)
+		r.Put("/api/admin/settings/notifications", expirySettingsHandler.UpdateSettings)
+	})
 	})
 
 	// Static files (Vite build output) - SPA catch-all
@@ -153,6 +163,18 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		log.Printf("warning: static sub fs error: %v", err)
 	}
 	r.Handle("/*", spaHandler(staticSub))
+
+	// --- Initialize Brevo email client and contract expiry worker ---
+	brevoClient, err := email.NewBrevoClient()
+	if err != nil {
+		log.Printf("[email-worker] Brevo client not initialized: %v — contract expiry notifications will use SMTP only", err)
+		brevoClient = nil
+	}
+
+	expiryWorker := worker.NewContractExpiryWorker(svc, brevoClient)
+	expiryWorker.Start()
+	defer expiryWorker.Stop()
+	// -----------------------------------------------------------------
 
 	srv := &http.Server{
 		Addr:         cfg.Addr,
