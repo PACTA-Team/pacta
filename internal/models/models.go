@@ -9,6 +9,7 @@ type User struct {
 	PasswordHash string     `json:"-"`
 	Role         string     `json:"role"`
 	Status       string     `json:"status"`
+	CompanyID    *int       `json:"company_id,omitempty"`
 	LastAccess   *time.Time `json:"last_access,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
