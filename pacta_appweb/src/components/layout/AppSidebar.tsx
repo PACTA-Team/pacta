@@ -8,7 +8,6 @@ import {
   FileText,
   FilePlus,
   FolderOpen,
-  LogOut,
   BarChart3,
   Building2,
   Truck,
@@ -24,7 +23,7 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import CompanySelector from '@/components/CompanySelector';
 import ContractIcon from '@/images/contract_icon.svg';
@@ -86,7 +85,7 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const location = useLocation();
   const pathname = location.pathname;
-  const { user, logout, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   
   // Use external device if provided, otherwise use internal detection
   const [internalDevice, setInternalDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -229,23 +228,7 @@ export default function AppSidebar({
                 </nav>
               </ScrollArea>
 
-              <div className="p-4 border-t">
-                <div className="flex items-center gap-3 p-2">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{user?.name}</p>
-                    <p className="truncate text-xs text-muted-foreground capitalize">{user?.role}</p>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full mt-3" onClick={logout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('logout')}
-                </Button>
-              </div>
+
             </div>
           </div>
         )}
@@ -330,34 +313,7 @@ export default function AppSidebar({
         </nav>
       </ScrollArea>
 
-      <Separator className="mx-3" />
 
-      {/* User profile section */}
-      <div className={cn('p-3', collapsed ? 'items-center' : '')}>
-        <div className={cn('flex items-center gap-3 rounded-lg p-2 hover:bg-muted transition-colors', collapsed ? 'justify-center' : '')}>
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-              {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user?.name}</p>
-              <p className="truncate text-xs text-muted-foreground capitalize">{user?.role}</p>
-            </div>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size={collapsed ? 'icon' : 'default'}
-          className={cn('w-full mt-2', collapsed ? 'h-9 w-9' : '')}
-          onClick={logout}
-          aria-label="Logout"
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">{t('logout')}</span>}
-        </Button>
-      </div>
     </div>
   );
 }
