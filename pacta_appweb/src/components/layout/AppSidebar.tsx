@@ -8,18 +8,14 @@ import {
   FileText,
   FilePlus,
   FolderOpen,
-  Users,
-  LogOut,
   BarChart3,
   Building2,
   Truck,
   UserCheck,
-  Menu,
   X,
   Building,
   ChevronLeft,
-  ChevronRight,
-  Settings
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +23,7 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import CompanySelector from '@/components/CompanySelector';
 import ContractIcon from '@/images/contract_icon.svg';
@@ -41,6 +37,8 @@ interface AppSidebarProps {
   device?: 'desktop' | 'tablet' | 'mobile';
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  mobileMenuOpen?: boolean;
+  onMobileMenuClose?: () => void;
 }
 
 function useDeviceSize() {
@@ -74,19 +72,20 @@ const navigation = [
   { nameKey: 'documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { nameKey: 'reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   // Notifications moved to header — removed from sidebar
-  { nameKey: 'users', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
+  // Users and Settings moved to UserDropdown in header — removed from sidebar
   { nameKey: 'companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
-  { nameKey: 'settings', href: '/settings', icon: Settings, roles: ['admin'] as UserRole[] },
 ];
 
 export default function AppSidebar({ 
   device: externalDevice, 
   collapsed: externalCollapsed, 
-  onCollapsedChange 
+  onCollapsedChange,
+  mobileMenuOpen,
+  onMobileMenuClose
 }: AppSidebarProps) {
   const location = useLocation();
   const pathname = location.pathname;
-  const { user, logout, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   
   // Use external device if provided, otherwise use internal detection
   const [internalDevice, setInternalDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -131,11 +130,21 @@ export default function AppSidebar({
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [externalDevice]);
-  
-   const [sidebarOpen, setSidebarOpen] = useState(false);
+   }, [externalDevice]);
    
-   const { t } = useTranslation('common');
+   // Mobile drawer state: controlled by parent if prop provided, else internal
+   const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
+   const sidebarOpen = mobileMenuOpen !== undefined ? mobileMenuOpen : internalSidebarOpen;
+
+   const closeSidebar = () => {
+     if (onMobileMenuClose) {
+       onMobileMenuClose();
+     } else {
+       setInternalSidebarOpen(false);
+     }
+   };
+
+    const { t } = useTranslation('common');
   const { t: tDashboard } = useTranslation('dashboard');
   const { t: tContracts } = useTranslation('contracts');
   const { t: tSupplements } = useTranslation('supplements');
@@ -168,37 +177,34 @@ export default function AppSidebar({
      [hasPermission]
    );
 
-  // Mobile drawer sidebar
-  if (isMobile) {
-    return (
-      <>
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed top-4 left-4 z-40"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open navigation menu"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </Button>
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          >
+   // Mobile drawer sidebar
+   if (isMobile) {
+     return (
+       <>
+         {sidebarOpen && (
+           <div
+             className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
+             onClick={closeSidebar}
+           >
             <div
               className="fixed left-0 top-0 bottom-0 w-72 bg-card border-r shadow-xl flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-4 flex items-center justify-between border-b">
-                <div>
-                  <h1 className="text-xl font-bold text-primary">PACTA</h1>
-                  <p className="text-xs text-muted-foreground">Contract Management</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+               <div className="p-4 border-b">
+                 {/* Company Selector for mobile */}
+                 <div className="mb-3">
+                   <CompanySelector />
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <h1 className="text-xl font-bold text-primary">PACTA</h1>
+                     <p className="text-xs text-muted-foreground">Contract Management</p>
+                   </div>
+                    <Button variant="ghost" size="icon" onClick={closeSidebar}>
+                     <X className="h-5 w-5" />
+                   </Button>
+                 </div>
+               </div>
 
               <ScrollArea className="flex-1 p-3">
                 <nav className="space-y-1">
@@ -212,7 +218,7 @@ export default function AppSidebar({
                           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                           isActive ? 'bg-primary/10 text-primary border-l-2 border-primary' : 'text-muted-foreground hover:bg-muted'
                         )}
-                        onClick={() => setSidebarOpen(false)}
+                         onClick={closeSidebar}
                       >
                         <item.icon className="h-5 w-5" />
                         {navLabels[item.nameKey]}
@@ -222,23 +228,7 @@ export default function AppSidebar({
                 </nav>
               </ScrollArea>
 
-              <div className="p-4 border-t">
-                <div className="flex items-center gap-3 p-2">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{user?.name}</p>
-                    <p className="truncate text-xs text-muted-foreground capitalize">{user?.role}</p>
-                  </div>
-                </div>
-                <Button variant="outline" className="w-full mt-3" onClick={logout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('logout')}
-                </Button>
-              </div>
+
             </div>
           </div>
         )}
@@ -323,34 +313,7 @@ export default function AppSidebar({
         </nav>
       </ScrollArea>
 
-      <Separator className="mx-3" />
 
-      {/* User profile section */}
-      <div className={cn('p-3', collapsed ? 'items-center' : '')}>
-        <div className={cn('flex items-center gap-3 rounded-lg p-2 hover:bg-muted transition-colors', collapsed ? 'justify-center' : '')}>
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-              {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user?.name}</p>
-              <p className="truncate text-xs text-muted-foreground capitalize">{user?.role}</p>
-            </div>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size={collapsed ? 'icon' : 'default'}
-          className={cn('w-full mt-2', collapsed ? 'h-9 w-9' : '')}
-          onClick={logout}
-          aria-label="Logout"
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">{t('logout')}</span>}
-        </Button>
-      </div>
     </div>
   );
 }

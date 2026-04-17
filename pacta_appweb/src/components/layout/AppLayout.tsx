@@ -1,14 +1,19 @@
- 
- import { useState } from 'react';
- import { useEffect, useRef } from 'react';
- import { useNavigate, useLocation } from 'react-router-dom';
- import { useTranslation } from 'react-i18next';
- import { useAuth } from '@/contexts/AuthContext';
- import AppSidebar from './AppSidebar';
- import { ThemeToggle } from '@/components/ThemeToggle';
- import { LanguageToggle } from '@/components/LanguageToggle';
- import CompanySelector from '@/components/CompanySelector';
- import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
+  
+import { useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/contexts/AuthContext';
+import AppSidebar from './AppSidebar';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageToggle } from '@/components/LanguageToggle';
+import CompanySelector from '@/components/CompanySelector';
+import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
+import UserDropdown from '@/components/header/UserDropdown';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+  import UserDropdown from '@/components/header/UserDropdown';
+  import { Menu } from 'lucide-react';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
@@ -33,10 +38,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = location.pathname;
   const mainRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('common');
-  
+   
    // Device size detection for responsive sidebar
    const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -56,13 +62,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const isMobile = device === 'mobile';
-  const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? 80 : 256); // 0 for mobile drawer, 80px for collapsed, 256px for expanded
+  const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? 80 : 256);
 
   // Update document title on route change
   useEffect(() => {
     const title = pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || 'PACTA');
     document.title = `${title} - PACTA`;
-    // Focus main content on route change for accessibility
     mainRef.current?.focus();
   }, [pathname]);
 
@@ -97,24 +102,47 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar 
         device={device} 
         collapsed={sidebarCollapsed} 
-        onCollapsedChange={setSidebarCollapsed} 
+        onCollapsedChange={setSidebarCollapsed}
+        mobileMenuOpen={mobileMenuOpen}
+        onMobileMenuClose={() => setMobileMenuOpen(false)}
       />
       <div 
         className="flex-1 flex flex-col overflow-hidden"
         style={{ marginLeft: isMobile ? 0 : (sidebarCollapsed ? 80 : 256) }}
       >
-         <header role="banner" className="border-b bg-card px-6 py-3 flex items-center justify-between">
-           <div className="flex items-center gap-4">
+         <header role="banner" className="border-b bg-card px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4">
+           {/* Mobile: Menu button (visible solo <768px) */}
+           <Button
+             variant="ghost"
+             size="icon"
+             className="md:hidden flex-shrink-0"
+             onClick={() => setMobileMenuOpen(true)}
+             aria-label="Open navigation menu"
+           >
+             <Menu className="h-5 w-5" aria-hidden="true" />
+           </Button>
+
+           {/* CompanySelector - Desktop/Tablet only (≥768px) */}
+           <div className="hidden md:flex flex-shrink-0">
              <CompanySelector />
-             <h1 className="text-xl font-semibold tracking-tight">
-               {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
-             </h1>
            </div>
-            <div className="flex items-center gap-2">
-              <LanguageToggle />
-              <ThemeToggle />
-              <NotificationsDropdown />
-            </div>
+
+           {/* Título de página - ocupa espacio restante */}
+           <h1 className="flex-1 text-base md:text-lg lg:text-xl font-semibold tracking-tight truncate">
+             {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
+           </h1>
+
+           {/* Acciones Desktop/Tablet (≥768px) - Notifications, Theme, Language */}
+           <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+             <NotificationsDropdown />
+             <LanguageToggle />
+             <ThemeToggle />
+           </div>
+
+           {/* UserDropdown - siempre visible (mobile y desktop) */}
+           <div className="flex-shrink-0">
+             <UserDropdown />
+           </div>
          </header>
         <main
           ref={mainRef}
