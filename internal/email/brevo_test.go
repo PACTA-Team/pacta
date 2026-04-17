@@ -2,11 +2,9 @@ package email
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
-	brevo "github.com/getbrevo/brevo-go/lib"
 	"github.com/stretchr/testify/assert"
 )
 
