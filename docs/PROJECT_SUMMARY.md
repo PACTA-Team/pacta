@@ -174,7 +174,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Login UX Fixes | Complete (v0.31.0 — Error message JSON parsing fix, Sonner Toaster provider, public companies endpoint, first-user dashboard navigation, approval role selection, company tooltip, form loading states) |
 | Landing Page Animations | Complete (v0.18.0 -- Framer Motion animations, animated geometric shapes, feature cards, CTA buttons, responsive navbar) |
 | Theme System | Complete (v0.18.0 -- ThemeProvider mounted, dark/light/system toggle with persistent preferences) |
-| Documentation | Complete (v0.18.0 -- README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding) |
+| Documentation | Complete (v0.18.0 — README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding; plus v0.36.0 BREVO-SETUP.md step-by-step Brevo configuration guide) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
 | Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
 | Frontend Pages | 15 pages created (Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |

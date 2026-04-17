@@ -1,6 +1,8 @@
 # Email Service — Brevo Primary + Gmail Fallback Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+>
+> **New to Brevo?** Start with the step-by-step guide: [docs/BREVO-SETUP.md](./BREVO-SETUP.md)
 
 **Goal:** Refactor PACTA's email service to use Brevo SMTP as primary with automatic Gmail fallback for reliable transactional email delivery.
 

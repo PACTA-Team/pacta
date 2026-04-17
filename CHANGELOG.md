@@ -20,11 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Email configuration documentation** — Renamed and rewrote `docs/RESEND-CONFIGURATION.md` → `docs/EMAIL-CONFIGURATION.md` to cover both Brevo and Gmail providers, including setup instructions for Linux systemd (3 options), Windows (3 options), and development `.env` usage
+- **Brevo step-by-step setup guide** — Added `docs/BREVO-SETUP.md` with detailed walkthrough: account creation, transactional platform activation, SMTP key generation, sender `pactateam@gmail.com` verification, connectivity testing from VPS, and troubleshooting
 
 ### Technical Details
-- **Files Modified:** 2 (`internal/email/sendmail.go`, `docs/EMAIL-CONFIGURATION.md`)
-- **Lines Added:** ~74 (code) + ~373 (docs)
-- **Lines Removed:** ~175 (removed old `getMailClient()` and old RESEND doc)
+- **Files Modified:** 3 (`internal/email/sendmail.go`, `docs/EMAIL-CONFIGURATION.md`, `docs/PROJECT_SUMMARY.md`)
+- **Files Created:** 1 (`docs/BREVO-SETUP.md`)
+- **Lines Added:** ~74 (code) + ~373 (EMAIL-CONFIGURATION.md) + ~373 (BREVO-SETUP.md)
+- **Lines Removed:** ~176 (old `getMailClient()` + `docs/RESEND-CONFIGURATION.md`)
 - **No breaking changes** — function signatures (`SendVerificationCode`, `SendAdminNotification`) unchanged; `internal/email/templates.go` and `internal/handlers/auth.go` untouched
 - **Environment variables:** `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` (Brevo); `GMAIL_USER`, `GMAIL_APP_PASSWORD` (Gmail); `EMAIL_FROM` (sender, unchanged)
 - **Backward compatible:** Existing single-provider setups continue working (Brevo or Gmail alone)
