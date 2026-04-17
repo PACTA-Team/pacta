@@ -8,18 +8,15 @@ import {
   FileText,
   FilePlus,
   FolderOpen,
-  Users,
   LogOut,
   BarChart3,
   Building2,
   Truck,
   UserCheck,
-  Menu,
   X,
   Building,
   ChevronLeft,
-  ChevronRight,
-  Settings
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,9 +73,8 @@ const navigation = [
   { nameKey: 'documents', href: '/documents', icon: FolderOpen, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   { nameKey: 'reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager', 'editor', 'viewer'] as UserRole[] },
   // Notifications moved to header — removed from sidebar
-  { nameKey: 'users', href: '/users', icon: Users, roles: ['admin'] as UserRole[] },
+  // Users and Settings moved to UserDropdown in header — removed from sidebar
   { nameKey: 'companies', href: '/companies', icon: Building, roles: ['admin', 'manager'] as UserRole[] },
-  { nameKey: 'settings', href: '/settings', icon: Settings, roles: ['admin'] as UserRole[] },
 ];
 
 export default function AppSidebar({ 
@@ -195,15 +191,21 @@ export default function AppSidebar({
               className="fixed left-0 top-0 bottom-0 w-72 bg-card border-r shadow-xl flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-4 flex items-center justify-between border-b">
-                <div>
-                  <h1 className="text-xl font-bold text-primary">PACTA</h1>
-                  <p className="text-xs text-muted-foreground">Contract Management</p>
-                </div>
-                 <Button variant="ghost" size="icon" onClick={closeSidebar}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
+               <div className="p-4 border-b">
+                 {/* Company Selector for mobile */}
+                 <div className="mb-3">
+                   <CompanySelector />
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <h1 className="text-xl font-bold text-primary">PACTA</h1>
+                     <p className="text-xs text-muted-foreground">Contract Management</p>
+                   </div>
+                    <Button variant="ghost" size="icon" onClick={closeSidebar}>
+                     <X className="h-5 w-5" />
+                   </Button>
+                 </div>
+               </div>
 
               <ScrollArea className="flex-1 p-3">
                 <nav className="space-y-1">
