@@ -19,7 +19,7 @@ func TestSendContractExpiryViaBrevo_Success(t *testing.T) {
 
 	// We can't easily mock the brevo-go APIClient due to internal types,
 	// so this is a smoke test that the function compiles and returns expected errors
-	bc, err := NewBrevoClient()
+	bc, err := NewBrevoClient(nil)
 	if err != nil {
 		// Expected if BREVO_API_KEY not set
 		assert.Error(t, err)

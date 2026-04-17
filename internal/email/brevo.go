@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -16,9 +17,40 @@ type BrevoClient struct {
 	apiKey string
 }
 
-// NewBrevoClient creates a new Brevo API client from environment
-func NewBrevoClient() (*BrevoClient, error) {
+// IsBrevoEnabled checks if Brevo is enabled in settings
+func IsBrevoEnabled(db *sql.DB) bool {
+	if db == nil {
+		return false
+	}
+	var enabled string
+	err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'brevo_enabled'").Scan(&enabled)
+	if err != nil || enabled == "false" {
+		return false
+	}
+	return true
+}
+
+// NewBrevoClient creates a new Brevo API client from environment or database
+func NewBrevoClient(db *sql.DB) (*BrevoClient, error) {
+	// Check if Brevo is enabled
+	if db != nil {
+		var brevoEnabled string
+		err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'brevo_enabled'").Scan(&brevoEnabled)
+		if err == nil && brevoEnabled == "false" {
+			return nil, fmt.Errorf("brevo disabled in settings")
+		}
+	}
+
+	// Get API key from DB or fallback to .env
 	apiKey := os.Getenv("BREVO_API_KEY")
+	if db != nil {
+		var dbKey string
+		err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'brevo_api_key'").Scan(&dbKey)
+		if err == nil && dbKey != "" {
+			apiKey = dbKey
+		}
+	}
+
 	if apiKey == "" {
 		return nil, fmt.Errorf("BREVO_API_KEY not set")
 	}
