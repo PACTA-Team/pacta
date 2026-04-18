@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-04-18
+
+### Fixed
+- **Duplicate imports in AppLayout.tsx** — Removed duplicate import statements causing build failure
+  - Fixed duplicate `import UserDropdown` and `import { Menu }` lines in `pacta_appweb/src/components/layout/AppLayout.tsx`
+  - The merge of PR #92 introduced duplicate imports that broke the build
+- **Missing UserDropdown component** — Added missing `UserDropdown.tsx` component file
+  - Component was referenced but not included in the PR #92 merge
+  - Located at `pacta_appweb/src/components/header/UserDropdown.tsx`
+
+### Technical Details
+- **Files Fixed:** 2 (`pacta_appweb/src/components/layout/AppLayout.tsx`, `pacta_appweb/src/components/header/UserDropdown.tsx`)
+- **Build Status:** Passing
+
+## [0.39.0] - 2026-04-17
+
+### Added
+- **Header Profile Dropdown** — User profile moved from sidebar to header with modern dropdown menu design
+  - **Profile dropdown component** — New `UserDropdown` component in `src/components/header/` with avatar, user name, and dropdown actions (Settings, Users, Logout)
+  - **AppSidebar cleanup** — Removed user profile section from sidebar; sidebar now focused on navigation only
+  - **AppLayout header integration** — ProfileDropdown integrated into AppLayout header with proper positioning and responsive behavior
+  - **Design consistency** — Profile dropdown matches header styling with proper theme support (light/dark)
+
+### Changed
+- **CompanySelector moved to header** — Company selector now resides in header alongside profile dropdown for better space utilization in collapsed sidebar
+- **Sidebar user card removed** — Eliminated duplicate user info display; all user-facing actions consolidated in header dropdown
+
+### Technical Details
+- **Files Created:** 1 (`pacta_appweb/src/components/header/ProfileDropdown.tsx`)
+- **Files Modified:** 3 (`pacta_appweb/src/components/CompanySelector.tsx`, `pacta_appweb/src/components/layout/AppLayout.tsx`, `pacta_appweb/src/components/layout/AppSidebar.tsx`)
+- **No breaking changes** — All existing user functionality preserved; UI reorganization only
+
 ## [0.38.0] - 2026-04-17
 
 ### Added

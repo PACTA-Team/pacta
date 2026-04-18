@@ -185,6 +185,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
 | Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | Setup Mode Auto-Advance | Complete (v0.22.0 -- click mode card to auto-advance, tactile card feedback, focus-visible accessibility, "Cambiar a..." toggle button) |
+| Header User Dropdown | Complete (v0.39.0 -- UserDropdown component in header, responsive design, Settings/Users/Logout navigation) |
 
 ---
 
@@ -454,7 +455,9 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.36.0 | Current | Email Settings from Database with UI Toggles (email_notifications_enabled, email_contract_expiry_enabled, smtp_enabled, brevo_enabled, brevo_api_key), backend helper functions (GetSetting, GetSettingBool, IsSMTPEnabled, IsBrevoEnabled), toggle checks in contract expiry worker, new Email Services tab in Settings page with toggle switches, i18n tooltips for all email settings |
+| v0.39.1 | Current | Build fix: Duplicate imports removed in AppLayout.tsx, UserDropdown component added |
+| v0.39.0 | - | Header User Dropdown: User profile moved from sidebar to header with UserDropdown component, responsive design (desktop/tablet/mobile), AppSidebar cleanup, CompanySelector in header |
+| v0.36.0 | - | Email Settings from Database with UI Toggles (email_notifications_enabled, email_contract_expiry_enabled, smtp_enabled, brevo_enabled, brevo_api_key), backend helper functions (GetSetting, GetSettingBool, IsSMTPEnabled, IsBrevoEnabled), toggle checks in contract expiry worker, new Email Services tab in Settings page with toggle switches, i18n tooltips for all email settings |
 | v0.35.1 | - | Sidebar mobile drawer state fix (blank pages bug) |
 | v0.35.0 | - | Sidebar responsive fix (dynamic margin), logo icon in collapsed state, theme-adaptive coloring |
 | v0.34.0 | - | SMTP via environment variables, System Settings page (SMTP/Company/Registration/General tabs), System Settings API (GET/PUT /api/system-settings), Modern floating sidebar with glassmorphism |
