@@ -73,10 +73,11 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	role := "viewer"
 	status := "active"
+	emailVerificationRequired := h.GetSettingBool("email_verification_required", false)
 	if userCount == 0 {
 		role = "admin"
 	} else {
-		if req.Mode == "email" {
+		if emailVerificationRequired && req.Mode == "email" {
 			status = "pending_email"
 		} else if req.Mode == "approval" {
 			status = "pending_approval"
