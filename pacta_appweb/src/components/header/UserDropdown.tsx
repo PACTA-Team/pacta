@@ -137,7 +137,10 @@ export default function UserDropdown() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem
+          onClick={() => handleNavigation("/notifications")}
+          className="cursor-pointer"
+        >
           <Bell className="h-4 w-4 mr-2" aria-hidden="true" />
           <span>{t("notifications")}</span>
         </DropdownMenuItem>
