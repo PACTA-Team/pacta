@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-04-18
+
+### Added
+- **Email Verification Toggle** — New `email_verification_required` setting in Email Settings tab to control whether users need to verify email during registration
+- **Missing Translations** — Added missing translations for settings and users pages to common.json (English and Spanish)
+
+### Fixed
+- **Blank Screens on Desktop** — Fixed device detection running before component mount causing blank desktop pages
+  - Added `useEffect` to ensure device detection runs only after component mounts
+- **Settings Tabs Stacked on Mobile** — Fixed horizontal scroll on mobile settings tabs
+  - Added `flex overflow-x-auto` to tab container for proper horizontal scrolling
+- **Mobile Access to Session Controls** — Added ThemeToggle, LanguageToggle, and Notifications access to UserDropdown on mobile
+  - Mobile users now have access to all session controls that desktop users have in header
+- **Settings Labels Capitalization** — Added `capitalize` CSS class to Settings page labels
+  - All labels now display with proper title case formatting
+
+### Technical Details
+- **Files Modified:** 7 (`pacta_appweb/src/components/layout/AppLayout.tsx`, `pacta_appweb/src/components/header/UserDropdown.tsx`, `pacta_appweb/src/pages/SettingsPage.tsx`, `pacta_appweb/src/pages/SettingsPage/EmailSettingsTab.tsx`, `pacta_appweb/public/locales/en/common.json`, `pacta_appweb/public/locales/es/common.json`, `pacta_appweb/public/locales/en/settings.json`, `pacta_appweb/public/locales/es/settings.json`)
+
 ## [0.39.1] - 2026-04-18
 
 ### Fixed
