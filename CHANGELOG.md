@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.2] - 2026-04-18
+
+### Fixed
+- **Sidebar SVG DOMException** — Fixed DOMException in desktop view where sidebar showed blank. Replaced direct SVG import with lucide-react FileText icon.
+
+### Technical Details
+- **Files Modified:** 1 (`pacta_appweb/src/components/Sidebar.tsx`)
+
 ## [0.40.1] - 2026-04-18
 
 ### Added

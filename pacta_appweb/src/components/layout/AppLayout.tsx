@@ -143,10 +143,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
              <ThemeToggle />
            </div>
 
-           {/* UserDropdown - siempre visible (mobile y desktop) */}
-           <div className="flex-shrink-0">
-             <UserDropdown />
-           </div>
+{/* UserDropdown - siempre visible (mobile y desktop) */}
+            <div className="flex items-center gap-1">
+              {/* Mobile: Notifications button (visible solo <768px) */}
+              <div className="md:hidden">
+                <NotificationsDropdown />
+              </div>
+              <UserDropdown />
+            </div>
          </header>
         <main
           ref={mainRef}

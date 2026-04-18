@@ -31,12 +31,12 @@
   },
   "systemTitle": "System Settings",
   "tabs": {
-    "smtp": "SMTP",
+    "email": "Email",
     "company": "Company",
     "registration": "Registration",
     "general": "General",
     "notifications": "Notifications",
-    "email": "Email Services"
+    "emailSettings": "Email Services"
   },
   "smtpTitle": "SMTP Configuration",
   "companyTitle": "Company Information",

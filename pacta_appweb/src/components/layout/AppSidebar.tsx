@@ -26,7 +26,6 @@ import { Separator } from '@/components/ui/separator';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import CompanySelector from '@/components/CompanySelector';
-import ContractIcon from '@/images/contract_icon.svg';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
@@ -253,7 +252,7 @@ export default function AppSidebar({
           </div>
         ) : (
           <div className="flex h-10 w-10 items-center justify-center rounded-xl text-primary">
-            <ContractIcon className="h-6 w-6" />
+            <FileText className="h-6 w-6" />
           </div>
         )}
         <button
