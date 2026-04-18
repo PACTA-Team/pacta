@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-04-18
+
+### Added
+- **Settings Persistence Fix** — Added missing `email_verification_required` setting to system_settings table with secure default (false)
+- **Individual Save Buttons** — Each settings section now has its own save button for immediate persistence
+- **Error Boundary** — Added ErrorBoundary component to App.tsx for better runtime error handling
+
+### Fixed
+- **Settings Not Persisting** — Fixed the issue where email verification toggle and other settings wouldn't save due to missing database key
+- **Insecure Defaults** - Changed email-related settings defaults from 'true' to 'false' for better security (least privilege)
+- **Backend Registration Logic** — Updated HandleRegister to respect email_verification_required toggle during user registration
+
+### Technical Details
+- **Files Modified:** 5 (`internal/config/config.go`, `internal/db/migrations/029_email_settings.sql`, `internal/handlers/auth.go`, `pacta_appweb/src/App.tsx`, `pacta_appweb/src/lib/settings-api.ts`)
+- **Files Created:** 1 (`pacta_appweb/src/components/ErrorBoundary.tsx`)
+
 ## [0.40.0] - 2026-04-18
 
 ### Added
