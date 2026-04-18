@@ -12,8 +12,6 @@ import NotificationsDropdown from '@/components/notifications/NotificationsDropd
 import UserDropdown from '@/components/header/UserDropdown';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-  import UserDropdown from '@/components/header/UserDropdown';
-  import { Menu } from 'lucide-react';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
