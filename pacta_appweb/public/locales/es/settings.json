@@ -30,14 +30,14 @@
     "settings": "Configuración"
   },
   "systemTitle": "Configuración del Sistema",
-   "tabs": {
-     "smtp": "SMTP",
-     "company": "Empresa",
-     "registration": "Registro",
-     "general": "General",
-     "notifications": "Notificaciones",
-     "email": "Servicios de Email"
-   },
+"tabs": {
+      "email": "Email",
+      "company": "Empresa",
+      "registration": "Registro",
+      "general": "General",
+      "notifications": "Notificaciones",
+      "emailSettings": "Servicios de Email"
+    },
   "smtpTitle": "Configuración SMTP",
   "companyTitle": "Información de la Empresa",
   "registrationTitle": "Opciones de Registro",
