@@ -455,7 +455,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.40.0 | Current | QA Bug Fixes: Device detection fix (blank screens), Settings tabs mobile fix, UserDropdown mobile access to theme/language/notifications, capitalize class for settings labels, missing translations (settings/users), email_verification_required toggle |
+| v0.40.1 | Current | Settings persistence fix: Added email_verification_required setting with secure defaults, backend logic to respect toggle during registration, individual save buttons per settings section |
+| v0.40.0 | Previous | QA Bug Fixes: Device detection fix (blank screens), Settings tabs mobile fix, UserDropdown mobile access to theme/language/notifications, capitalize class for settings labels, missing translations (settings/users), email_verification_required toggle |
 | v0.39.1 | - | Build fix: Duplicate imports removed in AppLayout.tsx, UserDropdown component added |
 | v0.39.0 | - | Header User Dropdown: User profile moved from sidebar to header with UserDropdown component, responsive design (desktop/tablet/mobile), AppSidebar cleanup, CompanySelector in header |
 | v0.36.0 | - | Email Settings from Database with UI Toggles (email_notifications_enabled, email_contract_expiry_enabled, smtp_enabled, brevo_enabled, brevo_api_key), backend helper functions (GetSetting, GetSettingBool, IsSMTPEnabled, IsBrevoEnabled), toggle checks in contract expiry worker, new Email Services tab in Settings page with toggle switches, i18n tooltips for all email settings |
