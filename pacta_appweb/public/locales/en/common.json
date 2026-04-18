@@ -34,6 +34,11 @@
   "markAllRead": "Mark all as read",
   "viewAllNotifications": "View all notifications",
   "noNotifications": "No notifications",
+  "settings": "Settings",
+  "users": "Users",
+  "lightMode": "Light mode",
+  "darkMode": "Dark mode",
+  "changeLanguage": "Change language",
   "footer": {
     "rights": "All rights reserved."
   }

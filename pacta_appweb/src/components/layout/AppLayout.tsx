@@ -29,6 +29,13 @@ const PAGE_TITLES: Record<string, string> = {
   '/supplements': 'Supplements Management',
 };
 
+const getInitialDevice = (): 'desktop' | 'tablet' | 'mobile' => {
+  if (typeof window === 'undefined') return 'desktop';
+  if (window.innerWidth <= MOBILE_BREAKPOINT) return 'mobile';
+  if (window.innerWidth <= TABLET_BREAKPOINT) return 'tablet';
+  return 'desktop';
+};
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -36,11 +43,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = location.pathname;
   const mainRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('common');
-   
-   // Device size detection for responsive sidebar
-   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Device size detection for responsive sidebar
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(getInitialDevice);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(device !== 'desktop');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -54,7 +61,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setSidebarCollapsed(false);
       }
     };
-    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);

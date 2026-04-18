@@ -97,13 +97,13 @@ export default function SettingsPage() {
       </div>
 
        <Tabs defaultValue="smtp">
-<TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="smtp">{t("tabs.smtp")}</TabsTrigger>
-            <TabsTrigger value="company">{t("tabs.company")}</TabsTrigger>
-            <TabsTrigger value="registration">{t("tabs.registration")}</TabsTrigger>
-            <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
-            <TabsTrigger value="notifications">{t("tabs.notifications")}</TabsTrigger>
-            <TabsTrigger value="email">{t("tabs.email")}</TabsTrigger>
+<TabsList className="flex w-full overflow-x-auto gap-1">
+            <TabsTrigger value="smtp" className="flex-shrink-0 px-3 py-1.5 text-sm">{t("tabs.smtp")}</TabsTrigger>
+            <TabsTrigger value="company" className="flex-shrink-0 px-3 py-1.5 text-sm">{t("tabs.company")}</TabsTrigger>
+            <TabsTrigger value="registration" className="flex-shrink-0 px-3 py-1.5 text-sm">{t("tabs.registration")}</TabsTrigger>
+            <TabsTrigger value="general" className="flex-shrink-0 px-3 py-1.5 text-sm">{t("tabs.general")}</TabsTrigger>
+            <TabsTrigger value="notifications" className="flex-shrink-0 px-3 py-1.5 text-sm">{t("tabs.notifications")}</TabsTrigger>
+            <TabsTrigger value="email" className="flex-shrink-0 px-3 py-1.5 text-sm">{t("tabs.email")}</TabsTrigger>
           </TabsList>
 
         <TabsContent value="smtp">
@@ -114,7 +114,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               {SETTINGS_BY_CATEGORY.smtp.map((key) => (
                 <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{LABELS.smtp[key]}</Label>
+                  <Label className="capitalize" htmlFor={key}>{LABELS.smtp[key]}</Label>
                   <Input
                     id={key}
                     type={key === "smtp_pass" ? "password" : "text"}
@@ -136,7 +136,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               {SETTINGS_BY_CATEGORY.company.map((key) => (
                 <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{LABELS.company[key]}</Label>
+                  <Label className="capitalize" htmlFor={key}>{LABELS.company[key]}</Label>
                   <Input
                     id={key}
                     type="text"
@@ -157,7 +157,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="registration_methods">
+                <Label className="capitalize" htmlFor="registration_methods">
                   {LABELS.registration.registration_methods}
                 </Label>
                 <Input
@@ -183,7 +183,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               {SETTINGS_BY_CATEGORY.general.map((key) => (
                 <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{LABELS.general[key]}</Label>
+                  <Label className="capitalize" htmlFor={key}>{LABELS.general[key]}</Label>
                   <Input
                     id={key}
                     type="text"

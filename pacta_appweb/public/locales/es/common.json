@@ -33,8 +33,13 @@
    "notifications": "Notificaciones",
    "markAllRead": "Marcar todas como leídas",
    "viewAllNotifications": "Ver todas las notificaciones",
-   "noNotifications": "Sin notificaciones",
-   "footer": {
+"noNotifications": "Sin notificaciones",
+  "settings": "Configuración",
+  "users": "Usuarios",
+  "lightMode": "Modo claro",
+  "darkMode": "Modo oscuro",
+  "changeLanguage": "Cambiar idioma",
+  "footer": {
      "rights": "Todos los derechos reservados."
    }
 }

@@ -185,7 +185,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
 | Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | Setup Mode Auto-Advance | Complete (v0.22.0 -- click mode card to auto-advance, tactile card feedback, focus-visible accessibility, "Cambiar a..." toggle button) |
-| Header User Dropdown | Complete (v0.39.0 -- UserDropdown component in header, responsive design, Settings/Users/Logout navigation) |
+| Header User Dropdown | Complete (v0.40.0 -- UserDropdown in header, responsive design, mobile drawer CompanySelector, device detection fix, mobile session controls) |
 
 ---
 
@@ -455,7 +455,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.39.1 | Current | Build fix: Duplicate imports removed in AppLayout.tsx, UserDropdown component added |
+| v0.40.0 | Current | QA Bug Fixes: Device detection fix (blank screens), Settings tabs mobile fix, UserDropdown mobile access to theme/language/notifications, capitalize class for settings labels, missing translations (settings/users), email_verification_required toggle |
+| v0.39.1 | - | Build fix: Duplicate imports removed in AppLayout.tsx, UserDropdown component added |
 | v0.39.0 | - | Header User Dropdown: User profile moved from sidebar to header with UserDropdown component, responsive design (desktop/tablet/mobile), AppSidebar cleanup, CompanySelector in header |
 | v0.36.0 | - | Email Settings from Database with UI Toggles (email_notifications_enabled, email_contract_expiry_enabled, smtp_enabled, brevo_enabled, brevo_api_key), backend helper functions (GetSetting, GetSettingBool, IsSMTPEnabled, IsBrevoEnabled), toggle checks in contract expiry worker, new Email Services tab in Settings page with toggle switches, i18n tooltips for all email settings |
 | v0.35.1 | - | Sidebar mobile drawer state fix (blank pages bug) |
@@ -791,11 +792,20 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 ### In Progress
 
-_No active work in progress. Latest PR: [#84 — Sidebar mobile drawer fix](https://github.com/PACTA-Team/pacta/pull/84)_
+_No active work in progress. Latest PR: [#95 — QA Bug Fixes](https://github.com/PACTA-Team/pacta/pull/95)_
 
-### Completed (v0.35.1)
+### Completed (v0.40.0)
 
-**Sidebar Mobile Drawer Fix:**
+**QA Bug Fixes (2026-04-18):**
+- [x] Fix blank screens on desktop — Device detection now runs after component mount (useEffect), prevents blank pages on initial render
+- [x] Fix Settings tabs stacked on mobile — Added `flex overflow-x-auto` to tab container for proper horizontal scrolling on mobile
+- [x] Add mobile access to Theme/Language/Notifications — UserDropdown now includes ThemeToggle, LanguageToggle, and Notification access for mobile users
+- [x] Add capitalize CSS class to Settings labels — All Settings page labels now display with proper title case formatting
+- [x] Add missing translations — Added missing translations for settings and users pages to common.json (EN/ES)
+- [x] Add email_verification_required toggle — New toggle in Email Settings tab to control email verification requirement during registration
+- [x] PR created: https://github.com/PACTA-Team/pacta/pull/95
+
+**Sidebar Mobile Drawer Fix (v0.35.1):**
 - [x] Added missing `sidebarOpen` state declaration in AppSidebar component
 - [x] Root cause: mobile drawer code used `setSidebarOpen()` without declaring state with `useState()`
 - [x] This fix resolves the "blank pages" issue in v0.35.0

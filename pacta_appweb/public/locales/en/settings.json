@@ -61,7 +61,9 @@
    "smtp_enabledTooltip": "Use standard SMTP server for email delivery",
    "brevo_enabled": "Brevo API",
    "brevo_enabledTooltip": "Use Brevo transactional API (requires API key)",
-   "brevo_api_key": "Brevo API Key",
+"brevo_api_key": "Brevo API Key",
    "brevo_api_keyPlaceholder": "Enter your Brevo API key",
-   "brevo_api_keyTooltip": "Get from: Dashboard → SMTP & APIs → API → Brevo API"
-}
+   "brevo_api_keyTooltip": "Get from: Dashboard → SMTP & APIs → API → Brevo API",
+   "email_verification_required": "Email verification required",
+   "email_verification_requiredTooltip": "Require email verification before first login"
+ }
