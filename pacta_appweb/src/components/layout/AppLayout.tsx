@@ -8,7 +8,10 @@
  import { ThemeToggle } from '@/components/ThemeToggle';
  import { LanguageToggle } from '@/components/LanguageToggle';
  import CompanySelector from '@/components/CompanySelector';
- import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
+import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
+import UserDropdown from '@/components/header/UserDropdown';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
