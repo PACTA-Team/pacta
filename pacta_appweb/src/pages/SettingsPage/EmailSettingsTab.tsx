@@ -15,6 +15,7 @@ const EMAIL_SETTINGS = [
   "smtp_enabled",
   "brevo_enabled",
   "brevo_api_key",
+  "email_verification_required",
 ];
 
 export function EmailSettingsTab() {
@@ -141,6 +142,22 @@ export function EmailSettingsTab() {
             <Switch
               checked={settings.brevo_enabled === "true"}
               onCheckedChange={(checked) => handleToggle("brevo_enabled", checked)}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>{t("email_verification_required")}</Label>
+              <p className="text-xs text-muted-foreground">
+                {t("email_verification_requiredTooltip")}
+              </p>
+            </div>
+            <Switch
+              checked={settings.email_verification_required === "true"}
+              onCheckedChange={(checked) =>
+                handleToggle("email_verification_required", checked)
+              }
               disabled={saving}
             />
           </div>

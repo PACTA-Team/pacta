@@ -61,7 +61,9 @@
    "smtp_enabledTooltip": "Usar servidor SMTP estándar para envío de emails",
    "brevo_enabled": "API de Brevo",
    "brevo_enabledTooltip": "Usar API transaccional de Brevo (requiere clave API)",
-   "brevo_api_key": "Clave API de Brevo",
+"brevo_api_key": "Clave API de Brevo",
    "brevo_api_keyPlaceholder": "Ingrese su clave API de Brevo",
-   "brevo_api_keyTooltip": "Obtener en: Dashboard → SMTP & APIs → API"
-}
+   "brevo_api_keyTooltip": "Obtener en: Dashboard → SMTP & APIs → API",
+   "email_verification_required": "Verificación de correo requerida",
+   "email_verification_requiredTooltip": "Requerir verificación de correo antes del primer inicio de sesión"
+ }

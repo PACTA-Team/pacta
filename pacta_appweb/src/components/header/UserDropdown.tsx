@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,10 @@ import {
   Users,
   LogOut,
   ChevronDown,
+  Bell,
+  Sun,
+  Moon,
+  Globe,
 } from "lucide-react";
 
 export default function UserDropdown() {
@@ -33,6 +37,19 @@ export default function UserDropdown() {
   const handleLogout = async () => {
     await logout();
     navigate("/login", { replace: true });
+  };
+
+  const [currentTheme, setCurrentTheme] = useState<"light" | "dark">("light");
+
+  const toggleTheme = () => {
+    const newTheme = currentTheme === "dark" ? "light" : "dark";
+    setCurrentTheme(newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  };
+
+  const toggleLanguage = () => {
+    // Language toggle functionality - could be expanded
+    console.log("Language toggle clicked");
   };
 
   const userInitials = useMemo(() => {
@@ -116,6 +133,27 @@ export default function UserDropdown() {
         >
           <Users className="h-4 w-4 mr-2" aria-hidden="true" />
           <span>{t("users") || "Users"}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem className="cursor-pointer">
+          <Bell className="h-4 w-4 mr-2" aria-hidden="true" />
+          <span>{t("notifications")}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+          {currentTheme === "dark" ? (
+            <Sun className="h-4 w-4 mr-2" aria-hidden="true" />
+          ) : (
+            <Moon className="h-4 w-4 mr-2" aria-hidden="true" />
+          )}
+          <span>{currentTheme === "dark" ? t("lightMode") : t("darkMode")}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={toggleLanguage} className="cursor-pointer">
+          <Globe className="h-4 w-4 mr-2" aria-hidden="true" />
+          <span>{t("changeLanguage")}</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
