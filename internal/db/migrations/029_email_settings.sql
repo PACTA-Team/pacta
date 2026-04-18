@@ -3,9 +3,10 @@
 -- Date: 2026-04-17
 
 INSERT INTO system_settings (key, value, category) VALUES
-('email_notifications_enabled', 'true', 'email'),
-('email_contract_expiry_enabled', 'true', 'email'),
-('smtp_enabled', 'true', 'email'),
+('email_notifications_enabled', 'false', 'email'),
+('email_contract_expiry_enabled', 'false', 'email'),
+('email_verification_required', 'false', 'email'),
+('smtp_enabled', 'false', 'email'),
 ('brevo_enabled', 'false', 'email'),
 ('brevo_api_key', '', 'email');
 
