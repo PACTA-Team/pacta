@@ -8,12 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Contract, ContractType, ContractStatus } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Contract, ContractType, ContractStatus, RenewalType, RENEWAL_TYPE_LABELS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { signersAPI } from '@/lib/signers-api';
 import { toast } from 'sonner';
+import { ChevronDown } from 'lucide-react';
 
 interface ContractFormProps {
   contract?: Contract;
@@ -41,7 +44,15 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
     type: contract?.type || 'service' as ContractType,
     status: contract?.status || 'pending' as ContractStatus,
     description: contract?.description || '',
+    object: (contract as any)?.object || contract?.object || '',
+    fulfillmentPlace: (contract as any)?.fulfillment_place || contract?.fulfillmentPlace || '',
+    disputeResolution: (contract as any)?.dispute_resolution || contract?.disputeResolution || '',
+    hasConfidentiality: (contract as any)?.has_confidentiality || contract?.hasConfidentiality || false,
+    guarantees: (contract as any)?.guarantees || contract?.guarantees || '',
+    renewalType: (contract as any)?.renewal_type || contract?.renewalType || '' as RenewalType,
   });
+
+  const [legalFieldsOpen, setLegalFieldsOpen] = useState(false);
 
   const isEditing = !!contract;
   const [ourRole, setOurRole] = useState<'client' | 'supplier'>(() => {
@@ -339,6 +350,84 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
               rows={4}
             />
           </div>
+
+          <Collapsible open={legalFieldsOpen} onOpenChange={setLegalFieldsOpen}>
+            <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <ChevronDown className={`h-4 w-4 transition-transform ${legalFieldsOpen ? 'rotate-180' : ''}`} />
+              {t('additionalClauses') || 'Cláusulas Adicionales'}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="object">{t('object') || 'Objeto del Contrato'}</Label>
+                  <Textarea
+                    id="object"
+                    value={formData.object}
+                    onChange={(e) => setFormData({ ...formData, object: e.target.value })}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">Art. 32, DL-304: el objeto debe describir claramente las prestaciones</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                  <Input
+                    id="fulfillmentPlace"
+                    value={formData.fulfillmentPlace}
+                    onChange={(e) => setFormData({ ...formData, fulfillmentPlace: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
+                  <Input
+                    id="disputeResolution"
+                    value={formData.disputeResolution}
+                    onChange={(e) => setFormData({ ...formData, disputeResolution: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="guarantees">{t('guarantees') || 'Garantías'}</Label>
+                  <Textarea
+                    id="guarantees"
+                    value={formData.guarantees}
+                    onChange={(e) => setFormData({ ...formData, guarantees: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
+                  <Select
+                    value={formData.renewalType}
+                    onValueChange={(value) => setFormData({ ...formData, renewalType: value as RenewalType })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="automatica">{RENEWAL_TYPE_LABELS.automatica}</SelectItem>
+                      <SelectItem value="manual">{RENEWAL_TYPE_LABELS.manual}</SelectItem>
+                      <SelectItem value="cumplimiento">{RENEWAL_TYPE_LABELS.cumplimiento}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasConfidentiality"
+                  checked={formData.hasConfidentiality}
+                  onCheckedChange={(checked) => setFormData({ ...formData, hasConfidentiality: !!checked })}
+                />
+                <Label htmlFor="hasConfidentiality" className="cursor-pointer">
+                  {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-6">Art. 5, DL-304: obligación de no revelar información</p>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>
