@@ -271,10 +271,10 @@ export default function SupplementsPage() {
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="modificacion">Modificación</SelectItem>
-                <SelectItem value="prorroga">Prórroga</SelectItem>
-                <SelectItem value="concrecion">Concreción</SelectItem>
+                <SelectItem value="all">{t('status') === 'Estado' ? 'Todos los tipos' : 'All Types'}</SelectItem>
+                <SelectItem value="modificacion">{t('modificationTypes.modificacion')}</SelectItem>
+                <SelectItem value="prorroga">{t('modificationTypes.prorroga')}</SelectItem>
+                <SelectItem value="concrecion">{t('modificationTypes.concrecion')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={supplementPartyFilter} onValueChange={setSupplementPartyFilter}>
@@ -282,9 +282,9 @@ export default function SupplementsPage() {
                 <SelectValue placeholder="Party" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Parties</SelectItem>
-                <SelectItem value="client">Client Supplements</SelectItem>
-                <SelectItem value="supplier">Supplier Supplements</SelectItem>
+                <SelectItem value="all">{t('partyFilter.all')}</SelectItem>
+                <SelectItem value="client">{t('partyFilter.client')}</SelectItem>
+                <SelectItem value="supplier">{t('partyFilter.supplier')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
