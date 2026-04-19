@@ -154,28 +154,28 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/settings" element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="admin">
             <Suspense fallback={<PageLoadingFallback />}>
               <AppLayout><SettingsPage /></AppLayout>
             </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/settings/email" element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="admin">
             <Suspense fallback={<PageLoadingFallback />}>
               <AppLayout><SettingsPage /></AppLayout>
             </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/settings/company" element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="admin">
             <Suspense fallback={<PageLoadingFallback />}>
               <AppLayout><SettingsPage /></AppLayout>
             </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/settings/registration" element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="admin">
             <Suspense fallback={<PageLoadingFallback />}>
               <AppLayout><SettingsPage /></AppLayout>
             </Suspense>
