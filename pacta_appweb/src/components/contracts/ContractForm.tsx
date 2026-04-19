@@ -18,6 +18,7 @@ import { signersAPI } from '@/lib/signers-api';
 import { documentsAPI, APIDocument } from '@/lib/documents-api';
 import { toast } from 'sonner';
 import { ChevronDown, FileText, Upload, X, Download } from 'lucide-react';
+import { FieldTooltip } from '@/components/ui/field-tooltip';
 
 interface ContractFormProps {
   contract?: Contract;
@@ -404,18 +405,21 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             <CollapsibleContent className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="object">{t('object') || 'Objeto del Contrato'}</Label>
+                  <FieldTooltip content={t('objectTooltip')}>
+                    <Label htmlFor="object">{t('object') || 'Objeto del Contrato'}</Label>
+                  </FieldTooltip>
                   <Textarea
                     id="object"
                     value={formData.object}
                     onChange={(e) => setFormData({ ...formData, object: e.target.value })}
                     rows={3}
                   />
-                  <p className="text-xs text-muted-foreground">Art. 32, DL-304: el objeto debe describir claramente las prestaciones</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                  <FieldTooltip content={t('fulfillmentPlaceTooltip')}>
+                    <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                  </FieldTooltip>
                   <Input
                     id="fulfillmentPlace"
                     value={formData.fulfillmentPlace}
@@ -424,7 +428,9 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
+                  <FieldTooltip content={t('disputeResolutionTooltip')}>
+                    <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
+                  </FieldTooltip>
                   <Input
                     id="disputeResolution"
                     value={formData.disputeResolution}
@@ -433,7 +439,9 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="guarantees">{t('guarantees') || 'Garantías'}</Label>
+                  <FieldTooltip content={t('guaranteesTooltip')}>
+                    <Label htmlFor="guarantees">{t('guarantees') || 'Garantías'}</Label>
+                  </FieldTooltip>
                   <Textarea
                     id="guarantees"
                     value={formData.guarantees}
@@ -443,7 +451,9 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
+                  <FieldTooltip content={t('renewalTypeTooltip')}>
+                    <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
+                  </FieldTooltip>
                   <Select
                     value={formData.renewalType}
                     onValueChange={(value) => setFormData({ ...formData, renewalType: value as RenewalType })}
@@ -466,11 +476,12 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                   checked={formData.hasConfidentiality}
                   onCheckedChange={(checked) => setFormData({ ...formData, hasConfidentiality: !!checked })}
                 />
-                <Label htmlFor="hasConfidentiality" className="cursor-pointer">
-                  {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
-                </Label>
+                <FieldTooltip content={t('confidentialityClauseTooltip')}>
+                  <Label htmlFor="hasConfidentiality" className="cursor-pointer">
+                    {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
+                  </Label>
+                </FieldTooltip>
               </div>
-              <p className="text-xs text-muted-foreground ml-6">Art. 5, DL-304: obligación de no revelar información</p>
             </CollapsibleContent>
           </Collapsible>
 

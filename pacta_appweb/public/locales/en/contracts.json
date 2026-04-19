@@ -69,5 +69,18 @@
     "all": "All Parties",
     "client": "Client Contracts",
     "supplier": "Supplier Contracts"
-  }
+  },
+  "additionalClauses": "Additional Clauses",
+  "object": "Contract Object",
+  "objectTooltip": "Art. 32, DL-304: the object must clearly describe the mutually agreed upon prestations by the parties",
+  "fulfillmentPlace": "Place of Performance",
+  "fulfillmentPlaceTooltip": "Address or territory where contractual obligations will be executed",
+  "disputeResolution": "Dispute Resolution",
+  "disputeResolutionTooltip": "Mechanism to resolve disputes (arbitration, mediation, courts)",
+  "guarantees": "Guarantees",
+  "guaranteesTooltip": "Guarantees offered by either party to secure performance",
+  "renewalType": "Renewal Type",
+  "renewalTypeTooltip": "Automatic or manual renewal conditions",
+  "confidentialityClause": "Confidentiality Clause",
+  "confidentialityClauseTooltip": "Art. 5, DL-304: obligation not to disclose information"
 }

@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { TooltipProvider } from './components/ui/tooltip';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -175,6 +176,7 @@ function App() {
         {/* 404 Catch-all route - must be last */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </TooltipProvider>
       </CompanyProvider>
     </AuthProvider>
   );
