@@ -52,132 +52,133 @@ function App() {
 
   return (
     <AuthProvider>
-      <CompanyProvider>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/setup" element={<SetupPage />} />
-        <Route path="/403" element={<ForbiddenPage />} />
-        <Route path="/" element={<HomePage />} />
-        <Route path="/download" element={<DownloadPage />} />
-        <Route path="/changelog" element={<ChangelogPage />} />
+      <TooltipProvider>
+        <CompanyProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/setup" element={<SetupPage />} />
+            <Route path="/403" element={<ForbiddenPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/download" element={<DownloadPage />} />
+            <Route path="/changelog" element={<ChangelogPage />} />
 
-        {/* Protected routes with authentication guards */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><DashboardPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/contracts" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ContractsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/contracts/:id" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ContractDetailsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/clients" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ClientsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/suppliers" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SuppliersPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/authorized-signers" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><AuthorizedSignersPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/documents" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><DocumentsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/notifications" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><NotificationsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/pending-approval" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><PendingApprovalPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/reports" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ReportsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/supplements" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SupplementsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/users" element={
-          <ProtectedRoute requiredRole="admin">
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><UsersPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/companies" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><CompaniesPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute requiredRole="admin">
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ProfilePage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        
-        {/* Email verification routes */}
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/registration-expired" element={<RegistrationExpiredPage />} />
+            {/* Protected routes with authentication guards */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><DashboardPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/contracts" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><ContractsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/contracts/:id" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><ContractDetailsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/clients" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><ClientsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/suppliers" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><SuppliersPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/authorized-signers" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><AuthorizedSignersPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/documents" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><DocumentsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/notifications" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><NotificationsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/pending-approval" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><PendingApprovalPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><ReportsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/supplements" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><SupplementsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute requiredRole="admin">
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><UsersPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/companies" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><CompaniesPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute requiredRole="admin">
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><SettingsPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><ProfilePage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
+            {/* Email verification routes */}
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/registration-expired" element={<RegistrationExpiredPage />} />
 
-        {/* 404 Catch-all route - must be last */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+            {/* 404 Catch-all route - must be last */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </CompanyProvider>
       </TooltipProvider>
-      </CompanyProvider>
     </AuthProvider>
   );
 }
