@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Contract, ContractType, ContractStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { clientsAPI } from '@/lib/clients-api';
@@ -42,6 +43,18 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
     status: contract?.status || 'pending' as ContractStatus,
     description: contract?.description || '',
   });
+
+  const isEditing = !!contract;
+  const [ourRole, setOurRole] = useState<'client' | 'supplier'>(() => {
+    if (contract) {
+      return contract.clientId ? 'client' : 'supplier';
+    }
+    return 'client';
+  });
+
+  const counterpartType = ourRole === 'client' ? 'supplier' : 'client';
+  const counterpartLabel = ourRole === 'client' ? t('supplier') : t('client');
+  const ourLabel = ourRole === 'client' ? t('client') : t('supplier');
 
   useEffect(() => {
     const loadData = async () => {
@@ -164,11 +177,33 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
           </div>
 
-          
+          {!isEditing && (
+            <div className="space-y-3">
+              <Label>Esta empresa actúa como *</Label>
+              <RadioGroup
+                value={ourRole}
+                onValueChange={(value) => setOurRole(value as 'client' | 'supplier')}
+                className="flex gap-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="client" id="our-role-client" />
+                  <Label htmlFor="our-role-client" className="cursor-pointer">
+                    Cliente (recibimos el servicio/producto)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="supplier" id="our-role-supplier" />
+                  <Label htmlFor="our-role-supplier" className="cursor-pointer">
+                    Proveedor (brindamos el servicio/producto)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="clientId">Client *</Label>
+              <Label htmlFor="clientId">{ourLabel} *</Label>
               <Select value={formData.clientId} onValueChange={handleClientChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select client" />
@@ -184,7 +219,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clientSignerId">Client Authorized Signer *</Label>
+              <Label htmlFor="clientSignerId">{ourLabel} Authorized Signer *</Label>
               <Select 
                 value={formData.clientSignerId} 
                 onValueChange={(value) => setFormData({ ...formData, clientSignerId: value })}
@@ -206,7 +241,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="supplierId">Supplier *</Label>
+              <Label htmlFor="supplierId">{counterpartLabel} *</Label>
               <Select value={formData.supplierId} onValueChange={handleSupplierChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select supplier" />
@@ -222,7 +257,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="supplierSignerId">Supplier Authorized Signer *</Label>
+              <Label htmlFor="supplierSignerId">{counterpartLabel} Authorized Signer *</Label>
               <Select 
                 value={formData.supplierSignerId} 
                 onValueChange={(value) => setFormData({ ...formData, supplierSignerId: value })}
