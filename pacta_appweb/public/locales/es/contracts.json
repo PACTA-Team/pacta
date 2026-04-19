@@ -46,5 +46,28 @@
   "lease": "Arriendo",
   "employment": "Empleo",
   "nda": "NDA",
-  "other": "Otro"
+  "other": "Otro",
+  "contractTypes": {
+    "compraventa": "Compraventa",
+    "suministro": "Suministro",
+    "permuta": "Permuta",
+    "donacion": "Donación",
+    "deposito": "Depósito",
+    "prestacion_servicios": "Prest. Servicios",
+    "agencia": "Agencia",
+    "comision": "Comisión",
+    "consignacion": "Consignación",
+    "comodato": "Comodato",
+    "arrendamiento": "Arrendamiento",
+    "leasing": "Leasing",
+    "cooperacion": "Cooperación",
+    "administracion": "Administración",
+    "transporte": "Transporte",
+    "otro": "Otro"
+  },
+  "partyFilter": {
+    "all": "Todas las partes",
+    "client": "Contratos como cliente",
+    "supplier": "Contratos como proveedor"
+  }
 }
