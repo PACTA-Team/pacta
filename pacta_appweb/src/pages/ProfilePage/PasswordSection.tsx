@@ -34,7 +34,7 @@ export function PasswordSection() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err) {
+    } catch {
       toast.error(t("passwordError"));
     }
     setSaving(false);

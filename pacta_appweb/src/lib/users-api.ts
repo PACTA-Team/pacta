@@ -128,7 +128,7 @@ export const certificateAPI = {
     const formData = new FormData();
     formData.append('type', certType);
     formData.append('file', file);
-    return fetchFormData<Profile>('/api/user/certificate', formData, signal);
+    return fetchFormData<{ status: string }>('/api/user/certificate', formData, signal);
   },
 
   delete: async (certType: CertType, signal?: AbortSignal) => {
