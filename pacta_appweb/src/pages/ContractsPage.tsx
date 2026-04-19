@@ -257,9 +257,7 @@ export default function ContractsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Internal ID</TableHead>
                     <TableHead>{t('contractNumber', 'Contract Number')}</TableHead>
-                    <TableHead className="hidden md:table-cell">Title</TableHead>
                     <TableHead className="hidden lg:table-cell">{t('client')}/{t('supplier')}</TableHead>
                     <TableHead>{t('startDate')}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t('endDate')}</TableHead>
@@ -271,16 +269,14 @@ export default function ContractsPage() {
                 <TableBody>
                   {filteredContracts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         {t('noContracts')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredContracts.map((contract) => (
                       <TableRow key={contract.id}>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{contract.internal_id || '—'}</TableCell>
                         <TableCell className="font-medium">{contract.contract_number}</TableCell>
-                        <TableCell className="hidden md:table-cell">{contract.title}</TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <div className="text-sm">
                             <div>{t('client')}: {getClientName(contract.client_id)}</div>
