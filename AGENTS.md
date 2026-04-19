@@ -1,5 +1,11 @@
 # AGENTS.md - Pacta Project Rules
 
+## Rutas de Archivos
+
+- **Ruta base del proyecto**: `/home/mowgli/pacta/`
+- Usar rutas relativas desde la raíz del proyecto al hacer edits
+- NO usar ruta absoluta completa en oldString/newString
+
 ## Critical: Local-Write, CI-Build
 
 - **DO**: Write code, create features, fix bugs

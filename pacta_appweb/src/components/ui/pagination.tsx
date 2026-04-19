@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChevronLeft, ChevronRight, More } from "lucide-react"
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 import { cn } from "@/lib/utils"
@@ -97,7 +97,7 @@ export function Pagination({
               className="flex h-8 w-8 items-center justify-center"
               aria-hidden="true"
             >
-              <More className="h-4 w-4" />
+              <MoreHorizontal className="h-4 w-4" />
             </span>
           )
         }
