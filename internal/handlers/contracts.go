@@ -3,14 +3,11 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	_ "modernc.org/sqlite"
 )
 
 func (h *Handler) HandleContracts(w http.ResponseWriter, r *http.Request) {
@@ -195,8 +192,7 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace,
 		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, companyID)
 	if err != nil {
-		var dupErr sqlite.Error
-		if errors.As(err, &dupErr) && dupErr.Code == 19 {
+		if strings.Contains(err.Error(), "UNIQUE constraint") || strings.Contains(err.Error(), "duplicate") {
 			h.Error(w, http.StatusConflict, "contract number '"+req.ContractNumber+"' already exists")
 			return
 		}
