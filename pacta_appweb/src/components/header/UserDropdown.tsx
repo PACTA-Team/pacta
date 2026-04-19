@@ -23,6 +23,7 @@ import {
   Sun,
   Moon,
   Globe,
+  User,
 } from "lucide-react";
 
 export default function UserDropdown() {
@@ -118,6 +119,14 @@ export default function UserDropdown() {
         </DropdownMenuLabel>
 
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onClick={() => handleNavigation("/profile")}
+          className="cursor-pointer"
+        >
+          <User className="h-4 w-4 mr-2" aria-hidden="true" />
+          <span>{t("profile") || "Profile"}</span>
+        </DropdownMenuItem>
 
         <DropdownMenuItem
           onClick={() => handleNavigation("/settings")}
