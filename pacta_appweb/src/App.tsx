@@ -160,70 +160,7 @@ function App() {
             </Suspense>
           </ProtectedRoute>
         } />
-        <Route path="/settings/email" element={
-          <ProtectedRoute requiredRole="admin">
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings/company" element={
-          <ProtectedRoute requiredRole="admin">
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings/registration" element={
-          <ProtectedRoute requiredRole="admin">
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings/general" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings/notifications" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings/email-settings" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><SettingsPage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
         <Route path="/profile" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ProfilePage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/profile/profile" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ProfilePage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/profile/password" element={
-          <ProtectedRoute>
-            <Suspense fallback={<PageLoadingFallback />}>
-              <AppLayout><ProfilePage /></AppLayout>
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/profile/certificates" element={
           <ProtectedRoute>
             <Suspense fallback={<PageLoadingFallback />}>
               <AppLayout><ProfilePage /></AppLayout>
