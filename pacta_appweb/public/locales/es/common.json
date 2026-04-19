@@ -39,6 +39,19 @@
   "lightMode": "Modo claro",
   "darkMode": "Modo oscuro",
   "changeLanguage": "Cambiar idioma",
+  "pageTitles": {
+    "dashboard": "Panel de control",
+    "contracts": "Gestión de contratos",
+    "clients": "Clientes",
+    "suppliers": "Proveedores",
+    "authorizedSigners": "Firmantes autorizados",
+    "documents": "Repositorio de documentos",
+    "notifications": "Centro de notificaciones",
+    "users": "Gestión de usuarios y roles",
+    "reports": "Informes",
+    "supplements": "Gestión de suplementos",
+    "contractDetails": "Detalles del contrato"
+  },
   "footer": {
      "rights": "Todos los derechos reservados."
    }

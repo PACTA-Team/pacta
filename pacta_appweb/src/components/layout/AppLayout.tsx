@@ -16,17 +16,18 @@ import { Button } from '@/components/ui/button';
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/contracts': 'Contracts Management',
-  '/clients': 'Clients',
-  '/suppliers': 'Suppliers',
-  '/authorized-signers': 'Authorized Signers',
-  '/documents': 'Document Repository',
-  '/notifications': 'Notifications Center',
-  '/users': 'Users & Roles Management',
-  '/reports': 'Reports',
-  '/supplements': 'Supplements Management',
+// Route to translation key mapping
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  '/dashboard': 'pageTitles.dashboard',
+  '/contracts': 'pageTitles.contracts',
+  '/clients': 'pageTitles.clients',
+  '/suppliers': 'pageTitles.suppliers',
+  '/authorized-signers': 'pageTitles.authorizedSigners',
+  '/documents': 'pageTitles.documents',
+  '/notifications': 'pageTitles.notifications',
+  '/users': 'pageTitles.users',
+  '/reports': 'pageTitles.reports',
+  '/supplements': 'pageTitles.supplements',
 };
 
 const getInitialDevice = (): 'desktop' | 'tablet' | 'mobile' => {
@@ -70,10 +71,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Update document title on route change
   useEffect(() => {
-    const title = pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || 'PACTA');
+    const titleKey = pathname.startsWith('/contracts/') ? 'pageTitles.contractDetails' : (PAGE_TITLE_KEYS[pathname]);
+    const title = titleKey ? t(titleKey) : 'PACTA';
     document.title = `${title} - PACTA`;
     mainRef.current?.focus();
-  }, [pathname]);
+  }, [pathname, t]);
 
     // Redirect if not authenticated (backup guard)
     useEffect(() => {
@@ -131,10 +133,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
              <CompanySelector />
            </div>
 
-           {/* Título de página - ocupa espacio restante */}
-           <h1 className="flex-1 text-base md:text-lg lg:text-xl font-semibold tracking-tight truncate">
-             {pathname.startsWith('/contracts/') ? 'Contract Details' : (PAGE_TITLES[pathname] || '')}
-           </h1>
+{/* Título de página - ocupa espacio restante */}
+            <h1 className="flex-1 text-base md:text-lg lg:text-xl font-semibold tracking-tight truncate">
+              {pathname.startsWith('/contracts/') ? t('pageTitles.contractDetails') : (PAGE_TITLE_KEYS[pathname] ? t(PAGE_TITLE_KEYS[pathname]) : '')}
+            </h1>
 
            {/* Acciones Desktop/Tablet (≥768px) - Notifications, Theme, Language */}
            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
