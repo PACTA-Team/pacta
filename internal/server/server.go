@@ -59,15 +59,14 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// Authenticated API routes
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
+		r.Use(h.CompanyMiddleware)
 
-		// User profile routes (no company middleware - user may not have company yet)
+		// User profile routes
 		r.Get("/api/user/profile", h.HandleUserProfile)
 		r.Patch("/api/user/profile", h.HandleUserProfile)
 		r.Post("/api/user/change-password", h.HandleChangePassword)
 		r.Post("/api/user/certificate", h.HandleCertificate)
 		r.Delete("/api/user/certificate/{type}", h.HandleCertificate)
-
-		r.Use(h.CompanyMiddleware)
 
 		// Auth routes (no auth required)
 		r.Get("/api/auth/me", h.HandleMe)
