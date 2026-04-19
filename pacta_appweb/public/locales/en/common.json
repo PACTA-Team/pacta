@@ -39,6 +39,19 @@
   "lightMode": "Light mode",
   "darkMode": "Dark mode",
   "changeLanguage": "Change language",
+  "pageTitles": {
+    "dashboard": "Dashboard",
+    "contracts": "Contracts Management",
+    "clients": "Clients",
+    "suppliers": "Suppliers",
+    "authorizedSigners": "Authorized Signers",
+    "documents": "Document Repository",
+    "notifications": "Notifications Center",
+    "users": "Users & Roles Management",
+    "reports": "Reports",
+    "supplements": "Supplements Management",
+    "contractDetails": "Contract Details"
+  },
   "footer": {
     "rights": "All rights reserved."
   }
