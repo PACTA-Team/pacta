@@ -3,7 +3,34 @@ export type UserRole = 'admin' | 'manager' | 'editor' | 'viewer';
 
 export type ContractStatus = 'active' | 'expired' | 'pending' | 'cancelled';
 
-export type ContractType = 'service' | 'purchase' | 'lease' | 'partnership' | 'employment' | 'other';
+export type ContractType = 
+  | 'compraventa' 
+  | 'suministro' 
+  | 'prestacion_servicios' 
+  | 'agencia' 
+  | 'comision' 
+  | 'consignacion' 
+  | 'arrendamiento' 
+  | 'leasing' 
+  | 'transporte' 
+  | 'construccion' 
+  | 'cooperacion' 
+  | 'otro';
+
+export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  compraventa: 'Compraventa',
+  suministro: 'Suministro',
+  prestacion_servicios: 'Prestación de Servicios',
+  agencia: 'Agencia',
+  comision: 'Comisión',
+  consignacion: 'Consignación',
+  arrendamiento: 'Arrendamiento',
+  leasing: 'Leasing',
+  transporte: 'Transporte',
+  construccion: 'Construcción',
+  cooperacion: 'Cooperación',
+  otro: 'Otro',
+};
 
 export type SupplementStatus = 'draft' | 'approved' | 'active';
 
