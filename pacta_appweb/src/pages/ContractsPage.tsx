@@ -112,11 +112,20 @@ export default function ContractsPage() {
         await contractsAPI.update(editingContract.id, {
           client_id: parseInt(data.clientId),
           supplier_id: parseInt(data.supplierId),
+          client_signer_id: data.clientSignerId ? parseInt(data.clientSignerId) : undefined,
+          supplier_signer_id: data.supplierSignerId ? parseInt(data.supplierSignerId) : undefined,
           start_date: data.startDate,
           end_date: data.endDate,
           amount: data.amount,
           type: data.type,
           status: data.status,
+          description: data.description,
+          object: data.object,
+          fulfillment_place: data.fulfillmentPlace,
+          dispute_resolution: data.disputeResolution,
+          has_confidentiality: data.hasConfidentiality,
+          guarantees: data.guarantees,
+          renewal_type: data.renewalType,
         });
         toast.success(t('updateSuccess'));
       } else {
@@ -124,11 +133,20 @@ export default function ContractsPage() {
           contract_number: data.contractNumber,
           client_id: parseInt(data.clientId),
           supplier_id: parseInt(data.supplierId),
+          client_signer_id: data.clientSignerId ? parseInt(data.clientSignerId) : undefined,
+          supplier_signer_id: data.supplierSignerId ? parseInt(data.supplierSignerId) : undefined,
           start_date: data.startDate,
           end_date: data.endDate,
           amount: data.amount,
           type: data.type,
           status: data.status,
+          description: data.description,
+          object: data.object,
+          fulfillment_place: data.fulfillmentPlace,
+          dispute_resolution: data.disputeResolution,
+          has_confidentiality: data.hasConfidentiality,
+          guarantees: data.guarantees,
+          renewal_type: data.renewalType,
         });
         toast.success(t('createSuccess'));
       }

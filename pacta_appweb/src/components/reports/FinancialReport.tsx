@@ -15,24 +15,44 @@ interface FinancialReportProps {
 }
 
 const TYPE_COLORS: Record<ContractType, string> = {
-  service: '#3b82f6',
-  purchase: '#22c55e',
-  lease: '#f59e0b',
-  partnership: '#8b5cf6',
-  employment: '#ec4899',
-  other: '#6b7280',
+  compraventa: '#3b82f6',
+  suministro: '#22c55e',
+  permuta: '#f59e0b',
+  donacion: '#8b5cf6',
+  deposito: '#ec4899',
+  prestacion_servicios: '#06b6d4',
+  agencia: '#84cc16',
+  comision: '#f97316',
+  consignacion: '#14b8a6',
+  comodato: '#a855f7',
+  arrendamiento: '#eab308',
+  leasing: '#ef4444',
+  cooperacion: '#0ea5e9',
+  administracion: '#10b981',
+  transporte: '#6366f1',
+  otro: '#6b7280',
 };
 
 export default function FinancialReport({ contracts, title = 'Financial Report' }: FinancialReportProps) {
   const financialData = useMemo(() => {
     // By Type
     const byType: Record<ContractType, number> = {
-      service: 0,
-      purchase: 0,
-      lease: 0,
-      partnership: 0,
-      employment: 0,
-      other: 0,
+      compraventa: 0,
+      suministro: 0,
+      permuta: 0,
+      donacion: 0,
+      deposito: 0,
+      prestacion_servicios: 0,
+      agencia: 0,
+      comision: 0,
+      consignacion: 0,
+      comodato: 0,
+      arrendamiento: 0,
+      leasing: 0,
+      cooperacion: 0,
+      administracion: 0,
+      transporte: 0,
+      otro: 0,
     };
 
     contracts.forEach(c => {

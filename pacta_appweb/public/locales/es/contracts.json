@@ -69,5 +69,18 @@
     "all": "Todas las partes",
     "client": "Contratos como cliente",
     "supplier": "Contratos como proveedor"
-  }
+  },
+  "additionalClauses": "Cláusulas Adicionales",
+  "object": "Objeto del Contrato",
+  "objectTooltip": "Art. 32, DL-304: el objeto debe describir claramente las prestaciones mutually agreed upon by the parties",
+  "fulfillmentPlace": "Lugar de Cumplimiento",
+  "fulfillmentPlaceTooltip": "Dirección o territorio donde se ejecutarán las obligaciones contractuales",
+  "disputeResolution": "Resolución de Controversias",
+  "disputeResolutionTooltip": "Mecanismo para resolver disputas (arbitraje, mediación, tribunales)",
+  "guarantees": "Garantías",
+  "guaranteesTooltip": "Garantías offered by either party to secure performance",
+  "renewalType": "Tipo de Renovación",
+  "renewalTypeTooltip": "Condiciones de renovación automática o manual",
+  "confidentialityClause": "Cláusula de Confidencialidad",
+  "confidentialityClauseTooltip": "Art. 5, DL-304: obligación de no revelar información"
 }
