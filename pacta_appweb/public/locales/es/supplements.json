@@ -16,5 +16,15 @@
   "description": "Descripción",
   "modificationType": "Tipo de modificación",
   "modificationTypePlaceholder": "Seleccione el tipo",
-  "modificationTypeTooltip": "Art. 66.2 DL-304: el suplemento puede modificar cláusulas, prorrogar la vigencia o concrete contenido pendiente del contrato principal."
+  "modificationTypeTooltip": "Art. 66.2 DL-304: el suplemento puede modificar cláusulas, prorrogar la vigencia o concrete contenido pendiente del contrato principal.",
+  "modificationTypes": {
+    "modificacion": "Modificación",
+    "prorroga": "Prórroga",
+    "concrecion": "Concreción"
+  },
+  "partyFilter": {
+    "all": "Todas las partes",
+    "client": "Suplementos como cliente",
+    "supplier": "Suplementos como proveedor"
+  }
 }
