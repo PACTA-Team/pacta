@@ -16,5 +16,15 @@
   "description": "Description",
   "modificationType": "Modification type",
   "modificationTypePlaceholder": "Select type",
-  "modificationTypeTooltip": "Art. 66.2 DL-304: supplement may modify clauses, extend validity, or specify pending content from the main contract."
+  "modificationTypeTooltip": "Art. 66.2 DL-304: supplement may modify clauses, extend validity, or specify pending content from the main contract.",
+  "modificationTypes": {
+    "modificacion": "Modification",
+    "prorroga": "Extension",
+    "concrecion": "Concretion"
+  },
+  "partyFilter": {
+    "all": "All Parties",
+    "client": "Client Supplements",
+    "supplier": "Supplier Supplements"
+  }
 }
