@@ -186,6 +186,35 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | Setup Mode Auto-Advance | Complete (v0.22.0 -- click mode card to auto-advance, tactile card feedback, focus-visible accessibility, "Cambiar a..." toggle button) |
 | Header User Dropdown | Complete (v0.40.0 -- UserDropdown in header, responsive design, mobile drawer CompanySelector, device detection fix, mobile session controls) |
+| User Profile API | Complete (v0.41.0 -- GET/PATCH /api/user/profile, POST /api/user/change-password, audit logging) |
+| User Certificates API | Complete (v0.41.0 -- POST/DELETE /api/user/certificate for P12 and public certs, audit logging) |
+| Profile Page | Complete (v0.41.0 -- ProfilePage with sub-routes (/profile/account, /profile/security, /profile/certificates), profile i18n) |
+
+---
+
+## User Profile & Certificates (v0.41.0)
+
+### What Changed
+User profile management received comprehensive upgrades with dedicated pages and certificate support.
+
+### New Features Added
+- **Profile API** — New backend endpoints for profile management:
+  - GET /api/user/profile — Get current user profile
+  - PATCH /api/user/profile — Update name and email
+  - POST /api/user/change-password — Change password with current password validation
+- **User Certificates API** — New backend endpoints for digital certificate management:
+  - POST /api/user/certificate — Upload P12 or public certificate
+  - DELETE /api/user/certificate/{type} — Delete certificate
+- **Profile Page** — New dedicated page at /profile with sub-routes:
+  - /profile/account — Account info display and edit
+  - /profile/security — Password change form
+  - /profile/certificates — Certificate upload and management
+- **Profile i18n** — Full Spanish/English translations
+
+### Technical Additions
+- **Files Modified:** 4 backend, 8 frontend
+- **Files Created:** 2 (migration, design doc)
+- **Lines Added:** ~300
 
 ---
 
