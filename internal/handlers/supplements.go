@@ -86,6 +86,17 @@ func (h *Handler) generateSupplementInternalID(companyID int) (string, error) {
 	return fmt.Sprintf("SPL-%d-%04d", year, next), nil
 }
 
+// statusToUse returns the new status if provided, otherwise preserves the current status
+func statusToUse(newStatus, currentStatus *string) string {
+	if newStatus != nil && *newStatus != "" {
+		return *newStatus
+	}
+	if currentStatus != nil {
+		return *currentStatus
+	}
+	return "draft"
+}
+
 type createSupplementRequest struct {
 	ContractID         int     `json:"contract_id"`
 	SupplementNumber   string  `json:"supplement_number"`
@@ -95,6 +106,7 @@ type createSupplementRequest struct {
 	ClientSignerID     *int    `json:"client_signer_id"`
 	SupplierSignerID   *int    `json:"supplier_signer_id"`
 	ModificationType   *string `json:"modification_type"`
+	Status            *string `json:"status"`
 }
 
 func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
@@ -258,7 +270,8 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 			updated_at=CURRENT_TIMESTAMP
 		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.ContractID, req.SupplementNumber, req.Description,
-		req.EffectiveDate, req.Modifications, req.ModificationType, "draft",
+		req.EffectiveDate, req.Modifications, req.ModificationType,
+		statusToUse(req.Status, prevStatus),
 		req.ClientSignerID, req.SupplierSignerID, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplement")
