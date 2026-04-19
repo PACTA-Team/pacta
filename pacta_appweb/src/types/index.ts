@@ -3,32 +3,40 @@ export type UserRole = 'admin' | 'manager' | 'editor' | 'viewer';
 
 export type ContractStatus = 'active' | 'expired' | 'pending' | 'cancelled';
 
-export type ContractType = 
-  | 'compraventa' 
-  | 'suministro' 
-  | 'prestacion_servicios' 
-  | 'agencia' 
-  | 'comision' 
-  | 'consignacion' 
-  | 'arrendamiento' 
-  | 'leasing' 
-  | 'transporte' 
-  | 'construccion' 
-  | 'cooperacion' 
+export type ContractType =
+  | 'compraventa'
+  | 'suministro'
+  | 'permuta'
+  | 'donacion'
+  | 'deposito'
+  | 'prestacion_servicios'
+  | 'agencia'
+  | 'comision'
+  | 'consignacion'
+  | 'comodato'
+  | 'arrendamiento'
+  | 'leasing'
+  | 'cooperacion'
+  | 'administracion'
+  | 'transporte'
   | 'otro';
 
 export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
   compraventa: 'Compraventa',
   suministro: 'Suministro',
+  permuta: 'Permuta',
+  donacion: 'Donación',
+  deposito: 'Depósito',
   prestacion_servicios: 'Prestación de Servicios',
   agencia: 'Agencia',
   comision: 'Comisión',
   consignacion: 'Consignación',
+  comodato: 'Comodato',
   arrendamiento: 'Arrendamiento',
   leasing: 'Leasing',
-  transporte: 'Transporte',
-  construccion: 'Construcción',
   cooperacion: 'Cooperación',
+  administracion: 'Administración',
+  transporte: 'Transporte',
   otro: 'Otro',
 };
 
@@ -41,6 +49,7 @@ export interface User {
   password: string;
   role: UserRole;
   status: 'active' | 'inactive';
+  company_id?: string;
   lastAccess: string;
   createdAt: string;
 }

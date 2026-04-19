@@ -35,11 +35,12 @@ export default function ContractsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [partyFilter, setPartyFilter] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('contracts');
   const { t: tCommon } = useTranslation('common');
@@ -53,7 +54,7 @@ export default function ContractsPage() {
 
   useEffect(() => {
     filterContracts();
-  }, [contracts, searchTerm, statusFilter, typeFilter]);
+  }, [contracts, searchTerm, statusFilter, typeFilter, partyFilter]);
 
   const loadData = useCallback(async () => {
     try {
@@ -91,6 +92,15 @@ export default function ContractsPage() {
 
     if (typeFilter !== 'all') {
       filtered = filtered.filter(c => c.type === typeFilter);
+    }
+
+    if (partyFilter !== 'all' && user?.company_id) {
+      const companyId = user.company_id;
+      if (partyFilter === 'client') {
+        filtered = filtered.filter(c => String(c.client_id) === companyId);
+      } else if (partyFilter === 'supplier') {
+        filtered = filtered.filter(c => String(c.supplier_id) === companyId);
+      }
     }
 
     setFilteredContracts(filtered);
@@ -224,17 +234,37 @@ export default function ContractsPage() {
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder={t('type')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="service">{t('service')}</SelectItem>
-                  <SelectItem value="purchase">{t('purchase')}</SelectItem>
-                  <SelectItem value="lease">{t('lease')}</SelectItem>
-                  <SelectItem value="employment">{t('employment')}</SelectItem>
-                  <SelectItem value="nda">{t('nda')}</SelectItem>
-                  <SelectItem value="other">{t('other')}</SelectItem>
+                  <SelectItem value="compraventa">Compraventa</SelectItem>
+                  <SelectItem value="suministro">Suministro</SelectItem>
+                  <SelectItem value="permuta">Permuta</SelectItem>
+                  <SelectItem value="donacion">Donación</SelectItem>
+                  <SelectItem value="deposito">Depósito</SelectItem>
+                  <SelectItem value="prestacion_servicios">Prest. Servicios</SelectItem>
+                  <SelectItem value="agencia">Agencia</SelectItem>
+                  <SelectItem value="comision">Comisión</SelectItem>
+                  <SelectItem value="consignacion">Consignación</SelectItem>
+                  <SelectItem value="comodato">Comodato</SelectItem>
+                  <SelectItem value="arrendamiento">Arrendamiento</SelectItem>
+                  <SelectItem value="leasing">Leasing</SelectItem>
+                  <SelectItem value="cooperacion">Cooperación</SelectItem>
+                  <SelectItem value="administracion">Administración</SelectItem>
+                  <SelectItem value="transporte">Transporte</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={partyFilter} onValueChange={setPartyFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Party" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Parties</SelectItem>
+                  <SelectItem value="client">Client Contracts</SelectItem>
+                  <SelectItem value="supplier">Supplier Contracts</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -22,6 +22,8 @@ type ContractSummary = {
   internal_id: string;
   contract_number: string;
   title: string;
+  client_id: number;
+  supplier_id: number;
 };
 
 export default function SupplementsPage() {
@@ -34,12 +36,14 @@ export default function SupplementsPage() {
   const [editingSupplement, setEditingSupplement] = useState<Supplement | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [contractFilter, setContractFilter] = useState<string>('all');
+  const [modificationTypeFilter, setModificationTypeFilter] = useState<string>('all');
+  const [supplementPartyFilter, setSupplementPartyFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -61,6 +65,25 @@ export default function SupplementsPage() {
       filtered = filtered.filter(s => s.contract_id === parseInt(contractFilter));
     }
 
+    if (modificationTypeFilter !== 'all') {
+      filtered = filtered.filter(s => s.modification_type === modificationTypeFilter);
+    }
+
+    if (supplementPartyFilter !== 'all' && user?.company_id) {
+      const companyId = user.company_id;
+      if (supplementPartyFilter === 'client') {
+        filtered = filtered.filter(s => {
+          const contract = contracts.find(c => c.id === s.contract_id);
+          return String(contract?.client_id) === companyId;
+        });
+      } else if (supplementPartyFilter === 'supplier') {
+        filtered = filtered.filter(s => {
+          const contract = contracts.find(c => c.id === s.contract_id);
+          return String(contract?.supplier_id) === companyId;
+        });
+      }
+    }
+
     return filtered;
   }, [supplements, searchTerm, statusFilter, contractFilter]);
 
@@ -72,7 +95,7 @@ export default function SupplementsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, contractFilter]);
+  }, [searchTerm, statusFilter, contractFilter, modificationTypeFilter, supplementPartyFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -241,6 +264,27 @@ export default function SupplementsPage() {
                     {contract.contract_number}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={modificationTypeFilter} onValueChange={setModificationTypeFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="modificacion">Modificación</SelectItem>
+                <SelectItem value="prorroga">Prórroga</SelectItem>
+                <SelectItem value="concrecion">Concreción</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={supplementPartyFilter} onValueChange={setSupplementPartyFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Party" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Parties</SelectItem>
+                <SelectItem value="client">Client Supplements</SelectItem>
+                <SelectItem value="supplier">Supplier Supplements</SelectItem>
               </SelectContent>
             </Select>
           </div>
