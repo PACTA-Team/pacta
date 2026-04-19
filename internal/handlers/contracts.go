@@ -3,11 +3,14 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 func (h *Handler) HandleContracts(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +59,7 @@ type contractRow struct {
 	Object              *string   `json:"object,omitempty"`
 	FulfillmentPlace   *string   `json:"fulfillment_place,omitempty"`
 	DisputeResolution   *string   `json:"dispute_resolution,omitempty"`
-	HasConfidentiality  bool       `json:"has_confidentiality"`
+	HasConfidentiality  *bool      `json:"has_confidentiality,omitempty"`
 	Guarantees         *string   `json:"guarantees,omitempty"`
 	RenewalType        *string   `json:"renewal_type,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
@@ -90,6 +93,10 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 		}
 		contracts = append(contracts, c)
 	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if contracts == nil {
 		contracts = []contractRow{}
 	}
@@ -112,7 +119,7 @@ type createContractRequest struct {
 	Object            *string `json:"object"`
 	FulfillmentPlace *string `json:"fulfillment_place"`
 	DisputeResolution *string `json:"dispute_resolution"`
-	HasConfidentiality bool   `json:"has_confidentiality"`
+	HasConfidentiality *bool  `json:"has_confidentiality,omitempty"`
 	Guarantees        *string `json:"guarantees"`
 	RenewalType       *string `json:"renewal_type"`
 }
@@ -188,7 +195,8 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace,
 		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, companyID)
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed: contracts.contract_number") {
+		var dupErr sqlite.Error
+		if errors.As(err, &dupErr) && dupErr.Code == 19 {
 			h.Error(w, http.StatusConflict, "contract number '"+req.ContractNumber+"' already exists")
 			return
 		}
@@ -280,6 +288,10 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 	`, id, companyID).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
 		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription,
 		&prevObject, &prevFulfillmentPlace, &prevDisputeResolution, &prevGuarantees, &prevRenewalType)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "contract not found")
+		return
+	}
 
 	_, err = h.DB.Exec(`
 		UPDATE contracts SET title=?, client_id=?, supplier_id=?,

@@ -81,7 +81,7 @@ type Contract struct {
 	Object             *string    `json:"object,omitempty"`
 	FulfillmentPlace  *string    `json:"fulfillment_place,omitempty"`
 	DisputeResolution *string    `json:"dispute_resolution,omitempty"`
-	HasConfidentiality bool       `json:"has_confidentiality"`
+	HasConfidentiality *bool      `json:"has_confidentiality,omitempty"`
 	Guarantees        *string    `json:"guarantees,omitempty"`
 	RenewalType       *string    `json:"renewal_type,omitempty"`
 	CreatedBy         *int       `json:"created_by,omitempty"`
