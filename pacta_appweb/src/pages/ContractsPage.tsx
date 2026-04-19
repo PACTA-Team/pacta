@@ -35,11 +35,12 @@ export default function ContractsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [partyFilter, setPartyFilter] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation('contracts');
   const { t: tCommon } = useTranslation('common');
@@ -53,7 +54,7 @@ export default function ContractsPage() {
 
   useEffect(() => {
     filterContracts();
-  }, [contracts, searchTerm, statusFilter, typeFilter]);
+  }, [contracts, searchTerm, statusFilter, typeFilter, partyFilter]);
 
   const loadData = useCallback(async () => {
     try {
@@ -91,6 +92,15 @@ export default function ContractsPage() {
 
     if (typeFilter !== 'all') {
       filtered = filtered.filter(c => c.type === typeFilter);
+    }
+
+    if (partyFilter !== 'all' && user?.company_id) {
+      const companyId = user.company_id;
+      if (partyFilter === 'client') {
+        filtered = filtered.filter(c => String(c.client_id) === companyId);
+      } else if (partyFilter === 'supplier') {
+        filtered = filtered.filter(c => String(c.supplier_id) === companyId);
+      }
     }
 
     setFilteredContracts(filtered);
@@ -224,17 +234,37 @@ export default function ContractsPage() {
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder={t('type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="service">{t('service')}</SelectItem>
-                  <SelectItem value="purchase">{t('purchase')}</SelectItem>
-                  <SelectItem value="lease">{t('lease')}</SelectItem>
-                  <SelectItem value="employment">{t('employment')}</SelectItem>
-                  <SelectItem value="nda">{t('nda')}</SelectItem>
-                  <SelectItem value="other">{t('other')}</SelectItem>
+                  <SelectItem value="all">{t('status') === 'Estado' ? 'Todos' : 'All'}</SelectItem>
+                  <SelectItem value="compraventa">{t('contractTypes.compraventa')}</SelectItem>
+                  <SelectItem value="suministro">{t('contractTypes.suministro')}</SelectItem>
+                  <SelectItem value="permuta">{t('contractTypes.permuta')}</SelectItem>
+                  <SelectItem value="donacion">{t('contractTypes.donacion')}</SelectItem>
+                  <SelectItem value="deposito">{t('contractTypes.deposito')}</SelectItem>
+                  <SelectItem value="prestacion_servicios">{t('contractTypes.prestacion_servicios')}</SelectItem>
+                  <SelectItem value="agencia">{t('contractTypes.agencia')}</SelectItem>
+                  <SelectItem value="comision">{t('contractTypes.comision')}</SelectItem>
+                  <SelectItem value="consignacion">{t('contractTypes.consignacion')}</SelectItem>
+                  <SelectItem value="comodato">{t('contractTypes.comodato')}</SelectItem>
+                  <SelectItem value="arrendamiento">{t('contractTypes.arrendamiento')}</SelectItem>
+                  <SelectItem value="leasing">{t('contractTypes.leasing')}</SelectItem>
+                  <SelectItem value="cooperacion">{t('contractTypes.cooperacion')}</SelectItem>
+                  <SelectItem value="administracion">{t('contractTypes.administracion')}</SelectItem>
+                  <SelectItem value="transporte">{t('contractTypes.transporte')}</SelectItem>
+                  <SelectItem value="otro">{t('contractTypes.otro')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={partyFilter} onValueChange={setPartyFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Party" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('partyFilter.all')}</SelectItem>
+                  <SelectItem value="client">{t('partyFilter.client')}</SelectItem>
+                  <SelectItem value="supplier">{t('partyFilter.supplier')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
