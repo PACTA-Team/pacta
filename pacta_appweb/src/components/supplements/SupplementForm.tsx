@@ -37,8 +37,12 @@ export default function SupplementForm({
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
 
+    // Validate modification_type against allowed values (type safety)
+    const VALID_MODIFICATION_TYPES: readonly ModificationType[] = ['modificacion', 'prorroga', 'concrecion'];
     const modificationTypeRaw = formData.get('modification_type') as string;
-    const modificationType = modificationTypeRaw as ModificationType | undefined;
+    const modificationType = VALID_MODIFICATION_TYPES.includes(modificationTypeRaw as ModificationType)
+      ? modificationTypeRaw as ModificationType
+      : undefined;
     
     const data: CreateSupplementRequest = {
       contract_id: Number(formData.get('contract_id')),
