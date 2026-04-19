@@ -14,11 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - GET /api/user/profile - Get current user profile
   - PATCH /api/user/profile - Update name and email
   - POST /api/user/change-password - Change password with current password validation
-- **Audit Logging** — Profile and password changes are now logged in audit logs
+- **User Certificates API** — New backend endpoints for digital certificate management:
+  - POST /api/user/certificate - Upload P12 or public certificate
+  - DELETE /api/user/certificate/{type} - Delete certificate
+- **Audit Logging** — Profile, password, and certificate changes are now logged
 
 ### Technical Details
-- **Files Modified:** 2 (`internal/handlers/users.go`, `internal/server/server.go`)
-- **Lines Added:** 165
+- **Files Modified:** 4
+- **Files Created:** 2 (migration, design doc)
+- **Lines Added:** ~300
 
 ## [0.40.2] - 2026-04-18
 
