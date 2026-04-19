@@ -129,14 +129,13 @@ describe('contractsAPI', () => {
   describe('create', () => {
     const validPayload = {
       contract_number: 'C-003',
-      title: 'New Contract',
       client_id: 1,
       supplier_id: 2,
       start_date: '2025-06-01',
       end_date: '2026-06-01',
       amount: 25000,
-      type: 'service',
-      status: 'draft',
+      type: 'compraventa',
+      status: 'pending',
     };
 
     it('creates a contract with POST and returns response', async () => {
@@ -196,13 +195,12 @@ describe('contractsAPI', () => {
 
   describe('update', () => {
     const updatePayload = {
-      title: 'Updated Title',
       client_id: 1,
       supplier_id: 2,
       start_date: '2025-06-01',
       end_date: '2026-06-01',
       amount: 30000,
-      type: 'purchase',
+      type: 'compraventa',
       status: 'active',
     };
 
