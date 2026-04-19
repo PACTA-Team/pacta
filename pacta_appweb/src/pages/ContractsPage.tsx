@@ -238,23 +238,23 @@ export default function ContractsPage() {
                   <SelectValue placeholder={t('type')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="compraventa">Compraventa</SelectItem>
-                  <SelectItem value="suministro">Suministro</SelectItem>
-                  <SelectItem value="permuta">Permuta</SelectItem>
-                  <SelectItem value="donacion">Donación</SelectItem>
-                  <SelectItem value="deposito">Depósito</SelectItem>
-                  <SelectItem value="prestacion_servicios">Prest. Servicios</SelectItem>
-                  <SelectItem value="agencia">Agencia</SelectItem>
-                  <SelectItem value="comision">Comisión</SelectItem>
-                  <SelectItem value="consignacion">Consignación</SelectItem>
-                  <SelectItem value="comodato">Comodato</SelectItem>
-                  <SelectItem value="arrendamiento">Arrendamiento</SelectItem>
-                  <SelectItem value="leasing">Leasing</SelectItem>
-                  <SelectItem value="cooperacion">Cooperación</SelectItem>
-                  <SelectItem value="administracion">Administración</SelectItem>
-                  <SelectItem value="transporte">Transporte</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
+                  <SelectItem value="all">{t('status') === 'Estado' ? 'Todos' : 'All'}</SelectItem>
+                  <SelectItem value="compraventa">{t('contractTypes.compraventa')}</SelectItem>
+                  <SelectItem value="suministro">{t('contractTypes.suministro')}</SelectItem>
+                  <SelectItem value="permuta">{t('contractTypes.permuta')}</SelectItem>
+                  <SelectItem value="donacion">{t('contractTypes.donacion')}</SelectItem>
+                  <SelectItem value="deposito">{t('contractTypes.deposito')}</SelectItem>
+                  <SelectItem value="prestacion_servicios">{t('contractTypes.prestacion_servicios')}</SelectItem>
+                  <SelectItem value="agencia">{t('contractTypes.agencia')}</SelectItem>
+                  <SelectItem value="comision">{t('contractTypes.comision')}</SelectItem>
+                  <SelectItem value="consignacion">{t('contractTypes.consignacion')}</SelectItem>
+                  <SelectItem value="comodato">{t('contractTypes.comodato')}</SelectItem>
+                  <SelectItem value="arrendamiento">{t('contractTypes.arrendamiento')}</SelectItem>
+                  <SelectItem value="leasing">{t('contractTypes.leasing')}</SelectItem>
+                  <SelectItem value="cooperacion">{t('contractTypes.cooperacion')}</SelectItem>
+                  <SelectItem value="administracion">{t('contractTypes.administracion')}</SelectItem>
+                  <SelectItem value="transporte">{t('contractTypes.transporte')}</SelectItem>
+                  <SelectItem value="otro">{t('contractTypes.otro')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={partyFilter} onValueChange={setPartyFilter}>
@@ -262,9 +262,9 @@ export default function ContractsPage() {
                   <SelectValue placeholder="Party" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Parties</SelectItem>
-                  <SelectItem value="client">Client Contracts</SelectItem>
-                  <SelectItem value="supplier">Supplier Contracts</SelectItem>
+                  <SelectItem value="all">{t('partyFilter.all')}</SelectItem>
+                  <SelectItem value="client">{t('partyFilter.client')}</SelectItem>
+                  <SelectItem value="supplier">{t('partyFilter.supplier')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
