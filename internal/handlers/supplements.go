@@ -11,18 +11,19 @@ import (
 )
 
 type supplementRow struct {
-	ID               int       `json:"id"`
-	InternalID       string    `json:"internal_id"`
-	ContractID       int       `json:"contract_id"`
-	SupplementNumber string    `json:"supplement_number"`
-	Description      *string   `json:"description,omitempty"`
-	EffectiveDate    string    `json:"effective_date"`
-	Modifications    *string   `json:"modifications,omitempty"`
-	Status           string    `json:"status"`
-	ClientSignerID   *int      `json:"client_signer_id,omitempty"`
-	SupplierSignerID *int      `json:"supplier_signer_id,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID                 int        `json:"id"`
+	InternalID         string     `json:"internal_id"`
+	ContractID         int        `json:"contract_id"`
+	SupplementNumber   string     `json:"supplement_number"`
+	Description        *string    `json:"description,omitempty"`
+	EffectiveDate      string     `json:"effective_date"`
+	Modifications      *string    `json:"modifications,omitempty"`
+	ModificationType   *string    `json:"modification_type,omitempty"`
+	Status             string     `json:"status"`
+	ClientSignerID     *int       `json:"client_signer_id,omitempty"`
+	SupplierSignerID   *int       `json:"supplier_signer_id,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 func (h *Handler) HandleSupplements(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +41,7 @@ func (h *Handler) listSupplements(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
 	rows, err := h.DB.Query(`
 		SELECT id, internal_id, contract_id, supplement_number, description,
-		       effective_date, modifications, status, client_signer_id, supplier_signer_id,
+		       effective_date, modifications, modification_type, status, client_signer_id, supplier_signer_id,
 		       created_at, updated_at
 		FROM supplements WHERE deleted_at IS NULL AND company_id = ? ORDER BY created_at DESC
 	`, companyID)
@@ -54,7 +55,7 @@ func (h *Handler) listSupplements(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var s supplementRow
 		if err := rows.Scan(&s.ID, &s.InternalID, &s.ContractID, &s.SupplementNumber,
-			&s.Description, &s.EffectiveDate, &s.Modifications, &s.Status,
+			&s.Description, &s.EffectiveDate, &s.Modifications, &s.ModificationType, &s.Status,
 			&s.ClientSignerID, &s.SupplierSignerID, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to list supplements")
 			return
@@ -86,13 +87,14 @@ func (h *Handler) generateSupplementInternalID(companyID int) (string, error) {
 }
 
 type createSupplementRequest struct {
-	ContractID       int     `json:"contract_id"`
-	SupplementNumber string  `json:"supplement_number"`
-	Description      *string `json:"description"`
-	EffectiveDate    string  `json:"effective_date"`
-	Modifications    *string `json:"modifications"`
-	ClientSignerID   *int    `json:"client_signer_id"`
-	SupplierSignerID *int    `json:"supplier_signer_id"`
+	ContractID         int     `json:"contract_id"`
+	SupplementNumber   string  `json:"supplement_number"`
+	Description        *string `json:"description"`
+	EffectiveDate      string  `json:"effective_date"`
+	Modifications      *string `json:"modifications"`
+	ClientSignerID     *int    `json:"client_signer_id"`
+	SupplierSignerID   *int    `json:"supplier_signer_id"`
+	ModificationType   *string `json:"modification_type"`
 }
 
 func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
@@ -148,10 +150,10 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
 	result, err := h.DB.Exec(`
 		INSERT INTO supplements (internal_id, contract_id, supplement_number, description,
-			effective_date, modifications, status, client_signer_id, supplier_signer_id, created_by, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			effective_date, modifications, modification_type, status, client_signer_id, supplier_signer_id, created_by, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, internalID, req.ContractID, req.SupplementNumber, req.Description,
-		req.EffectiveDate, req.Modifications, "draft",
+		req.EffectiveDate, req.Modifications, req.ModificationType, "draft",
 		req.ClientSignerID, req.SupplierSignerID, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create supplement")
@@ -198,11 +200,11 @@ func (h *Handler) getSupplement(w http.ResponseWriter, r *http.Request, id int) 
 	var s supplementRow
 	err := h.DB.QueryRow(`
 		SELECT id, internal_id, contract_id, supplement_number, description,
-		       effective_date, modifications, status, client_signer_id, supplier_signer_id,
+		       effective_date, modifications, modification_type, status, client_signer_id, supplier_signer_id,
 		       created_at, updated_at
 		FROM supplements WHERE id = ? AND deleted_at IS NULL AND company_id = ?
 	`, id, companyID).Scan(&s.ID, &s.InternalID, &s.ContractID, &s.SupplementNumber,
-		&s.Description, &s.EffectiveDate, &s.Modifications, &s.Status,
+		&s.Description, &s.EffectiveDate, &s.Modifications, &s.ModificationType, &s.Status,
 		&s.ClientSignerID, &s.SupplierSignerID, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplement not found")
@@ -236,14 +238,14 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 	// Fetch previous state for audit
 	var prevContractID int
 	var prevSupplementNumber string
-	var prevDescription, prevEffectiveDate, prevModifications, prevStatus *string
+	var prevDescription, prevEffectiveDate, prevModifications, prevModificationType, prevStatus *string
 	var prevClientSignerID, prevSupplierSignerID *int
 	err := h.DB.QueryRow(`
 		SELECT contract_id, supplement_number, description, effective_date,
-		       modifications, status, client_signer_id, supplier_signer_id
+		       modifications, modification_type, status, client_signer_id, supplier_signer_id
 		FROM supplements WHERE id = ? AND deleted_at IS NULL AND company_id = ?
 	`, id, companyID).Scan(&prevContractID, &prevSupplementNumber, &prevDescription,
-		&prevEffectiveDate, &prevModifications, &prevStatus,
+		&prevEffectiveDate, &prevModifications, &prevModificationType, &prevStatus,
 		&prevClientSignerID, &prevSupplierSignerID)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplement not found")
@@ -252,11 +254,11 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 
 	_, err = h.DB.Exec(`
 		UPDATE supplements SET contract_id=?, supplement_number=?, description=?,
-			effective_date=?, modifications=?, status=?, client_signer_id=?, supplier_signer_id=?,
+			effective_date=?, modifications=?, modification_type=?, status=?, client_signer_id=?, supplier_signer_id=?,
 			updated_at=CURRENT_TIMESTAMP
 		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.ContractID, req.SupplementNumber, req.Description,
-		req.EffectiveDate, req.Modifications, "draft",
+		req.EffectiveDate, req.Modifications, req.ModificationType, "draft",
 		req.ClientSignerID, req.SupplierSignerID, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplement")

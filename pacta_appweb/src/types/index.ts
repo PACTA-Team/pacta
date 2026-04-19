@@ -126,6 +126,14 @@ export const RENEWAL_TYPE_LABELS: Record<RenewalType, string> = {
   cumplimiento: 'Expira al cumplirse obligaciones',
 };
 
+export type ModificationType = 'modificacion' | 'prorroga' | 'concrecion';
+
+export const ModificationTypeLabels: Record<ModificationType, string> = {
+  modificacion: 'Modificación de cláusulas',
+  prorroga: 'Prórroga de vigencia',
+  concrecion: 'Concretización de contenido',
+};
+
 export interface Supplement {
   id: number;
   internal_id: string;
@@ -134,6 +142,7 @@ export interface Supplement {
   description: string | null;
   effective_date: string;
   modifications: string | null;
+  modification_type: ModificationType | null;
   status: SupplementStatus;
   client_signer_id: number | null;
   supplier_signer_id: number | null;
@@ -148,6 +157,7 @@ export interface CreateSupplementRequest {
   description?: string;
   effective_date: string;
   modifications?: string;
+  modification_type?: ModificationType;
   client_signer_id?: number;
   supplier_signer_id?: number;
 }
@@ -158,6 +168,7 @@ export interface UpdateSupplementRequest {
   description?: string;
   effective_date?: string;
   modifications?: string;
+  modification_type?: ModificationType;
   status?: SupplementStatus;
   client_signer_id?: number;
   supplier_signer_id?: number;

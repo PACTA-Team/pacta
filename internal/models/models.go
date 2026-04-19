@@ -119,8 +119,9 @@ type Supplement struct {
 	SupplementNumber string     `json:"supplement_number"`
 	Description      *string    `json:"description,omitempty"`
 	EffectiveDate    string     `json:"effective_date"`
-	Modifications    *string    `json:"modifications,omitempty"`
-	Status           string     `json:"status"`
+	Modifications      *string    `json:"modifications,omitempty"`
+	ModificationType   *string    `json:"modification_type,omitempty"`
+	Status             string     `json:"status"`
 	ClientSignerID   *int       `json:"client_signer_id,omitempty"`
 	SupplierSignerID *int       `json:"supplier_signer_id,omitempty"`
 	CreatedBy        *int       `json:"created_by,omitempty"`
