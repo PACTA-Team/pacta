@@ -107,10 +107,24 @@ export interface Contract {
   type: ContractType;
   status: ContractStatus;
   description: string;
+  object?: string;
+  fulfillmentPlace?: string;
+  disputeResolution?: string;
+  hasConfidentiality?: boolean;
+  guarantees?: string;
+  renewalType?: RenewalType;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type RenewalType = 'automatica' | 'manual' | 'cumplimiento';
+
+export const RENEWAL_TYPE_LABELS: Record<RenewalType, string> = {
+  automatica: 'Prórroga automática',
+  manual: 'Renovación por acuerdo expreso',
+  cumplimiento: 'Expira al cumplirse obligaciones',
+};
 
 export interface Supplement {
   id: number;

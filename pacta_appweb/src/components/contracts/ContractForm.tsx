@@ -8,12 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Contract, ContractType, ContractStatus } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Contract, ContractType, ContractStatus, RenewalType, RENEWAL_TYPE_LABELS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { signersAPI } from '@/lib/signers-api';
+import { documentsAPI, APIDocument } from '@/lib/documents-api';
 import { toast } from 'sonner';
+import { ChevronDown, FileText, Upload, X, Download } from 'lucide-react';
 
 interface ContractFormProps {
   contract?: Contract;
@@ -41,7 +45,59 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
     type: contract?.type || 'service' as ContractType,
     status: contract?.status || 'pending' as ContractStatus,
     description: contract?.description || '',
+    object: (contract as any)?.object || contract?.object || '',
+    fulfillmentPlace: (contract as any)?.fulfillment_place || contract?.fulfillmentPlace || '',
+    disputeResolution: (contract as any)?.dispute_resolution || contract?.disputeResolution || '',
+    hasConfidentiality: (contract as any)?.has_confidentiality || contract?.hasConfidentiality || false,
+    guarantees: (contract as any)?.guarantees || contract?.guarantees || '',
+    renewalType: (contract as any)?.renewal_type || contract?.renewalType || '' as RenewalType,
   });
+
+  const [legalFieldsOpen, setLegalFieldsOpen] = useState(false);
+  const [documents, setDocuments] = useState<APIDocument[]>([]);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (contract?.id) {
+      loadDocuments();
+    }
+  }, [contract?.id]);
+
+  const loadDocuments = async () => {
+    if (!contract?.id) return;
+    try {
+      const docs = await documentsAPI.list(Number(contract.id), 'contract');
+      setDocuments(docs);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !contract?.id) return;
+    setUploading(true);
+    try {
+      const doc = await documentsAPI.upload(file, Number(contract.id), 'contract');
+      setDocuments([...documents, doc]);
+      toast.success('Document uploaded successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to upload document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    try {
+      await documentsAPI.delete(docId);
+      setDocuments(documents.filter(d => d.id !== docId));
+      toast.success('Document deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete document');
+    }
+  };
 
   const isEditing = !!contract;
   const [ourRole, setOurRole] = useState<'client' | 'supplier'>(() => {
@@ -339,6 +395,153 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
               rows={4}
             />
           </div>
+
+          <Collapsible open={legalFieldsOpen} onOpenChange={setLegalFieldsOpen}>
+            <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <ChevronDown className={`h-4 w-4 transition-transform ${legalFieldsOpen ? 'rotate-180' : ''}`} />
+              {t('additionalClauses') || 'Cláusulas Adicionales'}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="object">{t('object') || 'Objeto del Contrato'}</Label>
+                  <Textarea
+                    id="object"
+                    value={formData.object}
+                    onChange={(e) => setFormData({ ...formData, object: e.target.value })}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">Art. 32, DL-304: el objeto debe describir claramente las prestaciones</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                  <Input
+                    id="fulfillmentPlace"
+                    value={formData.fulfillmentPlace}
+                    onChange={(e) => setFormData({ ...formData, fulfillmentPlace: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
+                  <Input
+                    id="disputeResolution"
+                    value={formData.disputeResolution}
+                    onChange={(e) => setFormData({ ...formData, disputeResolution: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="guarantees">{t('guarantees') || 'Garantías'}</Label>
+                  <Textarea
+                    id="guarantees"
+                    value={formData.guarantees}
+                    onChange={(e) => setFormData({ ...formData, guarantees: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
+                  <Select
+                    value={formData.renewalType}
+                    onValueChange={(value) => setFormData({ ...formData, renewalType: value as RenewalType })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="automatica">{RENEWAL_TYPE_LABELS.automatica}</SelectItem>
+                      <SelectItem value="manual">{RENEWAL_TYPE_LABELS.manual}</SelectItem>
+                      <SelectItem value="cumplimiento">{RENEWAL_TYPE_LABELS.cumplimiento}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasConfidentiality"
+                  checked={formData.hasConfidentiality}
+                  onCheckedChange={(checked) => setFormData({ ...formData, hasConfidentiality: !!checked })}
+                />
+                <Label htmlFor="hasConfidentiality" className="cursor-pointer">
+                  {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-6">Art. 5, DL-304: obligación de no revelar información</p>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {isEditing && (
+            <Collapsible open={documentsOpen} onOpenChange={setDocumentsOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                <ChevronDown className={`h-4 w-4 transition-transform ${documentsOpen ? 'rotate-180' : ''}`} />
+                {t('documents') || 'Documentos Adjuntos'}
+                {documents.length > 0 && (
+                  <span className="ml-1 text-xs bg-primary/10 px-2 py-0.5 rounded-full">{documents.length}</span>
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                {documents.length > 0 && (
+                  <div className="space-y-2">
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-2 border rounded-md">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 flex-shrink-0" />
+                          <span className="text-sm truncate">{doc.filename}</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => documentsAPI.download(doc.id)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer text-muted-foreground hover:text-foreground">
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      disabled={uploading}
+                    />
+                    <Upload className="h-4 w-4" />
+                    {uploading ? t('uploading') || 'Subiendo...' : t('uploadDocument') || 'Adjuntar documento'}
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('acceptedFormats') || 'Formatos aceptados: PDF, Word, Excel, imágenes'}
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {!isEditing && (
+            <p className="text-sm text-muted-foreground">
+              {t('attachAfterSave') || 'Puede adjuntar documentos después de guardar el contrato.'}
+            </p>
+          )}
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>

@@ -42,26 +42,34 @@ func (h *Handler) HandleContractByID(w http.ResponseWriter, r *http.Request) {
 }
 
 type contractRow struct {
-	ID               int        `json:"id"`
-	InternalID       string     `json:"internal_id"`
-	ContractNumber   string     `json:"contract_number"`
-	Title            *string    `json:"title,omitempty"`
-	ClientID         int        `json:"client_id"`
-	SupplierID       int        `json:"supplier_id"`
-	StartDate        string     `json:"start_date"`
-	EndDate          string     `json:"end_date"`
-	Amount           float64    `json:"amount"`
-	Type             string     `json:"type"`
-	Status           string     `json:"status"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	ID                  int        `json:"id"`
+	InternalID          string     `json:"internal_id"`
+	ContractNumber      string     `json:"contract_number"`
+	Title               *string   `json:"title,omitempty"`
+	ClientID            int        `json:"client_id"`
+	SupplierID          int        `json:"supplier_id"`
+	StartDate           string     `json:"start_date"`
+	EndDate             string     `json:"end_date"`
+	Amount              float64    `json:"amount"`
+	Type                string     `json:"type"`
+	Status              string     `json:"status"`
+	Object              *string   `json:"object,omitempty"`
+	FulfillmentPlace   *string   `json:"fulfillment_place,omitempty"`
+	DisputeResolution   *string   `json:"dispute_resolution,omitempty"`
+	HasConfidentiality  *bool      `json:"has_confidentiality,omitempty"`
+	Guarantees         *string   `json:"guarantees,omitempty"`
+	RenewalType        *string   `json:"renewal_type,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
 	rows, err := h.DB.Query(`
 		SELECT id, internal_id, contract_number, title, client_id, supplier_id,
-		       start_date, end_date, amount, type, status, created_at, updated_at
+		       start_date, end_date, amount, type, status, object, fulfillment_place,
+		       dispute_resolution, has_confidentiality, guarantees, renewal_type,
+		       created_at, updated_at
 		FROM contracts WHERE deleted_at IS NULL AND company_id = ? ORDER BY created_at DESC
 	`, companyID)
 	if err != nil {
@@ -74,11 +82,17 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c contractRow
 		if err := rows.Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
-			&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.Object, &c.FulfillmentPlace,
+			&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType,
+			&c.CreatedAt, &c.UpdatedAt); err != nil {
 			h.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		contracts = append(contracts, c)
+	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	if contracts == nil {
 		contracts = []contractRow{}
@@ -87,18 +101,24 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 }
 
 type createContractRequest struct {
-	ContractNumber   string  `json:"contract_number"`
-	Title            *string `json:"title"`
-	ClientID         int     `json:"client_id"`
-	SupplierID       int     `json:"supplier_id"`
-	ClientSignerID   *int    `json:"client_signer_id"`
+	ContractNumber      string  `json:"contract_number"`
+	Title             *string `json:"title"`
+	ClientID          int     `json:"client_id"`
+	SupplierID        int     `json:"supplier_id"`
+	ClientSignerID    *int    `json:"client_signer_id"`
 	SupplierSignerID *int    `json:"supplier_signer_id"`
-	StartDate        string  `json:"start_date"`
-	EndDate          string  `json:"end_date"`
-	Amount           float64 `json:"amount"`
-	Type             string  `json:"type"`
-	Status           string  `json:"status"`
-	Description      *string `json:"description"`
+	StartDate         string  `json:"start_date"`
+	EndDate           string  `json:"end_date"`
+	Amount            float64 `json:"amount"`
+	Type              string  `json:"type"`
+	Status            string  `json:"status"`
+	Description       *string `json:"description"`
+	Object            *string `json:"object"`
+	FulfillmentPlace *string `json:"fulfillment_place"`
+	DisputeResolution *string `json:"dispute_resolution"`
+	HasConfidentiality *bool  `json:"has_confidentiality,omitempty"`
+	Guarantees        *string `json:"guarantees"`
+	RenewalType       *string `json:"renewal_type"`
 }
 
 func (h *Handler) generateInternalID(companyID int) (string, error) {
@@ -164,13 +184,15 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 	result, err := h.DB.Exec(`
 		INSERT INTO contracts (internal_id, contract_number, title, client_id, supplier_id,
 			client_signer_id, supplier_signer_id, start_date, end_date, amount,
-			type, status, description, created_by, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			type, status, description, object, fulfillment_place, dispute_resolution,
+			has_confidentiality, guarantees, renewal_type, created_by, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, internalID, req.ContractNumber, req.Title, req.ClientID, req.SupplierID,
 		req.ClientSignerID, req.SupplierSignerID, req.StartDate, req.EndDate,
-		req.Amount, req.Type, req.Status, req.Description, userID, companyID)
+		req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace,
+		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, companyID)
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed: contracts.contract_number") {
+		if strings.Contains(err.Error(), "UNIQUE constraint") || strings.Contains(err.Error(), "duplicate") {
 			h.Error(w, http.StatusConflict, "contract number '"+req.ContractNumber+"' already exists")
 			return
 		}
@@ -204,10 +226,13 @@ func (h *Handler) getContract(w http.ResponseWriter, r *http.Request, id int) {
 	var c contractRow
 	err := h.DB.QueryRow(`
 		SELECT id, internal_id, contract_number, title, client_id, supplier_id,
-		       start_date, end_date, amount, type, status, created_at, updated_at
+		       start_date, end_date, amount, type, status, object, fulfillment_place,
+		       dispute_resolution, has_confidentiality, guarantees, renewal_type,
+		       created_at, updated_at
 		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
 	`, id, companyID).Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
-		&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.CreatedAt, &c.UpdatedAt)
+		&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.Object, &c.FulfillmentPlace,
+		&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "contract not found")
 		return
@@ -250,20 +275,31 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 	var prevAmount float64
 	var prevDescription *string
 	var prevClientSignerID, prevSupplierSignerID *int
+	var prevObject, prevFulfillmentPlace, prevDisputeResolution, prevGuarantees, prevRenewalType *string
 	err := h.DB.QueryRow(`
 		SELECT title, client_id, supplier_id, client_signer_id, supplier_signer_id,
-		       start_date, end_date, amount, type, status, description
+		       start_date, end_date, amount, type, status, description,
+		       object, fulfillment_place, dispute_resolution, guarantees, renewal_type
 		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
 	`, id, companyID).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
-		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription)
+		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription,
+		&prevObject, &prevFulfillmentPlace, &prevDisputeResolution, &prevGuarantees, &prevRenewalType)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "contract not found")
+		return
+	}
 
 	_, err = h.DB.Exec(`
 		UPDATE contracts SET title=?, client_id=?, supplier_id=?,
 			client_signer_id=?, supplier_signer_id=?, start_date=?, end_date=?,
-			amount=?, type=?, status=?, description=?, updated_at=CURRENT_TIMESTAMP
+			amount=?, type=?, status=?, description=?, object=?, fulfillment_place=?,
+			dispute_resolution=?, has_confidentiality=?, guarantees=?, renewal_type=?,
+			updated_at=CURRENT_TIMESTAMP
 		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.Title, req.ClientID, req.SupplierID, req.ClientSignerID, req.SupplierSignerID,
-		req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description, id, companyID)
+		req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description,
+		req.Object, req.FulfillmentPlace, req.DisputeResolution, req.HasConfidentiality,
+		req.Guarantees, req.RenewalType, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update contract")
 		return
@@ -272,32 +308,42 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 	var prevState map[string]interface{}
 	if prevTitle != "" {
 		prevState = map[string]interface{}{
-			"id":                 id,
-			"title":              prevTitle,
-			"client_id":          prevClientID,
-			"supplier_id":        prevSupplierID,
-			"client_signer_id":   prevClientSignerID,
-			"supplier_signer_id": prevSupplierSignerID,
-			"start_date":         prevStartDate,
-			"end_date":           prevEndDate,
-			"amount":             prevAmount,
-			"type":               prevType,
-			"status":             prevStatus,
-			"description":        prevDescription,
+			"id":                    id,
+			"title":                 prevTitle,
+			"client_id":             prevClientID,
+			"supplier_id":           prevSupplierID,
+			"client_signer_id":      prevClientSignerID,
+			"supplier_signer_id":    prevSupplierSignerID,
+			"start_date":            prevStartDate,
+			"end_date":              prevEndDate,
+			"amount":              prevAmount,
+			"type":                prevType,
+			"status":              prevStatus,
+			"description":         prevDescription,
+			"object":              prevObject,
+			"fulfillment_place":    prevFulfillmentPlace,
+			"dispute_resolution":  prevDisputeResolution,
+			"guarantees":        prevGuarantees,
+			"renewal_type":       prevRenewalType,
 		}
 	}
 	h.auditLog(r, h.getUserID(r), companyID, "update", "contract", &id, prevState, map[string]interface{}{
-		"title":              req.Title,
-		"client_id":          req.ClientID,
-		"supplier_id":        req.SupplierID,
-		"client_signer_id":   req.ClientSignerID,
+		"title":               req.Title,
+		"client_id":           req.ClientID,
+		"supplier_id":         req.SupplierID,
+		"client_signer_id":    req.ClientSignerID,
 		"supplier_signer_id": req.SupplierSignerID,
-		"start_date":         req.StartDate,
-		"end_date":           req.EndDate,
+		"start_date":          req.StartDate,
+		"end_date":            req.EndDate,
 		"amount":             req.Amount,
 		"type":               req.Type,
 		"status":             req.Status,
 		"description":        req.Description,
+		"object":             req.Object,
+		"fulfillment_place": req.FulfillmentPlace,
+		"dispute_resolution": req.DisputeResolution,
+		"guarantees":        req.Guarantees,
+		"renewal_type":       req.RenewalType,
 	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
