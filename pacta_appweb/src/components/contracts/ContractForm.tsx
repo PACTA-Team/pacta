@@ -15,8 +15,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { signersAPI } from '@/lib/signers-api';
+import { documentsAPI, APIDocument } from '@/lib/documents-api';
 import { toast } from 'sonner';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, FileText, Upload, X, Download } from 'lucide-react';
 
 interface ContractFormProps {
   contract?: Contract;
@@ -53,6 +54,50 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   });
 
   const [legalFieldsOpen, setLegalFieldsOpen] = useState(false);
+  const [documents, setDocuments] = useState<APIDocument[]>([]);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (contract?.id) {
+      loadDocuments();
+    }
+  }, [contract?.id]);
+
+  const loadDocuments = async () => {
+    if (!contract?.id) return;
+    try {
+      const docs = await documentsAPI.list(Number(contract.id), 'contract');
+      setDocuments(docs);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !contract?.id) return;
+    setUploading(true);
+    try {
+      const doc = await documentsAPI.upload(file, Number(contract.id), 'contract');
+      setDocuments([...documents, doc]);
+      toast.success('Document uploaded successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to upload document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: number) => {
+    try {
+      await documentsAPI.delete(docId);
+      setDocuments(documents.filter(d => d.id !== docId));
+      toast.success('Document deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete document');
+    }
+  };
 
   const isEditing = !!contract;
   const [ourRole, setOurRole] = useState<'client' | 'supplier'>(() => {
@@ -428,6 +473,75 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
               <p className="text-xs text-muted-foreground ml-6">Art. 5, DL-304: obligación de no revelar información</p>
             </CollapsibleContent>
           </Collapsible>
+
+          {isEditing && (
+            <Collapsible open={documentsOpen} onOpenChange={setDocumentsOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                <ChevronDown className={`h-4 w-4 transition-transform ${documentsOpen ? 'rotate-180' : ''}`} />
+                {t('documents') || 'Documentos Adjuntos'}
+                {documents.length > 0 && (
+                  <span className="ml-1 text-xs bg-primary/10 px-2 py-0.5 rounded-full">{documents.length}</span>
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                {documents.length > 0 && (
+                  <div className="space-y-2">
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-2 border rounded-md">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 flex-shrink-0" />
+                          <span className="text-sm truncate">{doc.filename}</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => documentsAPI.download(doc.id)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer text-muted-foreground hover:text-foreground">
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      disabled={uploading}
+                    />
+                    <Upload className="h-4 w-4" />
+                    {uploading ? t('uploading') || 'Subiendo...' : t('uploadDocument') || 'Adjuntar documento'}
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('acceptedFormats') || 'Formatos aceptados: PDF, Word, Excel, imágenes'}
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {!isEditing && (
+            <p className="text-sm text-muted-foreground">
+              {t('attachAfterSave') || 'Puede adjuntar documentos después de guardar el contrato.'}
+            </p>
+          )}
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>
