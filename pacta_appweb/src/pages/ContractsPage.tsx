@@ -79,7 +79,6 @@ export default function ContractsPage() {
         const supplier = suppliers.find(s => s.id === c.supplier_id);
         return (
           c.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -101,7 +100,6 @@ export default function ContractsPage() {
     try {
       if (editingContract) {
         await contractsAPI.update(editingContract.id, {
-          title: data.title,
           client_id: parseInt(data.clientId),
           supplier_id: parseInt(data.supplierId),
           start_date: data.startDate,
@@ -114,7 +112,6 @@ export default function ContractsPage() {
       } else {
         await contractsAPI.create({
           contract_number: data.contractNumber,
-          title: data.title,
           client_id: parseInt(data.clientId),
           supplier_id: parseInt(data.supplierId),
           start_date: data.startDate,

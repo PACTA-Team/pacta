@@ -31,7 +31,6 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
   const [formData, setFormData] = useState({
     contractNumber: (contract as any)?.contract_number || contract?.contractNumber || '',
-    title: contract?.title || '',
     clientId: ((contract as any)?.client_id ?? contract?.clientId)?.toString() || '',
     supplierId: ((contract as any)?.supplier_id ?? contract?.supplierId)?.toString() || '',
     clientSignerId: ((contract as any)?.client_signer_id ?? contract?.clientSignerId)?.toString() || '',
