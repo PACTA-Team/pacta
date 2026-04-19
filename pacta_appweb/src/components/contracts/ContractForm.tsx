@@ -164,15 +164,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Contract Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
-          </div>
+          
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

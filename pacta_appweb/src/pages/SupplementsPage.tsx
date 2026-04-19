@@ -187,7 +187,6 @@ export default function SupplementsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Supplement Number</TableHead>
-                  <TableHead className="hidden sm:table-cell">Internal ID</TableHead>
                   <TableHead className="hidden md:table-cell">Parent Contract</TableHead>
                   <TableHead className="hidden lg:table-cell">Description</TableHead>
                   <TableHead>{t('effectiveDate')}</TableHead>
@@ -198,15 +197,14 @@ export default function SupplementsPage() {
               <TableBody>
                 {supplements.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       {t('noSupplements')}
                     </TableCell>
                   </TableRow>
                 ) : (
                   supplements.map((supplement) => (
                     <TableRow key={supplement.id}>
-                      <TableCell className="font-medium" title={supplement.internal_id}>{supplement.supplement_number}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground font-mono">{supplement.internal_id}</TableCell>
+                      <TableCell className="font-medium">{supplement.supplement_number}</TableCell>
                       <TableCell className="hidden md:table-cell">
                         <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline dark:text-blue-400">
                           {getContractInfo(supplement.contract_id)}
