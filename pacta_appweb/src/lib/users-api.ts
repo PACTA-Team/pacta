@@ -84,6 +84,8 @@ export interface Profile {
   last_access: string | null;
   created_at: string;
   updated_at: string;
+  digital_signature_url: string | null;
+  public_cert_url: string | null;
 }
 
 export const profileAPI = {
@@ -103,4 +105,42 @@ export const profileAPI = {
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
       signal,
     }),
+};
+
+export type CertType = 'digital_signature' | 'public_cert';
+
+async function fetchFormData<T>(url: string, formData: FormData, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export const certificateAPI = {
+  upload: async (certType: CertType, file: File, signal?: AbortSignal) => {
+    const formData = new FormData();
+    formData.append('type', certType);
+    formData.append('file', file);
+    return fetchFormData<Profile>('/api/user/certificate', formData, signal);
+  },
+
+  delete: async (certType: CertType, signal?: AbortSignal) => {
+    const res = await fetch(`/api/user/certificate/${certType}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      signal,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Delete failed' }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return { status: 'deleted' };
+  },
 };
