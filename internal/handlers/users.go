@@ -603,7 +603,11 @@ func (h *Handler) uploadCertificate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate storage filename
-	storageName := generateUUID()
+	storageName, err := generateUUID()
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to generate filename")
+		return
+	}
 	storagePath := filepath.Join(h.DataDir, certStorageDir, strconv.Itoa(userID), certType)
 	if err := os.MkdirAll(storagePath, 0755); err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create storage directory")
