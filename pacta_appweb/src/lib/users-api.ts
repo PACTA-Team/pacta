@@ -74,3 +74,33 @@ export const usersCompanyAPI = {
       body: JSON.stringify({ company_id: companyId }),
     }),
 };
+
+export interface Profile {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'manager' | 'editor' | 'viewer';
+  status: 'active' | 'inactive' | 'locked';
+  last_access: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const profileAPI = {
+  getProfile: (signal?: AbortSignal) =>
+    fetchJSON<Profile>('/api/user/profile', { signal }),
+
+  updateProfile: (name: string, email: string, signal?: AbortSignal) =>
+    fetchJSON<Profile>('/api/user/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ name, email }),
+      signal,
+    }),
+
+  changePassword: (currentPassword: string, newPassword: string, signal?: AbortSignal) =>
+    fetchJSON<{ status: string }>('/api/user/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      signal,
+    }),
+};
