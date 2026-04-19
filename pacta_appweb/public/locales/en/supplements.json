@@ -13,5 +13,8 @@
   "type": "Type",
   "status": "Status",
   "effectiveDate": "Effective date",
-  "description": "Description"
+  "description": "Description",
+  "modificationType": "Modification type",
+  "modificationTypePlaceholder": "Select type",
+  "modificationTypeTooltip": "Art. 66.2 DL-304: supplement may modify clauses, extend validity, or specify pending content from the main contract."
 }
