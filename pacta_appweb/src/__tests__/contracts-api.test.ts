@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { ContractType, ContractStatus } from '@/types';
 
 // --- Mock fetch globally ---
 const mockFetch = vi.fn();
@@ -134,8 +135,8 @@ describe('contractsAPI', () => {
       start_date: '2025-06-01',
       end_date: '2026-06-01',
       amount: 25000,
-      type: 'compraventa',
-      status: 'pending',
+      type: 'compraventa' as ContractType,
+      status: 'pending' as ContractStatus,
     };
 
     it('creates a contract with POST and returns response', async () => {
@@ -200,8 +201,8 @@ describe('contractsAPI', () => {
       start_date: '2025-06-01',
       end_date: '2026-06-01',
       amount: 30000,
-      type: 'compraventa',
-      status: 'active',
+      type: 'compraventa' as ContractType,
+      status: 'active' as ContractStatus,
     };
 
     it('updates a contract with PUT and returns response', async () => {
