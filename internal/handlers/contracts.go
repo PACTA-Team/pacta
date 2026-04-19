@@ -42,19 +42,19 @@ func (h *Handler) HandleContractByID(w http.ResponseWriter, r *http.Request) {
 }
 
 type contractRow struct {
-	ID               int       `json:"id"`
-	InternalID       string    `json:"internal_id"`
-	ContractNumber   string    `json:"contract_number"`
-	Title            string    `json:"title"`
-	ClientID         int       `json:"client_id"`
-	SupplierID       int       `json:"supplier_id"`
-	StartDate        string    `json:"start_date"`
-	EndDate          string    `json:"end_date"`
-	Amount           float64   `json:"amount"`
-	Type             string    `json:"type"`
-	Status           string    `json:"status"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               int        `json:"id"`
+	InternalID       string     `json:"internal_id"`
+	ContractNumber   string     `json:"contract_number"`
+	Title            *string    `json:"title"`
+	ClientID         int        `json:"client_id"`
+	SupplierID       int        `json:"supplier_id"`
+	StartDate        string     `json:"start_date"`
+	EndDate          string     `json:"end_date"`
+	Amount           float64    `json:"amount"`
+	Type             string     `json:"type"`
+	Status           string     `json:"status"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +88,7 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 
 type createContractRequest struct {
 	ContractNumber   string  `json:"contract_number"`
-	Title            string  `json:"title"`
+	Title            *string `json:"title"`
 	ClientID         int     `json:"client_id"`
 	SupplierID       int     `json:"supplier_id"`
 	ClientSignerID   *int    `json:"client_signer_id"`
