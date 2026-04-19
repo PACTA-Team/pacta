@@ -45,7 +45,7 @@ type contractRow struct {
 	ID               int        `json:"id"`
 	InternalID       string     `json:"internal_id"`
 	ContractNumber   string     `json:"contract_number"`
-	Title            *string    `json:"title"`
+	Title            *string    `json:"title,omitempty"`
 	ClientID         int        `json:"client_id"`
 	SupplierID       int        `json:"supplier_id"`
 	StartDate        string     `json:"start_date"`
