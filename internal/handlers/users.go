@@ -380,3 +380,162 @@ func (h *Handler) HandleSwitchCompany(w http.ResponseWriter, r *http.Request) {
 
 	h.JSON(w, http.StatusOK, map[string]interface{}{"company_id": companyID})
 }
+
+// HandleUserProfile handles GET and PATCH /api/user/profile
+func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
+	userID := h.getUserID(r)
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getUserProfile(w, userID)
+	case http.MethodPatch:
+		h.updateUserProfile(w, r, userID)
+	default:
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (h *Handler) getUserProfile(w http.ResponseWriter, userID int) {
+	var u models.User
+	err := h.DB.QueryRow(`
+		SELECT id, name, email, role, status, last_access, created_at, updated_at
+		FROM users WHERE id = ? AND deleted_at IS NULL
+	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status,
+		&u.LastAccess, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "user not found")
+		return
+	}
+	h.JSON(w, http.StatusOK, u)
+}
+
+type updateProfileRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (h *Handler) updateUserProfile(w http.ResponseWriter, r *http.Request, userID int) {
+	var req updateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	if req.Name == "" {
+		h.Error(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	if req.Email == "" {
+		h.Error(w, http.StatusBadRequest, "email is required")
+		return
+	}
+
+	// Fetch previous state for audit
+	var prevName, prevEmail string
+	err := h.DB.QueryRow(`
+		SELECT name, email FROM users WHERE id = ? AND deleted_at IS NULL
+	`, userID).Scan(&prevName, &prevEmail)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	// Check email uniqueness (excluding current user)
+	var existingID int
+	err = h.DB.QueryRow(`
+		SELECT id FROM users WHERE email = ? AND id != ? AND deleted_at IS NULL
+	`, req.Email, userID).Scan(&existingID)
+	if err == nil {
+		h.Error(w, http.StatusConflict, "email already exists")
+		return
+	}
+
+	_, err = h.DB.Exec(`
+		UPDATE users SET name=?, email=?, updated_at=CURRENT_TIMESTAMP
+		WHERE id=? AND deleted_at IS NULL
+	`, req.Name, req.Email, userID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update profile")
+		return
+	}
+
+	h.auditLog(r, userID, 0, "update_profile", "user", &userID, map[string]interface{}{
+		"name":  prevName,
+		"email": prevEmail,
+	}, map[string]interface{}{
+		"name":  req.Name,
+		"email": req.Email,
+	})
+
+	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+// HandleChangePassword handles POST /api/user/change-password
+func (h *Handler) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	userID := h.getUserID(r)
+
+	type changePasswordRequest struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	if req.CurrentPassword == "" {
+		h.Error(w, http.StatusBadRequest, "current_password is required")
+		return
+	}
+	if req.NewPassword == "" {
+		h.Error(w, http.StatusBadRequest, "new_password is required")
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		h.Error(w, http.StatusBadRequest, "new_password must be at least 8 characters")
+		return
+	}
+
+	// Get current password hash
+	var passwordHash string
+	err := h.DB.QueryRow(`
+		SELECT password_hash FROM users WHERE id = ? AND deleted_at IS NULL
+	`, userID).Scan(&passwordHash)
+	if err != nil {
+		h.Error(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	// Verify current password
+	if !auth.CheckPassword(req.CurrentPassword, passwordHash) {
+		h.Error(w, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+
+	// Hash new password
+	hashedPassword, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update password")
+		return
+	}
+
+	_, err = h.DB.Exec(`
+		UPDATE users SET password_hash=?, updated_at=CURRENT_TIMESTAMP
+		WHERE id=? AND deleted_at IS NULL
+	`, hashedPassword, userID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to update password")
+		return
+	}
+
+	h.auditLog(r, userID, 0, "change_password", "user", &userID, nil, nil)
+
+	h.JSON(w, http.StatusOK, map[string]string{"status": "password changed"})
+}
