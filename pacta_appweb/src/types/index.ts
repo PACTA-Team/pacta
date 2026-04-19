@@ -67,7 +67,7 @@ export interface Contract {
   id: string;
   internalId: string;
   contractNumber: string;
-  title: string;
+  title?: string;
   clientId: string;
   supplierId: string;
   client?: string;
