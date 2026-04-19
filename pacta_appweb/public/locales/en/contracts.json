@@ -46,5 +46,28 @@
   "lease": "Lease",
   "employment": "Employment",
   "nda": "NDA",
-  "other": "Other"
+  "other": "Other",
+  "contractTypes": {
+    "compraventa": "Purchase and Sale",
+    "suministro": "Supply",
+    "permuta": "Exchange",
+    "donacion": "Donation",
+    "deposito": "Deposit",
+    "prestacion_servicios": "Service Provision",
+    "agencia": "Agency",
+    "comision": "Commission",
+    "consignacion": "Consignment",
+    "comodato": "Loan for Use",
+    "arrendamiento": "Lease",
+    "leasing": "Leasing",
+    "cooperacion": "Cooperation",
+    "administracion": "Administration",
+    "transporte": "Transport",
+    "otro": "Other"
+  },
+  "partyFilter": {
+    "all": "All Parties",
+    "client": "Client Contracts",
+    "supplier": "Supplier Contracts"
+  }
 }
