@@ -8,16 +8,20 @@ import (
 )
 
 type User struct {
-	ID           int        `json:"id"`
-	Name         string     `json:"name"`
-	Email        string     `json:"email"`
-	PasswordHash string     `json:"-"`
-	Role         string     `json:"role"`
-	Status       string     `json:"status"`
-	CompanyID    *int       `json:"company_id,omitempty"`
-	LastAccess   *time.Time `json:"last_access,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID                    int        `json:"id"`
+	Name                  string     `json:"name"`
+	Email                 string     `json:"email"`
+	PasswordHash          string     `json:"-"`
+	Role                  string     `json:"role"`
+	Status                string     `json:"status"`
+	CompanyID             *int       `json:"company_id,omitempty"`
+	LastAccess            *time.Time `json:"last_access,omitempty"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+	DigitalSignatureURL   *string    `json:"digital_signature_url,omitempty"`
+	DigitalSignatureKey   *string    `json:"digital_signature_key,omitempty"`
+	PublicCertURL         *string    `json:"public_cert_url,omitempty"`
+	PublicCertKey         *string    `json:"public_cert_key,omitempty"`
 }
 
 type Client struct {

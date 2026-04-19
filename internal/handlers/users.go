@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -538,4 +541,170 @@ func (h *Handler) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 	h.auditLog(r, userID, 0, "change_password", "user", &userID, nil, nil)
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "password changed"})
+}
+
+const (
+	maxCertSize    int64 = 1024 * 1024 // 1MB
+	certStorageDir       = "certificates"
+)
+
+// HandleCertificate handles POST /api/user/certificate and DELETE /api/user/certificate/{type}
+func (h *Handler) HandleCertificate(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.uploadCertificate(w, r)
+	case http.MethodDelete:
+		h.deleteCertificate(w, r)
+	default:
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (h *Handler) uploadCertificate(w http.ResponseWriter, r *http.Request) {
+	userID := h.getUserID(r)
+
+	if err := r.ParseMultipartForm(maxCertSize); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	certType := r.FormValue("type")
+	if certType != "digital_signature" && certType != "public_cert" {
+		h.Error(w, http.StatusBadRequest, "type must be 'digital_signature' or 'public_cert'")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		h.Error(w, http.StatusBadRequest, "no file uploaded")
+		return
+	}
+	defer file.Close()
+
+	// Validate file extension
+	var allowedExts []string
+	if certType == "digital_signature" {
+		allowedExts = []string{".p12", ".pfx"}
+	} else {
+		allowedExts = []string{".cer", ".crt", ".pem", ".der"}
+	}
+
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	allowed := false
+	for _, e := range allowedExts {
+		if ext == e {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		h.Error(w, http.StatusBadRequest, "invalid file type")
+		return
+	}
+
+	// Generate storage filename
+	storageName := generateUUID()
+	storagePath := filepath.Join(h.DataDir, certStorageDir, strconv.Itoa(userID), certType)
+	if err := os.MkdirAll(storagePath, 0755); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create storage directory")
+		return
+	}
+
+	dstPath := filepath.Join(storagePath, storageName+ext)
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to save file")
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		os.Remove(dstPath)
+		h.Error(w, http.StatusInternalServerError, "failed to save file")
+		return
+	}
+
+	// Update database
+	var urlField, keyField string
+	if certType == "digital_signature" {
+		urlField = "digital_signature_url"
+		keyField = "digital_signature_key"
+	} else {
+		urlField = "public_cert_url"
+		keyField = "public_cert_key"
+	}
+
+	// Delete old certificate if exists
+	var oldURL *string
+	h.DB.QueryRow("SELECT "+urlField+" FROM users WHERE id = ?", userID).Scan(&oldURL)
+	if oldURL != nil && *oldURL != "" {
+		os.Remove(filepath.Join(h.DataDir, certStorageDir, *oldURL))
+	}
+
+	relativePath := filepath.Join(strconv.Itoa(userID), certType, storageName+ext)
+	_, err = h.DB.Exec(
+		"UPDATE users SET "+urlField+"=?, "+keyField+"=?, updated_at=CURRENT_TIMESTAMP WHERE id = ?",
+		relativePath, header.Filename, userID,
+	)
+	if err != nil {
+		os.Remove(dstPath)
+		h.Error(w, http.StatusInternalServerError, "failed to update certificate")
+		return
+	}
+
+	h.auditLog(r, userID, 0, "upload_certificate", "user", &userID, nil, map[string]interface{}{
+		"type":    certType,
+		"filename": header.Filename,
+	})
+
+	h.JSON(w, http.StatusOK, map[string]string{"status": "uploaded", "filename": header.Filename})
+}
+
+func (h *Handler) deleteCertificate(w http.ResponseWriter, r *http.Request) {
+	userID := h.getUserID(r)
+
+	certType := chi.URLParam(r, "type")
+	if certType != "digital_signature" && certType != "public_cert" {
+		h.Error(w, http.StatusBadRequest, "type must be 'digital_signature' or 'public_cert'")
+		return
+	}
+
+	var urlField, keyField string
+	if certType == "digital_signature" {
+		urlField = "digital_signature_url"
+		keyField = "digital_signature_key"
+	} else {
+		urlField = "public_cert_url"
+		keyField = "public_cert_key"
+	}
+
+	// Get current certificate path
+	var certPath, certKey *string
+	err := h.DB.QueryRow(
+		"SELECT "+urlField+", "+keyField+" FROM users WHERE id = ?", userID,
+	).Scan(&certPath, &certKey)
+	if err != nil || certPath == nil || *certPath == "" {
+		h.Error(w, http.StatusNotFound, "certificate not found")
+		return
+	}
+
+	// Delete file
+	filePath := filepath.Join(h.DataDir, certStorageDir, *certPath)
+	os.Remove(filePath)
+
+	// Clear database
+	_, err = h.DB.Exec(
+		"UPDATE users SET "+urlField+"=NULL, "+keyField+"=NULL, updated_at=CURRENT_TIMESTAMP WHERE id = ?",
+		userID,
+	)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to delete certificate")
+		return
+	}
+
+	h.auditLog(r, userID, 0, "delete_certificate", "user", &userID, map[string]interface{}{
+		"type": certType,
+	}, nil)
+
+	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

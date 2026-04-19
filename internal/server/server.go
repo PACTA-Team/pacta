@@ -64,6 +64,8 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Get("/api/user/profile", h.HandleUserProfile)
 		r.Patch("/api/user/profile", h.HandleUserProfile)
 		r.Post("/api/user/change-password", h.HandleChangePassword)
+		r.Post("/api/user/certificate", h.HandleCertificate)
+		r.Delete("/api/user/certificate/{type}", h.HandleCertificate)
 
 		r.Use(h.CompanyMiddleware)
 
