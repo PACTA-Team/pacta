@@ -129,6 +129,14 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate status if provided
+	if req.Status != nil && *req.Status != "" {
+		if *req.Status != "draft" && *req.Status != "approved" && *req.Status != "active" {
+			h.Error(w, http.StatusBadRequest, "status must be 'draft', 'approved', or 'active'")
+			return
+		}
+	}
+
 	// Validate signers if provided
 	if req.ClientSignerID != nil {
 		var signerExists int
