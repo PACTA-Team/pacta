@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-04-18
+
+### Added
+- **User Profile API** — New backend endpoints for user profile management:
+  - GET /api/user/profile - Get current user profile
+  - PATCH /api/user/profile - Update name and email
+  - POST /api/user/change-password - Change password with current password validation
+- **Audit Logging** — Profile and password changes are now logged in audit logs
+
+### Technical Details
+- **Files Modified:** 2 (`internal/handlers/users.go`, `internal/server/server.go`)
+- **Lines Added:** 165
+
 ## [0.40.2] - 2026-04-18
 
 ### Fixed
