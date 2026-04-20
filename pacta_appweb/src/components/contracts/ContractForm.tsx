@@ -22,7 +22,7 @@ import { FieldTooltip } from '@/components/ui/field-tooltip';
 
 interface ContractFormProps {
   contract?: Contract;
-  onSubmit: (data: Omit<Contract, 'id' | 'internalId' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<Contract, 'id' | 'internal_id' | 'created_by' | 'created_at' | 'updated_at'>) => void;
   onCancel: () => void;
 }
 
@@ -35,23 +35,23 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   const [supplierSigners, setSupplierSigners] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    contractNumber: (contract as any)?.contract_number || contract?.contractNumber || '',
-    clientId: ((contract as any)?.client_id ?? contract?.clientId)?.toString() || '',
-    supplierId: ((contract as any)?.supplier_id ?? contract?.supplierId)?.toString() || '',
-    clientSignerId: ((contract as any)?.client_signer_id ?? contract?.clientSignerId)?.toString() || '',
-    supplierSignerId: ((contract as any)?.supplier_signer_id ?? contract?.supplierSignerId)?.toString() || '',
-    startDate: (contract as any)?.start_date || contract?.startDate || '',
-    endDate: (contract as any)?.end_date || contract?.endDate || '',
+    contract_number: (contract as any)?.contract_number || '',
+    client_id: ((contract as any)?.client_id ?? '')?.toString() || '',
+    supplier_id: ((contract as any)?.supplier_id ?? '')?.toString() || '',
+    client_signer_id: ((contract as any)?.client_signer_id ?? '')?.toString() || '',
+    supplier_signer_id: ((contract as any)?.supplier_signer_id ?? '')?.toString() || '',
+    start_date: (contract as any)?.start_date || '',
+    end_date: (contract as any)?.end_date || '',
     amount: contract?.amount || 0,
     type: contract?.type || 'service' as ContractType,
     status: contract?.status || 'pending' as ContractStatus,
     description: contract?.description || '',
-    object: (contract as any)?.object || contract?.object || '',
-    fulfillmentPlace: (contract as any)?.fulfillment_place || contract?.fulfillmentPlace || '',
-    disputeResolution: (contract as any)?.dispute_resolution || contract?.disputeResolution || '',
-    hasConfidentiality: (contract as any)?.has_confidentiality || contract?.hasConfidentiality || false,
-    guarantees: (contract as any)?.guarantees || contract?.guarantees || '',
-    renewalType: (contract as any)?.renewal_type || contract?.renewalType || '' as RenewalType,
+    object: (contract as any)?.object || '',
+    fulfillment_place: (contract as any)?.fulfillment_place || '',
+    dispute_resolution: (contract as any)?.dispute_resolution || '',
+    has_confidentiality: (contract as any)?.has_confidentiality || false,
+    guarantees: (contract as any)?.guarantees || '',
+    renewal_type: (contract as any)?.renewal_type || '' as RenewalType,
   });
 
   const [legalFieldsOpen, setLegalFieldsOpen] = useState(false);
@@ -103,7 +103,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   const isEditing = !!contract;
   const [ourRole, setOurRole] = useState<'client' | 'supplier'>(() => {
     if (contract) {
-      return contract.clientId ? 'client' : 'supplier';
+      return contract.client_id ? 'client' : 'supplier';
     }
     return 'client';
   });
@@ -123,12 +123,12 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
         setClients(clientsData as any[]);
         setSuppliers(suppliersData as any[]);
 
-        if (formData.clientId) {
-          setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.clientId) && s.company_type === 'client'));
+        if (formData.client_id) {
+          setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.client_id) && s.company_type === 'client'));
         }
 
-        if (formData.supplierId) {
-          setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplierId) && s.company_type === 'supplier'));
+        if (formData.supplier_id) {
+          setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplier_id) && s.company_type === 'supplier'));
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load form data');
@@ -140,43 +140,43 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   useEffect(() => {
     const loadSigners = async () => {
       const allSigners = await signersAPI.list();
-      if (formData.clientId) {
-        setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.clientId) && s.company_type === 'client'));
+      if (formData.client_id) {
+        setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.client_id) && s.company_type === 'client'));
       }
-      if (formData.supplierId) {
-        setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplierId) && s.company_type === 'supplier'));
+      if (formData.supplier_id) {
+        setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplier_id) && s.company_type === 'supplier'));
       }
     };
     loadSigners();
-  }, [formData.clientId, formData.supplierId]);
+  }, [formData.client_id, formData.supplier_id]);
 
-  const handleClientChange = (clientId: string) => {
+  const handleClientChange = (client_id: string) => {
     const fetchSigners = async () => {
       const signers = await signersAPI.list();
-      setClientSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(clientId) && s.company_type === 'client'));
+      setClientSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(client_id) && s.company_type === 'client'));
     };
     fetchSigners();
-    setFormData({ ...formData, clientId, clientSignerId: '' });
+    setFormData({ ...formData, client_id, client_signer_id: '' });
   };
 
-  const handleSupplierChange = (supplierId: string) => {
+  const handleSupplierChange = (supplier_id: string) => {
     const fetchSigners = async () => {
       const signers = await signersAPI.list();
-      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(supplierId) && s.company_type === 'supplier'));
+      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(supplier_id) && s.company_type === 'supplier'));
     };
     fetchSigners();
-    setFormData({ ...formData, supplierId, supplierSignerId: '' });
+    setFormData({ ...formData, supplier_id, supplier_signer_id: '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.clientId || !formData.supplierId) {
+    if (!formData.client_id || !formData.supplier_id) {
       toast.error('Please select both client and supplier');
       return;
     }
     
-    if (!formData.clientSignerId || !formData.supplierSignerId) {
+    if (!formData.client_signer_id || !formData.supplier_signer_id) {
       toast.error('Please select authorized signers for both parties');
       return;
     }
@@ -191,12 +191,12 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {contract?.internalId && (
+          {contract?.internal_id && (
             <div className="space-y-2">
-              <Label htmlFor="internalId">Internal ID (System)</Label>
+              <Label htmlFor="internal_id">Internal ID (System)</Label>
               <Input
-                id="internalId"
-                value={contract.internalId}
+                id="internal_id"
+                value={contract.internal_id}
                 disabled
                 className="bg-muted"
               />
@@ -208,9 +208,9 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             <div className="space-y-2">
               <Label htmlFor="contractNumber">Contract Number *</Label>
               <Input
-                id="contractNumber"
-                value={formData.contractNumber}
-                onChange={(e) => setFormData({ ...formData, contractNumber: e.target.value })}
+                id="contract_number"
+                value={formData.contract_number}
+                onChange={(e) => setFormData({ ...formData, contract_number: e.target.value })}
                 required
               />
             </div>
@@ -259,8 +259,8 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="clientId">{ourLabel} *</Label>
-              <Select value={formData.clientId} onValueChange={handleClientChange}>
+              <Label htmlFor="client_id">{ourLabel} *</Label>
+              <Select value={formData.client_id} onValueChange={handleClientChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
@@ -275,11 +275,11 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clientSignerId">{ourLabel} Authorized Signer *</Label>
+              <Label htmlFor="client_signer_id">{ourLabel} Authorized Signer *</Label>
               <Select 
-                value={formData.clientSignerId} 
-                onValueChange={(value) => setFormData({ ...formData, clientSignerId: value })}
-                disabled={!formData.clientId}
+                value={formData.client_signer_id} 
+                onValueChange={(value) => setFormData({ ...formData, client_signer_id: value })}
+                disabled={!formData.client_id}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select signer" />
@@ -297,8 +297,8 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="supplierId">{counterpartLabel} *</Label>
-              <Select value={formData.supplierId} onValueChange={handleSupplierChange}>
+              <Label htmlFor="supplier_id">{counterpartLabel} *</Label>
+              <Select value={formData.supplier_id} onValueChange={handleSupplierChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
@@ -313,11 +313,11 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="supplierSignerId">{counterpartLabel} Authorized Signer *</Label>
+              <Label htmlFor="supplier_signer_id">{counterpartLabel} Authorized Signer *</Label>
               <Select 
-                value={formData.supplierSignerId} 
-                onValueChange={(value) => setFormData({ ...formData, supplierSignerId: value })}
-                disabled={!formData.supplierId}
+                value={formData.supplier_signer_id} 
+                onValueChange={(value) => setFormData({ ...formData, supplier_signer_id: value })}
+                disabled={!formData.supplier_id}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select signer" />
@@ -335,23 +335,23 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date *</Label>
+              <Label htmlFor="start_date">Start Date *</Label>
               <Input
-                id="startDate"
+                id="start_date"
                 type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date *</Label>
+              <Label htmlFor="end_date">End Date *</Label>
               <Input
-                id="endDate"
+                id="end_date"
                 type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                 required
               />
             </div>
@@ -419,23 +419,23 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
                   <div className="space-y-2">
                     <FieldTooltip content={t('fulfillmentPlaceTooltip')}>
-                      <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                      <Label htmlFor="fulfillment_place">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
                     </FieldTooltip>
                     <Input
-                      id="fulfillmentPlace"
-                      value={formData.fulfillmentPlace}
-                      onChange={(e) => setFormData({ ...formData, fulfillmentPlace: e.target.value })}
+                      id="fulfillment_place"
+                      value={formData.fulfillment_place}
+                      onChange={(e) => setFormData({ ...formData, fulfillment_place: e.target.value })}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <FieldTooltip content={t('disputeResolutionTooltip')}>
-                      <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
+                      <Label htmlFor="dispute_resolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
                     </FieldTooltip>
                     <Input
-                      id="disputeResolution"
-                      value={formData.disputeResolution}
-                      onChange={(e) => setFormData({ ...formData, disputeResolution: e.target.value })}
+                      id="dispute_resolution"
+                      value={formData.dispute_resolution}
+                      onChange={(e) => setFormData({ ...formData, dispute_resolution: e.target.value })}
                     />
                   </div>
 
@@ -453,11 +453,11 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
                   <div className="space-y-2">
                     <FieldTooltip content={t('renewalTypeTooltip')}>
-                      <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
+                      <Label htmlFor="renewal_type">{t('renewalType') || 'Tipo de Renovación'}</Label>
                     </FieldTooltip>
                     <Select
-                      value={formData.renewalType}
-                      onValueChange={(value) => setFormData({ ...formData, renewalType: value as RenewalType })}
+                      value={formData.renewal_type}
+                      onValueChange={(value) => setFormData({ ...formData, renewal_type: value as RenewalType })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar..." />
@@ -473,12 +473,12 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="hasConfidentiality"
-                    checked={formData.hasConfidentiality}
-                    onCheckedChange={(checked) => setFormData({ ...formData, hasConfidentiality: !!checked })}
+                    id="has_confidentiality"
+                    checked={formData.has_confidentiality}
+                    onCheckedChange={(checked) => setFormData({ ...formData, has_confidentiality: !!checked })}
                   />
                   <FieldTooltip content={t('confidentialityClauseTooltip')}>
-                    <Label htmlFor="hasConfidentiality" className="cursor-pointer">
+                    <Label htmlFor="has_confidentiality" className="cursor-pointer">
                       {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
                     </Label>
                   </FieldTooltip>
