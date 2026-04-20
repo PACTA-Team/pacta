@@ -99,8 +99,8 @@ export const initializeDefaultUser = (): void => {
       password: 'pacta123',
       role: 'admin',
       status: 'active',
-      lastAccess: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+      last_access: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
     setUsers([defaultAdmin]);
   }

@@ -50,53 +50,53 @@ export interface User {
   role: UserRole;
   status: 'active' | 'inactive';
   company_id?: string;
-  lastAccess: string;
-  createdAt: string;
+  last_access: string;
+  created_at: string;
 }
 
 export interface Client {
   id: string;
   name: string;
   address: string;
-  reuCode: string;
+  reu_code: string;
   contacts: string;
-  documentUrl?: string;
-  documentKey?: string;
-  documentName?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  document_url?: string;
+  document_key?: string;
+  document_name?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Supplier {
   id: string;
   name: string;
   address: string;
-  reuCode: string;
+  reu_code: string;
   contacts: string;
-  documentUrl?: string;
-  documentKey?: string;
-  documentName?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  document_url?: string;
+  document_key?: string;
+  document_name?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuthorizedSigner {
   id: string;
-  companyId: string;
-  companyType: 'client' | 'supplier';
-  firstName: string;
-  lastName: string;
+  company_id: string;
+  company_type: 'client' | 'supplier';
+  first_name: string;
+  last_name: string;
   position: string;
   phone: string;
   email: string;
-  documentUrl?: string;
-  documentKey?: string;
-  documentName?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  document_url?: string;
+  document_key?: string;
+  document_name?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Contract {
@@ -183,24 +183,24 @@ export interface UpdateSupplementRequest {
 
 export interface Document {
   id: number;
-  entityId: number;
-  entityType: string;
+  entity_id: number;
+  entity_type: string;
   filename: string;
-  mimeType: string | null;
-  sizeBytes: number | null;
-  createdAt: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
 }
 
 export interface Notification {
   id: number;
-  userId: number;
+  user_id: number;
   type: string;
   title: string;
   message: string | null;
-  entityId: number | null;
-  entityType: string | null;
-  readAt: string | null;
-  createdAt: string;
+  entity_id: number | null;
+  entity_type: string | null;
+  read_at: string | null;
+  created_at: string;
 }
 
 export interface AuditLog {

@@ -25,17 +25,17 @@ export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: Aut
   const { t: tCommon } = useTranslation('common');
   const [clients, setClients] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    companyId: signer?.companyId || '',
-    companyType: signer?.companyType || 'client' as 'client' | 'supplier',
-    firstName: signer?.firstName || '',
-    lastName: signer?.lastName || '',
+  const [formData, setFormData] = useState<any>({
+    companyId: signer?.company_id || '',
+    companyType: signer?.company_type || 'client',
+    firstName: signer?.first_name || '',
+    lastName: signer?.last_name || '',
     position: signer?.position || '',
     phone: signer?.phone || '',
     email: signer?.email || '',
-    documentUrl: signer?.documentUrl || '',
-    documentKey: signer?.documentKey || '',
-    documentName: signer?.documentName || '',
+    documentUrl: signer?.document_url || '',
+    documentKey: signer?.document_key || '',
+    documentName: signer?.document_name || '',
   });
   const [uploading, setUploading] = useState(false);
 

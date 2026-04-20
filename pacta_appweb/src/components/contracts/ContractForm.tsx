@@ -287,7 +287,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 <SelectContent>
                   {clientSigners.map((signer) => (
                     <SelectItem key={signer.id} value={signer.id}>
-                      {signer.firstName} {signer.lastName} - {signer.position}
+                      {signer.first_name} {signer.last_name} - {signer.position}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -325,7 +325,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 <SelectContent>
                   {supplierSigners.map((signer) => (
                     <SelectItem key={signer.id} value={signer.id}>
-                      {signer.firstName} {signer.lastName} - {signer.position}
+                      {signer.first_name} {signer.last_name} - {signer.position}
                     </SelectItem>
                   ))}
                 </SelectContent>
