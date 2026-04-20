@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
-import { ContractStatus, ContractType, Contract } from '@/types';
+import { Contract, Client, Supplier } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
@@ -28,10 +28,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function ContractsPage() {
-  const [contracts, setContractsState] = useState<any[]>([]);
-  const [filteredContracts, setFilteredContracts] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [contracts, setContractsState] = useState<Contract[]>([]);
+  const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -63,9 +63,9 @@ export default function ContractsPage() {
         clientsAPI.list(),
         suppliersAPI.list(),
       ]);
-      setContractsState(contractsData as any[]);
-      setClients(clientsData as any[]);
-      setSuppliers(suppliersData as any[]);
+      setContractsState(contractsData as Contract[]);
+      setClients(clientsData as Client[]);
+      setSuppliers(suppliersData as Supplier[]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load data');
     }
@@ -76,8 +76,8 @@ export default function ContractsPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(c => {
-        const client = clients.find(cl => cl.id === c.client_id);
-        const supplier = suppliers.find(s => s.id === c.supplier_id);
+        const client = clients.find(cl => Number(cl.id) === c.client_id);
+        const supplier = suppliers.find(s => Number(s.id) === c.supplier_id);
         return (
           c.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

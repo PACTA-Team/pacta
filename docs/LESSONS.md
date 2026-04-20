@@ -73,6 +73,44 @@ Regla concreta para evitar este error en el futuro.
 
 <!-- Las lecciones se registran a continuación en orden cronológico inverso -->
 
+## [002] Inconsistencia de Tipos: any[] vs Tipos Strongly-Typed
+
+**Fecha**: 2026-04-20
+**Tags**: frontend, types, consistency
+**Severity**: high
+
+### Contexto
+Al reemplazar `any[]` por tipos específicos (`Contract[]`, `Client[]`, `Supplier[]`) en ContractsPage y DashboardPage, aparecieron errores LSP que estaban ocultos previamente.
+
+### Síntomas
+```
+ERROR: This comparison appears to be unintentional because the types 'string' and 'number' have no overlap.
+ERROR: Property 'clientId' does not exist on type...
+```
+
+### Causa Raíz
+1. **Inconsistencia de tipos**: `Client.id` es `string`, `Contract.client_id` es `number` - tipos diferentes para IDs
+2. **Naming híbrido**: El código del formulario usa camelCase (`data.clientId`), pero la API del backend espera snake_case (`client_id`)
+3. El uso de `any[]` ocultaba estos errores de type-checking
+
+### Solución
+1. Para **comparaciones de ID**: Usar conversión explícita `Number(cl.id) === c.client_id`
+2. **Arquitectura deciden**: Usar consistentemente snake_case en todo el proyecto (viene del backend)
+
+### Regla de Prevención
+> **Snake_case estándar**: Todo el proyecto debe usar snake_case consistentemente para mantener consistencia con el backend.
+> - No crear tipos duplicados camelCase y snake_case
+> - Al agregar tipos strong, verificar que el naming sea consistente con la API backend
+> - Usar conversión explícita cuando sea necesario: `Number()` o `String()`
+
+### Referencias
+- pacta_appweb/src/pages/ContractsPage.tsx
+- pacta_appweb/src/pages/DashboardPage.tsx
+- pacta_appweb/src/types/index.ts
+- internal/models/models.go (backend)
+
+---
+
 ## [001] Ejemplo: Error de Build por Falta de Dependencias
 
 **Fecha**: 2026-04-19
