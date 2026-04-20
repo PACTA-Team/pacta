@@ -72,8 +72,8 @@ export default function AuthorizedSignersPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(s =>
-        s.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.position.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -239,16 +239,16 @@ export default function AuthorizedSignersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setViewingSigner(signer)} aria-label={`View signer ${signer.firstName} ${signer.lastName}`}>
+                          <Button variant="ghost" size="sm" onClick={() => setViewingSigner(signer)} aria-label={`View signer ${signer.first_name} ${signer.last_name}`}>
                             <Eye className="h-4 w-4" aria-hidden="true" />
                           </Button>
                           {hasPermission('editor') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(signer)} aria-label={`Edit signer ${signer.firstName} ${signer.lastName}`}>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(signer)} aria-label={`Edit signer ${signer.first_name} ${signer.last_name}`}>
                               <Edit className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
                           {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(signer.id)} aria-label={`Delete signer ${signer.firstName} ${signer.lastName}`}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(signer.id)} aria-label={`Delete signer ${signer.first_name} ${signer.last_name}`}>
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           )}
