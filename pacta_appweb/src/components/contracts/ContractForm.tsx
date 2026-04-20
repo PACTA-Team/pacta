@@ -36,10 +36,10 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
   const [formData, setFormData] = useState({
     contract_number: (contract as any)?.contract_number || '',
-    client_id: ((contract as any)?.client_id ?? '')?.toString() || '',
-    supplier_id: ((contract as any)?.supplier_id ?? '')?.toString() || '',
-    client_signer_id: ((contract as any)?.client_signer_id ?? '')?.toString() || '',
-    supplier_signer_id: ((contract as any)?.supplier_signer_id ?? '')?.toString() || '',
+    client_id: (contract as any)?.client_id ?? null,
+    supplier_id: (contract as any)?.supplier_id ?? null,
+    client_signer_id: (contract as any)?.client_signer_id ?? null,
+    supplier_signer_id: (contract as any)?.supplier_signer_id ?? null,
     start_date: (contract as any)?.start_date || '',
     end_date: (contract as any)?.end_date || '',
     amount: contract?.amount || 0,
@@ -150,22 +150,24 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
     loadSigners();
   }, [formData.client_id, formData.supplier_id]);
 
-  const handleClientChange = (client_id: string) => {
+  const handleClientChange = (value: string) => {
+    const client_id = value ? parseInt(value, 10) : null;
     const fetchSigners = async () => {
       const signers = await signersAPI.list();
-      setClientSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(client_id) && s.company_type === 'client'));
+      setClientSigners((signers as any[]).filter((s: any) => s.company_id === client_id && s.company_type === 'client'));
     };
     fetchSigners();
-    setFormData({ ...formData, client_id, client_signer_id: '' });
+    setFormData({ ...formData, client_id, client_signer_id: null });
   };
 
-  const handleSupplierChange = (supplier_id: string) => {
+  const handleSupplierChange = (value: string) => {
+    const supplier_id = value ? parseInt(value, 10) : null;
     const fetchSigners = async () => {
       const signers = await signersAPI.list();
-      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(supplier_id) && s.company_type === 'supplier'));
+      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === supplier_id && s.company_type === 'supplier'));
     };
     fetchSigners();
-    setFormData({ ...formData, supplier_id, supplier_signer_id: '' });
+    setFormData({ ...formData, supplier_id, supplier_signer_id: null });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -277,9 +279,8 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             <div className="space-y-2">
               <Label htmlFor="client_signer_id">{ourLabel} Authorized Signer *</Label>
               <Select 
-                value={formData.client_signer_id} 
-                onValueChange={(value) => setFormData({ ...formData, client_signer_id: value })}
-                disabled={!formData.client_id}
+                value={formData.client_signer_id?.toString() ?? ''} 
+                onValueChange={(value) => setFormData({ ...formData, client_signer_id: value ? parseInt(value, 10) : null })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select signer" />
@@ -315,8 +316,8 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             <div className="space-y-2">
               <Label htmlFor="supplier_signer_id">{counterpartLabel} Authorized Signer *</Label>
               <Select 
-                value={formData.supplier_signer_id} 
-                onValueChange={(value) => setFormData({ ...formData, supplier_signer_id: value })}
+                value={formData.supplier_signer_id?.toString() ?? ''} 
+                onValueChange={(value) => setFormData({ ...formData, supplier_signer_id: value ? parseInt(value, 10) : null })}
                 disabled={!formData.supplier_id}
               >
                 <SelectTrigger>

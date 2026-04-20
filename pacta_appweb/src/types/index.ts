@@ -111,8 +111,8 @@ export interface Contract {
   start_date: string;
   end_date: string;
   amount: number;
-  type: string;
-  status: string;
+  type: ContractType;
+  status: ContractStatus;
   description?: string;
   object?: string;
   fulfillment_place?: string;
