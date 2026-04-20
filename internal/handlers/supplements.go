@@ -86,12 +86,25 @@ func (h *Handler) generateSupplementInternalID(companyID int) (string, error) {
 	return fmt.Sprintf("SPL-%d-%04d", year, next), nil
 }
 
-// statusToUse returns the new status if provided, otherwise preserves the current status
-func statusToUse(newStatus, currentStatus *string) string {
+// validateSupplementStatus validates that status is one of the allowed values
+func validateSupplementStatus(status *string) error {
+	if status == nil || *status == "" {
+		return nil
+	}
+	if *status != "draft" && *status != "approved" && *status != "active" {
+		return fmt.Errorf("status must be 'draft', 'approved', or 'active', got '%s'", *status)
+	}
+	return nil
+}
+
+// determineSupplementStatus returns the status to use for INSERT/UPDATE operations.
+// For CREATE: returns newStatus if provided, otherwise defaults to "draft"
+// For UPDATE: returns newStatus if provided, otherwise preserves currentStatus
+func determineSupplementStatus(newStatus, currentStatus *string) string {
 	if newStatus != nil && *newStatus != "" {
 		return *newStatus
 	}
-	if currentStatus != nil {
+	if currentStatus != nil && *currentStatus != "" {
 		return *currentStatus
 	}
 	return "draft"
@@ -130,11 +143,9 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate status if provided
-	if req.Status != nil && *req.Status != "" {
-		if *req.Status != "draft" && *req.Status != "approved" && *req.Status != "active" {
-			h.Error(w, http.StatusBadRequest, "status must be 'draft', 'approved', or 'active'")
-			return
-		}
+	if err := validateSupplementStatus(req.Status); err != nil {
+		h.Error(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Validate signers if provided
@@ -168,12 +179,13 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserID(r)
+	statusToUse := determineSupplementStatus(req.Status, nil)
 	result, err := h.DB.Exec(`
 		INSERT INTO supplements (internal_id, contract_id, supplement_number, description,
 			effective_date, modifications, modification_type, status, client_signer_id, supplier_signer_id, created_by, company_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, internalID, req.ContractID, req.SupplementNumber, req.Description,
-		req.EffectiveDate, req.Modifications, req.ModificationType, "draft",
+		req.EffectiveDate, req.Modifications, req.ModificationType, statusToUse,
 		req.ClientSignerID, req.SupplierSignerID, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create supplement")
@@ -186,7 +198,7 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 		"internal_id":       internalID,
 		"contract_id":       req.ContractID,
 		"supplement_number": req.SupplementNumber,
-		"status":            "draft",
+		"status":            statusToUse,
 	})
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
 		"id":          id,
@@ -255,6 +267,12 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 		}
 	}
 
+	// Validate status if provided
+	if err := validateSupplementStatus(req.Status); err != nil {
+		h.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Fetch previous state for audit
 	var prevContractID int
 	var prevSupplementNumber string
@@ -272,6 +290,8 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
+	newStatus := determineSupplementStatus(req.Status, prevStatus)
+
 	_, err = h.DB.Exec(`
 		UPDATE supplements SET contract_id=?, supplement_number=?, description=?,
 			effective_date=?, modifications=?, modification_type=?, status=?, client_signer_id=?, supplier_signer_id=?,
@@ -279,7 +299,7 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.ContractID, req.SupplementNumber, req.Description,
 		req.EffectiveDate, req.Modifications, req.ModificationType,
-		statusToUse(req.Status, prevStatus),
+		newStatus,
 		req.ClientSignerID, req.SupplierSignerID, id, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplement")
@@ -301,7 +321,7 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 		"description":       req.Description,
 		"effective_date":    req.EffectiveDate,
 		"modifications":     req.Modifications,
-		"status":            "draft",
+		"status":            newStatus,
 	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
