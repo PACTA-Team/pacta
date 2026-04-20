@@ -21,14 +21,14 @@ interface SupplierFormProps {
 export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierFormProps) {
   const { t } = useTranslation('suppliers');
   const { t: tCommon } = useTranslation('common');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name: supplier?.name || '',
     address: supplier?.address || '',
-    reuCode: supplier?.reuCode || '',
+    reuCode: supplier?.reu_code || '',
     contacts: supplier?.contacts || '',
-    documentUrl: supplier?.documentUrl || '',
-    documentKey: supplier?.documentKey || '',
-    documentName: supplier?.documentName || '',
+    documentUrl: supplier?.document_url || '',
+    documentKey: supplier?.document_key || '',
+    documentName: supplier?.document_name || '',
   });
   const [uploading, setUploading] = useState(false);
 

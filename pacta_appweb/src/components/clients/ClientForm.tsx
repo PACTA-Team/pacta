@@ -21,14 +21,14 @@ interface ClientFormProps {
 export default function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
   const { t } = useTranslation('clients');
   const { t: tCommon } = useTranslation('common');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name: client?.name || '',
     address: client?.address || '',
-    reuCode: client?.reuCode || '',
+    reuCode: client?.reu_code || '',
     contacts: client?.contacts || '',
-    documentUrl: client?.documentUrl || '',
-    documentKey: client?.documentKey || '',
-    documentName: client?.documentName || '',
+    documentUrl: client?.document_url || '',
+    documentKey: client?.document_key || '',
+    documentName: client?.document_name || '',
   });
   const [uploading, setUploading] = useState(false);
 

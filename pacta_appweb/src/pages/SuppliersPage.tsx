@@ -77,7 +77,7 @@ export default function SuppliersPage() {
         await suppliersAPI.update(editingSupplier.id, {
           name: data.name,
           address: data.address,
-          reu_code: data.reuCode,
+          reu_code: data.reu_code,
           contacts: data.contacts,
         });
         toast.success(t('updateSuccess'));
@@ -85,7 +85,7 @@ export default function SuppliersPage() {
         await suppliersAPI.create({
           name: data.name,
           address: data.address,
-          reu_code: data.reuCode,
+          reu_code: data.reu_code,
           contacts: data.contacts,
         });
         toast.success(t('createSuccess'));
