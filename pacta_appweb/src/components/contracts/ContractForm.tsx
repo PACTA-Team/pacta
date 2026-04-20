@@ -397,93 +397,95 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             />
           </div>
 
-          <Collapsible open={legalFieldsOpen} onOpenChange={setLegalFieldsOpen}>
-            <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-              <ChevronDown className={`h-4 w-4 transition-transform ${legalFieldsOpen ? 'rotate-180' : ''}`} />
-              {t('additionalClauses') || 'Cláusulas Adicionales'}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <FieldTooltip content={t('objectTooltip')}>
-                    <Label htmlFor="object">{t('object') || 'Objeto del Contrato'}</Label>
-                  </FieldTooltip>
-                  <Textarea
-                    id="object"
-                    value={formData.object}
-                    onChange={(e) => setFormData({ ...formData, object: e.target.value })}
-                    rows={3}
+          {ourRole === 'client' && (
+            <Collapsible open={legalFieldsOpen} onOpenChange={setLegalFieldsOpen}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                <ChevronDown className={`h-4 w-4 transition-transform ${legalFieldsOpen ? 'rotate-180' : ''}`} />
+                {t('additionalClauses') || 'Cláusulas Adicionales'}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 col-span-2">
+                    <FieldTooltip content={t('objectTooltip')}>
+                      <Label htmlFor="object">{t('object') || 'Objeto del Contrato'}</Label>
+                    </FieldTooltip>
+                    <Textarea
+                      id="object"
+                      value={formData.object}
+                      onChange={(e) => setFormData({ ...formData, object: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FieldTooltip content={t('fulfillmentPlaceTooltip')}>
+                      <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                    </FieldTooltip>
+                    <Input
+                      id="fulfillmentPlace"
+                      value={formData.fulfillmentPlace}
+                      onChange={(e) => setFormData({ ...formData, fulfillmentPlace: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FieldTooltip content={t('disputeResolutionTooltip')}>
+                      <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
+                    </FieldTooltip>
+                    <Input
+                      id="disputeResolution"
+                      value={formData.disputeResolution}
+                      onChange={(e) => setFormData({ ...formData, disputeResolution: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FieldTooltip content={t('guaranteesTooltip')}>
+                      <Label htmlFor="guarantees">{t('guarantees') || 'Garantías'}</Label>
+                    </FieldTooltip>
+                    <Textarea
+                      id="guarantees"
+                      value={formData.guarantees}
+                      onChange={(e) => setFormData({ ...formData, guarantees: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <FieldTooltip content={t('renewalTypeTooltip')}>
+                      <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
+                    </FieldTooltip>
+                    <Select
+                      value={formData.renewalType}
+                      onValueChange={(value) => setFormData({ ...formData, renewalType: value as RenewalType })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="automatica">{RENEWAL_TYPE_LABELS.automatica}</SelectItem>
+                        <SelectItem value="manual">{RENEWAL_TYPE_LABELS.manual}</SelectItem>
+                        <SelectItem value="cumplimiento">{RENEWAL_TYPE_LABELS.cumplimiento}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hasConfidentiality"
+                    checked={formData.hasConfidentiality}
+                    onCheckedChange={(checked) => setFormData({ ...formData, hasConfidentiality: !!checked })}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <FieldTooltip content={t('fulfillmentPlaceTooltip')}>
-                    <Label htmlFor="fulfillmentPlace">{t('fulfillmentPlace') || 'Lugar de Cumplimiento'}</Label>
+                  <FieldTooltip content={t('confidentialityClauseTooltip')}>
+                    <Label htmlFor="hasConfidentiality" className="cursor-pointer">
+                      {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
+                    </Label>
                   </FieldTooltip>
-                  <Input
-                    id="fulfillmentPlace"
-                    value={formData.fulfillmentPlace}
-                    onChange={(e) => setFormData({ ...formData, fulfillmentPlace: e.target.value })}
-                  />
                 </div>
-
-                <div className="space-y-2">
-                  <FieldTooltip content={t('disputeResolutionTooltip')}>
-                    <Label htmlFor="disputeResolution">{t('disputeResolution') || 'Resolución de Controversias'}</Label>
-                  </FieldTooltip>
-                  <Input
-                    id="disputeResolution"
-                    value={formData.disputeResolution}
-                    onChange={(e) => setFormData({ ...formData, disputeResolution: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <FieldTooltip content={t('guaranteesTooltip')}>
-                    <Label htmlFor="guarantees">{t('guarantees') || 'Garantías'}</Label>
-                  </FieldTooltip>
-                  <Textarea
-                    id="guarantees"
-                    value={formData.guarantees}
-                    onChange={(e) => setFormData({ ...formData, guarantees: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <FieldTooltip content={t('renewalTypeTooltip')}>
-                    <Label htmlFor="renewalType">{t('renewalType') || 'Tipo de Renovación'}</Label>
-                  </FieldTooltip>
-                  <Select
-                    value={formData.renewalType}
-                    onValueChange={(value) => setFormData({ ...formData, renewalType: value as RenewalType })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="automatica">{RENEWAL_TYPE_LABELS.automatica}</SelectItem>
-                      <SelectItem value="manual">{RENEWAL_TYPE_LABELS.manual}</SelectItem>
-                      <SelectItem value="cumplimiento">{RENEWAL_TYPE_LABELS.cumplimiento}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hasConfidentiality"
-                  checked={formData.hasConfidentiality}
-                  onCheckedChange={(checked) => setFormData({ ...formData, hasConfidentiality: !!checked })}
-                />
-                <FieldTooltip content={t('confidentialityClauseTooltip')}>
-                  <Label htmlFor="hasConfidentiality" className="cursor-pointer">
-                    {t('confidentialityClause') || 'Cláusula de Confidencialidad'}
-                  </Label>
-                </FieldTooltip>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {isEditing && (
             <Collapsible open={documentsOpen} onOpenChange={setDocumentsOpen}>
