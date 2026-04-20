@@ -100,31 +100,29 @@ export interface AuthorizedSigner {
 }
 
 export interface Contract {
-  id: string;
-  internalId: string;
-  contractNumber: string;
+  id: number;
+  internal_id: string;
+  contract_number: string;
   title?: string;
-  clientId: string;
-  supplierId: string;
-  client?: string;
-  supplier?: string;
-  clientSignerId: string;
-  supplierSignerId: string;
-  startDate: string;
-  endDate: string;
+  client_id: number;
+  supplier_id: number;
+  client_signer_id: number | null;
+  supplier_signer_id: number | null;
+  start_date: string;
+  end_date: string;
   amount: number;
-  type: ContractType;
-  status: ContractStatus;
-  description: string;
+  type: string;
+  status: string;
+  description?: string;
   object?: string;
-  fulfillmentPlace?: string;
-  disputeResolution?: string;
-  hasConfidentiality?: boolean;
+  fulfillment_place?: string;
+  dispute_resolution?: string;
+  has_confidentiality?: boolean;
   guarantees?: string;
-  renewalType?: RenewalType;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  renewal_type?: string;
+  created_by?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export type RenewalType = 'automatica' | 'manual' | 'cumplimiento';
