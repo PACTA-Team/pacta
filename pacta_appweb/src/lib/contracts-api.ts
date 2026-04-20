@@ -55,26 +55,6 @@ export interface UpdateContractRequest {
   renewal_type?: string;
 }
 
-export interface CreateContractRequest {
-  contract_number: string;
-  client_id: number;
-  supplier_id: number;
-  client_signer_id?: number;
-  supplier_signer_id?: number;
-  start_date: string;
-  end_date: string;
-  amount: number;
-  type: ContractType;
-  status?: ContractStatus;
-  description?: string;
-  object?: string;
-  fulfillment_place?: string;
-  dispute_resolution?: string;
-  has_confidentiality?: boolean;
-  guarantees?: string;
-  renewal_type?: string;
-}
-
 export const contractsAPI = {
   list: (signal?: AbortSignal) =>
     fetchJSON(BASE, { signal }),
