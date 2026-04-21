@@ -22,7 +22,7 @@ export const generateNotifications = async (contracts: any[]): Promise<void> => 
   for (const contract of contracts) {
     if (contract.status !== 'active') continue;
 
-    const endDate = new Date(contract.end_date || contract.endDate);
+    const endDate = new Date(contract.end_date);
     const daysUntilExpiration = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     for (const threshold of settings.thresholds) {
@@ -31,7 +31,7 @@ export const generateNotifications = async (contracts: any[]): Promise<void> => 
           await notificationsAPI.create({
             type: `expiration_${threshold}`,
             title: `Contract Expiring: ${contract.title}`,
-            message: `Contract "${contract.title}" (${contract.contract_number || contract.contractNumber}) will expire in ${threshold} days`,
+            message: `Contract "${contract.title}" (${contract.contract_number}) will expire in ${threshold} days`,
             entity_id: contract.id,
             entity_type: 'contract',
           });
