@@ -240,7 +240,7 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
                     <TableRow key={contract.id} className={daysUntil <= 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
                       <TableCell className="font-medium">{contract.contract_number}</TableCell>
                       <TableCell>{contract.title}</TableCell>
-                      <TableCell>{contract.client}</TableCell>
+                      <TableCell>{contract.client_name}</TableCell>
                       <TableCell>{formatDate(contract.end_date)}</TableCell>
                       <TableCell>{getUrgencyBadge(daysUntil)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(contract.amount)}</TableCell>

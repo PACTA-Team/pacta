@@ -24,22 +24,22 @@ export default function ClientSupplierReport({ contracts, title = 'Client/Suppli
     const supplierMap = new Map<string, { count: number; totalValue: number; contracts: Contract[] }>();
 
     contracts.forEach(contract => {
-      if (contract.client) {
+      if (contract.client_name) {
         // Client aggregation
-        const clientData = clientMap.get(contract.client) || { count: 0, totalValue: 0, contracts: [] };
+        const clientData = clientMap.get(contract.client_name) || { count: 0, totalValue: 0, contracts: [] };
         clientData.count++;
         clientData.totalValue += contract.amount;
         clientData.contracts.push(contract);
-        clientMap.set(contract.client, clientData);
+        clientMap.set(contract.client_name, clientData);
       }
 
-      if (contract.supplier) {
+      if (contract.supplier_name) {
         // Supplier aggregation
-        const supplierData = supplierMap.get(contract.supplier) || { count: 0, totalValue: 0, contracts: [] };
+        const supplierData = supplierMap.get(contract.supplier_name) || { count: 0, totalValue: 0, contracts: [] };
         supplierData.count++;
         supplierData.totalValue += contract.amount;
         supplierData.contracts.push(contract);
-        supplierMap.set(contract.supplier, supplierData);
+        supplierMap.set(contract.supplier_name, supplierData);
       }
     });
 

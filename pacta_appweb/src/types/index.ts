@@ -106,6 +106,8 @@ export interface Contract {
   title?: string;
   client_id: number;
   supplier_id: number;
+  client_name?: string;   // Nombre del cliente para display en reportes
+  supplier_name?: string;  // Nombre del proveedor para display en reportes
   client_signer_id: number | null;
   supplier_signer_id: number | null;
   start_date: string;

@@ -56,7 +56,7 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
     };
 
     contracts.forEach(c => {
-      byType[c.type] += c.amount;
+      byType[c.type as ContractType] += c.amount;
     });
 
     const typeData = Object.entries(byType)
@@ -107,11 +107,11 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
 
    const exportData = contracts
      .sort((a, b) => b.amount - a.amount)
-     .map(c => ({
-       contract_number: c.contract_number,
-       title: c.title,
-       client: c.client,
-       type: formatStatus(c.type),
+      .map(c => ({
+        contract_number: c.contract_number,
+        title: c.title,
+        client: c.client_name,
+        type: formatStatus(c.type),
        status: formatStatus(c.status),
        amount: formatCurrency(c.amount),
      }));
@@ -283,7 +283,7 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
                       <TableCell className="font-medium">#{index + 1}</TableCell>
                       <TableCell>{contract.contract_number}</TableCell>
                       <TableCell>{contract.title}</TableCell>
-                      <TableCell>{contract.client}</TableCell>
+                      <TableCell>{contract.client_name}</TableCell>
                       <TableCell>{formatStatus(contract.type)}</TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(contract.amount)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
