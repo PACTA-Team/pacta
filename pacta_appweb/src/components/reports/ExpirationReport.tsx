@@ -31,7 +31,7 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
     };
 
     activeContracts.forEach(contract => {
-      const endDate = new Date(contract.endDate);
+      const endDate = new Date(contract.end_date);
       const daysUntil = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
       if (daysUntil < 0) {
@@ -65,7 +65,7 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
       ...categories.critical,
       ...categories.warning,
       ...categories.attention,
-    ].sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+    ].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
 
     return {
       categories,
@@ -100,11 +100,10 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
   ];
 
   const exportData = expirationData.expiringSoon.map(c => ({
-    contractNumber: c.contractNumber,
-    title: c.title,
-    client: c.client,
-    endDate: formatDate(c.endDate),
-    daysUntil: getDaysUntil(c.endDate),
+contractNumber: c.contract_number,
+    contractTitle: c.title || '',
+    endDate: formatDate(c.end_date),
+    daysUntil: getDaysUntil(c.end_date),
     amount: formatCurrency(c.amount),
   }));
 
@@ -236,13 +235,13 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
                 </TableRow>
               ) : (
                 expirationData.expiringSoon.map((contract) => {
-                  const daysUntil = getDaysUntil(contract.endDate);
+                  const daysUntil = getDaysUntil(contract.end_date);
                   return (
                     <TableRow key={contract.id} className={daysUntil <= 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
-                      <TableCell className="font-medium">{contract.contractNumber}</TableCell>
+                      <TableCell className="font-medium">{contract.contract_number}</TableCell>
                       <TableCell>{contract.title}</TableCell>
                       <TableCell>{contract.client}</TableCell>
-                      <TableCell>{formatDate(contract.endDate)}</TableCell>
+                      <TableCell>{formatDate(contract.end_date)}</TableCell>
                       <TableCell>{getUrgencyBadge(daysUntil)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(contract.amount)}</TableCell>
                     </TableRow>

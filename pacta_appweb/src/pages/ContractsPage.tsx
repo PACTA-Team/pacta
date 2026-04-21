@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
-import { Contract, Client, Supplier } from '@/types';
+import { Contract, Client, Supplier, ContractType, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
@@ -16,134 +16,51 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import ContractForm from '@/components/contracts/ContractForm';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
-export default function ContractsPage() {
-  const [contracts, setContractsState] = useState<Contract[]>([]);
-  
-  const [clients, setClients] = useState<Client[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [partyFilter, setPartyFilter] = useState<string>('all');
-  const [showForm, setShowForm] = useState(false);
-  const [editingContract, setEditingContract] = useState<any>(undefined);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [contractToDelete, setContractToDelete] = useState<number | null>(null);
-  const { user, hasPermission } = useAuth();
-  const [searchParams] = useSearchParams();
-  const { t } = useTranslation('contracts');
-  const { t: tCommon } = useTranslation('common');
-
-  useEffect(() => {
-    loadData();
-    if (searchParams.get('action') === 'create') {
-      setShowForm(true);
-    }
-  }, [searchParams]);
-
-  const loadData = useCallback(async () => {
-    try {
-      const [contractsData, clientsData, suppliersData] = await Promise.all([
-        contractsAPI.list(),
-        clientsAPI.list(),
-        suppliersAPI.list(),
-      ]);
-      setContractsState(contractsData as Contract[]);
-      setClients(clientsData as Client[]);
-      setSuppliers(suppliersData as Supplier[]);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load data');
-    }
-  }, []);
-
-  const filteredContracts = useMemo(() => {
-    let filtered = [...contracts];
-
-    if (searchTerm) {
-      filtered = filtered.filter(c => {
-        const client = clients.find(cl => Number(cl.id) === c.client_id);
-        const supplier = suppliers.find(s => Number(s.id) === c.supplier_id);
-        return (
-          c.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      });
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(c => c.status === statusFilter);
-    }
-
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(c => c.type === typeFilter);
-    }
-
-    if (partyFilter !== 'all' && user?.company_id) {
-      const companyId = user.company_id;
-      if (partyFilter === 'client') {
-        filtered = filtered.filter(c => String(c.client_id) === companyId);
-      } else if (partyFilter === 'supplier') {
-        filtered = filtered.filter(c => String(c.supplier_id) === companyId);
-      }
-    }
-
-    return filtered;
-  }, [contracts, searchTerm, statusFilter, typeFilter, partyFilter, clients, suppliers, user]);
-
-  const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internalId' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internal_id' | 'created_by' | 'created_at' | 'updated_at'>) => {
     try {
       if (editingContract) {
-        await contractsAPI.update(editingContract.id, {
-          client_id: parseInt(data.clientId),
-          supplier_id: parseInt(data.supplierId),
-          client_signer_id: data.clientSignerId ? parseInt(data.clientSignerId) : undefined,
-          supplier_signer_id: data.supplierSignerId ? parseInt(data.supplierSignerId) : undefined,
-          start_date: data.startDate,
-          end_date: data.endDate,
-          amount: data.amount,
-          type: data.type,
-          status: data.status,
+        const updateData: UpdateContractRequest = {
+          client_id: Number(data.client_id),
+          supplier_id: Number(data.supplier_id),
+          client_signer_id: data.client_signer_id ? Number(data.client_signer_id) : undefined,
+          supplier_signer_id: data.supplier_signer_id ? Number(data.supplier_signer_id) : undefined,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          amount: Number(data.amount),
+          type: data.type as ContractType,
+          status: data.status as ContractStatus,
           description: data.description,
           object: data.object,
-          fulfillment_place: data.fulfillmentPlace,
-          dispute_resolution: data.disputeResolution,
-          has_confidentiality: data.hasConfidentiality,
+          fulfillment_place: data.fulfillment_place,
+          dispute_resolution: data.dispute_resolution,
+          has_confidentiality: data.has_confidentiality,
           guarantees: data.guarantees,
-          renewal_type: data.renewalType,
-        });
+          renewal_type: data.renewal_type,
+        };
+        await contractsAPI.update(editingContract.id, updateData);
         toast.success(t('updateSuccess'));
       } else {
-        await contractsAPI.create({
-          contract_number: data.contractNumber,
-          client_id: parseInt(data.clientId),
-          supplier_id: parseInt(data.supplierId),
-          client_signer_id: data.clientSignerId ? parseInt(data.clientSignerId) : undefined,
-          supplier_signer_id: data.supplierSignerId ? parseInt(data.supplierSignerId) : undefined,
-          start_date: data.startDate,
-          end_date: data.endDate,
-          amount: data.amount,
-          type: data.type,
-          status: data.status,
+        const createData: CreateContractRequest = {
+          contract_number: data.contract_number || '',
+          client_id: Number(data.client_id),
+          supplier_id: Number(data.supplier_id),
+          client_signer_id: data.client_signer_id ? Number(data.client_signer_id) : undefined,
+          supplier_signer_id: data.supplier_signer_id ? Number(data.supplier_signer_id) : undefined,
+          start_date: data.start_date,
+          end_date: data.end_date,
+          amount: Number(data.amount),
+          type: data.type as ContractType,
+          status: data.status as ContractStatus,
           description: data.description,
           object: data.object,
-          fulfillment_place: data.fulfillmentPlace,
-          dispute_resolution: data.disputeResolution,
-          has_confidentiality: data.hasConfidentiality,
+          fulfillment_place: data.fulfillment_place,
+          dispute_resolution: data.dispute_resolution,
+          has_confidentiality: data.has_confidentiality,
           guarantees: data.guarantees,
-          renewal_type: data.renewalType,
-        });
+          renewal_type: data.renewal_type,
+        };
+        await contractsAPI.create(createData);
         toast.success(t('createSuccess'));
       }
       setShowForm(false);

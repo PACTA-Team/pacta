@@ -54,12 +54,12 @@ export default function ContractStatusReport({ contracts, title = 'Contracts by 
   ];
 
   const exportData = contracts.map(c => ({
-    contractNumber: c.contractNumber,
+    contractNumber: c.contract_number,
     title: c.title,
     client: c.client,
     status: formatStatus(c.status),
-    startDate: formatDate(c.startDate),
-    endDate: formatDate(c.endDate),
+    startDate: formatDate(c.start_date),
+    endDate: formatDate(c.end_date),
     amount: formatCurrency(c.amount),
   }));
 
@@ -187,12 +187,12 @@ export default function ContractStatusReport({ contracts, title = 'Contracts by 
               ) : (
                 contracts.map((contract) => (
                   <TableRow key={contract.id}>
-                    <TableCell className="font-medium">{contract.contractNumber}</TableCell>
+                    <TableCell className="font-medium">{contract.contract_number}</TableCell>
                     <TableCell>{contract.title}</TableCell>
                     <TableCell>{contract.client}</TableCell>
                     <TableCell>{getStatusBadge(contract.status)}</TableCell>
-                    <TableCell>{formatDate(contract.startDate)}</TableCell>
-                    <TableCell>{formatDate(contract.endDate)}</TableCell>
+                    <TableCell>{formatDate(contract.start_date)}</TableCell>
+                    <TableCell>{formatDate(contract.end_date)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(contract.amount)}</TableCell>
                   </TableRow>
                 ))

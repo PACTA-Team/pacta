@@ -70,7 +70,7 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
     // Monthly Trends
     const monthlyData: Record<string, number> = {};
     contracts.forEach(c => {
-      const month = new Date(c.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      const month = new Date(c.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
       monthlyData[month] = (monthlyData[month] || 0) + c.amount;
     });
 
@@ -108,7 +108,7 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
   const exportData = contracts
     .sort((a, b) => b.amount - a.amount)
     .map(c => ({
-      contractNumber: c.contractNumber,
+      contractNumber: c.contract_number,
       title: c.title,
       client: c.client,
       type: formatStatus(c.type),
@@ -281,7 +281,7 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
                   .map((contract, index) => (
                     <TableRow key={contract.id}>
                       <TableCell className="font-medium">#{index + 1}</TableCell>
-                      <TableCell>{contract.contractNumber}</TableCell>
+                      <TableCell>{contract.contract_number}</TableCell>
                       <TableCell>{contract.title}</TableCell>
                       <TableCell>{contract.client}</TableCell>
                       <TableCell>{formatStatus(contract.type)}</TableCell>
