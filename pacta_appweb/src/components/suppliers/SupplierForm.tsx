@@ -12,11 +12,11 @@ import { upload } from '../../lib/upload';
 import { toast } from 'sonner';
 import { Upload, FileText, X } from 'lucide-react';
 
-interface SupplierFormProps {
-  supplier?: Supplier;
-  onSubmit: (data: Omit<Supplier, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
-  onCancel: () => void;
-}
+ interface SupplierFormProps {
+   supplier?: Supplier;
+   onSubmit: (data: Omit<Supplier, 'id' | 'created_by' | 'created_at' | 'updated_at'>) => void;
+   onCancel: () => void;
+ }
 
 export default function SupplierForm({ supplier, onSubmit, onCancel }: SupplierFormProps) {
   const { t } = useTranslation('suppliers');

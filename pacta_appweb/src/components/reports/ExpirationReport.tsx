@@ -90,22 +90,22 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
     return <Badge variant="secondary">{daysUntil} days</Badge>;
   };
 
-  const columns: ExportColumn[] = [
-    { key: 'contractNumber', header: 'Contract Number' },
-    { key: 'title', header: 'Title' },
-    { key: 'client', header: 'Client' },
-    { key: 'endDate', header: 'End Date' },
-    { key: 'daysUntil', header: 'Days Until Expiration' },
-    { key: 'amount', header: 'Amount' },
-  ];
+   const columns: ExportColumn[] = [
+     { key: 'contract_number', header: 'Contract Number' },
+     { key: 'title', header: 'Title' },
+     { key: 'client', header: 'Client' },
+     { key: 'end_date', header: 'End Date' },
+     { key: 'daysUntil', header: 'Days Until Expiration' },
+     { key: 'amount', header: 'Amount' },
+   ];
 
-  const exportData = expirationData.expiringSoon.map(c => ({
-contractNumber: c.contract_number,
-    contractTitle: c.title || '',
-    endDate: formatDate(c.end_date),
-    daysUntil: getDaysUntil(c.end_date),
-    amount: formatCurrency(c.amount),
-  }));
+   const exportData = expirationData.expiringSoon.map(c => ({
+     contract_number: c.contract_number,
+     contractTitle: c.title || '',
+     end_date: formatDate(c.end_date),
+     daysUntil: getDaysUntil(c.end_date),
+     amount: formatCurrency(c.amount),
+   }));
 
   const summary = [
     { label: 'Total Expiring (30 days)', value: expirationData.totalExpiringSoon },

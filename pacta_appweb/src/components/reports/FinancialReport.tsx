@@ -96,25 +96,25 @@ export default function FinancialReport({ contracts, title = 'Financial Report' 
     };
   }, [contracts]);
 
-  const columns: ExportColumn[] = [
-    { key: 'contractNumber', header: 'Contract Number' },
-    { key: 'title', header: 'Title' },
-    { key: 'client', header: 'Client' },
-    { key: 'type', header: 'Type' },
-    { key: 'status', header: 'Status' },
-    { key: 'amount', header: 'Amount' },
-  ];
+   const columns: ExportColumn[] = [
+     { key: 'contract_number', header: 'Contract Number' },
+     { key: 'title', header: 'Title' },
+     { key: 'client', header: 'Client' },
+     { key: 'type', header: 'Type' },
+     { key: 'status', header: 'Status' },
+     { key: 'amount', header: 'Amount' },
+   ];
 
-  const exportData = contracts
-    .sort((a, b) => b.amount - a.amount)
-    .map(c => ({
-      contractNumber: c.contract_number,
-      title: c.title,
-      client: c.client,
-      type: formatStatus(c.type),
-      status: formatStatus(c.status),
-      amount: formatCurrency(c.amount),
-    }));
+   const exportData = contracts
+     .sort((a, b) => b.amount - a.amount)
+     .map(c => ({
+       contract_number: c.contract_number,
+       title: c.title,
+       client: c.client,
+       type: formatStatus(c.type),
+       status: formatStatus(c.status),
+       amount: formatCurrency(c.amount),
+     }));
 
   const summary = [
     { label: 'Total Contract Value', value: formatCurrency(financialData.totalValue) },

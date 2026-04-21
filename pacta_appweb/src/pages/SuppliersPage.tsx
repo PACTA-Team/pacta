@@ -71,7 +71,7 @@ export default function SuppliersPage() {
     setFilteredSuppliers(filtered);
   };
 
-  const handleCreateOrUpdate = async (data: Omit<Supplier, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateOrUpdate = async (data: Omit<Supplier, 'id' | 'created_by' | 'created_at' | 'updated_at'>) => {
     try {
       if (editingSupplier) {
         await suppliersAPI.update(editingSupplier.id, {
