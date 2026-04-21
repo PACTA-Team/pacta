@@ -31,7 +31,7 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
     };
 
     activeContracts.forEach(contract => {
-      const endDate = new Date(contract.end_date);
+const endDate = new Date(contract.end_date);
       const daysUntil = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
       if (daysUntil < 0) {
@@ -90,22 +90,22 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
     return <Badge variant="secondary">{daysUntil} days</Badge>;
   };
 
-   const columns: ExportColumn[] = [
-     { key: 'contract_number', header: 'Contract Number' },
-     { key: 'title', header: 'Title' },
-     { key: 'client', header: 'Client' },
-     { key: 'end_date', header: 'End Date' },
-     { key: 'daysUntil', header: 'Days Until Expiration' },
-     { key: 'amount', header: 'Amount' },
-   ];
+const columns: ExportColumn[] = [
+   { key: 'contract_number', header: 'Contract Number' },
+   { key: 'title', header: 'Title' },
+   { key: 'client', header: 'Client' },
+   { key: 'end_date', header: 'End Date' },
+   { key: 'daysUntil', header: 'Days Until Expiration' },
+   { key: 'amount', header: 'Amount' },
+ ];
 
-   const exportData = expirationData.expiringSoon.map(c => ({
-     contract_number: c.contract_number,
-     contractTitle: c.title || '',
-     end_date: formatDate(c.end_date),
-     daysUntil: getDaysUntil(c.end_date),
-     amount: formatCurrency(c.amount),
-   }));
+ const exportData = expirationData.expiringSoon.map(c => ({
+   contract_number: c.contract_number,
+   contractTitle: c.title || '',
+   end_date: formatDate(c.end_date),
+   daysUntil: getDaysUntil(c.end_date),
+   amount: formatCurrency(c.amount),
+ }));
 
   const summary = [
     { label: 'Total Expiring (30 days)', value: expirationData.totalExpiringSoon },
@@ -240,7 +240,7 @@ export default function ExpirationReport({ contracts, title = 'Upcoming Expirati
                     <TableRow key={contract.id} className={daysUntil <= 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
                       <TableCell className="font-medium">{contract.contract_number}</TableCell>
                       <TableCell>{contract.title}</TableCell>
-                      <TableCell>{contract.client_name}</TableCell>
+<TableCell>{contract.client_name}</TableCell>
                       <TableCell>{formatDate(contract.end_date)}</TableCell>
                       <TableCell>{getUrgencyBadge(daysUntil)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(contract.amount)}</TableCell>

@@ -43,25 +43,25 @@ export default function ContractStatusReport({ contracts, title = 'Contracts by 
     }));
   }, [contracts]);
 
-   const columns: ExportColumn[] = [
-     { key: 'contract_number', header: 'Contract Number' },
-     { key: 'title', header: 'Title' },
-     { key: 'client', header: 'Client' },
-     { key: 'status', header: 'Status' },
-     { key: 'start_date', header: 'Start Date' },
-     { key: 'end_date', header: 'End Date' },
-     { key: 'amount', header: 'Amount' },
-   ];
+const columns: ExportColumn[] = [
+    { key: 'contract_number', header: 'Contract Number' },
+    { key: 'title', header: 'Title' },
+    { key: 'client', header: 'Client' },
+    { key: 'status', header: 'Status' },
+    { key: 'start_date', header: 'Start Date' },
+    { key: 'end_date', header: 'End Date' },
+    { key: 'amount', header: 'Amount' },
+  ];
 
-   const exportData = contracts.map(c => ({
-      contract_number: c.contract_number,
-      title: c.title,
-      client: c.client_name,
-      status: formatStatus(c.status),
-     start_date: formatDate(c.start_date),
-     end_date: formatDate(c.end_date),
-     amount: formatCurrency(c.amount),
-   }));
+  const exportData = contracts.map(c => ({
+    contract_number: c.contract_number,
+    title: c.title,
+    client: c.client_name,
+    status: formatStatus(c.status),
+    start_date: formatDate(c.start_date),
+    end_date: formatDate(c.end_date),
+    amount: formatCurrency(c.amount),
+  }));
 
   const summary = statusData.map(item => ({
     label: item.name,
@@ -189,7 +189,7 @@ export default function ContractStatusReport({ contracts, title = 'Contracts by 
                   <TableRow key={contract.id}>
                     <TableCell className="font-medium">{contract.contract_number}</TableCell>
                     <TableCell>{contract.title}</TableCell>
-                    <TableCell>{contract.client_name}</TableCell>
+<TableCell>{contract.client_name}</TableCell>
                     <TableCell>{getStatusBadge(contract.status as ContractStatus)}</TableCell>
                     <TableCell>{formatDate(contract.start_date)}</TableCell>
                     <TableCell>{formatDate(contract.end_date)}</TableCell>

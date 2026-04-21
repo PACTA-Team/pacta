@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
+import { clientsAPI } from '@/lib/clients-api';
+import { suppliersAPI } from '@/lib/suppliers-api';
 import ReportFiltersComponent, { ReportFilters, defaultFilters } from '@/components/reports/ReportFilters';
 import ContractStatusReport from '@/components/reports/ContractStatusReport';
 import FinancialReport from '@/components/reports/FinancialReport';
@@ -39,6 +41,8 @@ export default function ReportsPage() {
   const { t: tCommon } = useTranslation('common');
   const [contracts, setContracts] = useState<any[]>([]);
   const [supplements, setSupplements] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [activeReport, setActiveReport] = useState<ReportType>('status');
   const [filters, setFilters] = useState<ReportFilters>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters);
@@ -48,12 +52,16 @@ export default function ReportsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [contractsData, supplementsData] = await Promise.all([
+        const [contractsData, supplementsData, clientsData, suppliersData] = await Promise.all([
           contractsAPI.list(),
           supplementsAPI.list(),
+          clientsAPI.list(),
+          suppliersAPI.list(),
         ]);
         setContracts(contractsData as any[]);
         setSupplements(supplementsData as any[]);
+        setClients(clientsData as any[]);
+        setSuppliers(suppliersData as any[]);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : tCommon('error'));
       }
@@ -67,9 +75,21 @@ export default function ReportsPage() {
     }
   }, []);
 
-  // Filter contracts based on applied filters
-  const filteredContracts = useMemo(() => {
-    let result = [...contracts];
+  // Enrich contracts first, then filter
+  const enrichedContracts = useMemo(() => {
+    const clientsMap = new Map(clients.map((c: any) => [String(c.id), c.name]));
+    const suppliersMap = new Map(suppliers.map((s: any) => [String(s.id), s.name]));
+
+    return contracts.map((contract: any) => ({
+      ...contract,
+      client: clientsMap.get(String(contract.client_id)) || 'Unknown Client',
+      supplier: suppliersMap.get(String(contract.supplier_id)) || 'Unknown Supplier',
+    }));
+  }, [contracts, clients, suppliers]);
+
+  // Filter enriched contracts based on applied filters
+  const enrichedFilteredContracts = useMemo(() => {
+    let result = [...enrichedContracts];
 
     if (appliedFilters.dateFrom) {
       result = result.filter((c: any) => new Date(c.start_date) >= new Date(appliedFilters.dateFrom));
@@ -101,7 +121,7 @@ export default function ReportsPage() {
     }
 
     return result;
-  }, [contracts, appliedFilters]);
+  }, [enrichedContracts, appliedFilters]);
 
   // Filter supplements based on date filters
   const filteredSupplements = useMemo(() => {
@@ -227,21 +247,21 @@ export default function ReportsPage() {
         {/* Report Content */}
         <div className="mt-6">
           {activeReport === 'status' && (
-            <ContractStatusReport contracts={filteredContracts} />
+            <ContractStatusReport contracts={enrichedFilteredContracts} />
           )}
           {activeReport === 'financial' && (
-            <FinancialReport contracts={filteredContracts} />
+            <FinancialReport contracts={enrichedFilteredContracts} />
           )}
           {activeReport === 'expiration' && (
-            <ExpirationReport contracts={filteredContracts} />
+            <ExpirationReport contracts={enrichedFilteredContracts} />
           )}
           {activeReport === 'client-supplier' && (
-            <ClientSupplierReport contracts={filteredContracts} />
+            <ClientSupplierReport contracts={enrichedFilteredContracts} />
           )}
           {activeReport === 'supplements' && (
             <SupplementsReport
               supplements={filteredSupplements}
-              contracts={contracts}
+              contracts={enrichedContracts}
               dateFrom={appliedFilters.dateFrom}
               dateTo={appliedFilters.dateTo}
             />
@@ -249,7 +269,7 @@ export default function ReportsPage() {
           {activeReport === 'modifications' && (
             <ModificationsReport
               supplements={filteredSupplements}
-              contracts={contracts}
+              contracts={enrichedContracts}
             />
           )}
         </div>
