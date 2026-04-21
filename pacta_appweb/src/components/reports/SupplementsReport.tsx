@@ -72,7 +72,7 @@ export default function SupplementsReport({
     const contractData = Array.from(byContract.entries())
       .map(([contractId, data]) => ({
         contractId,
-        contractNumber: data.contract?.contract_number || data.contract?.contractNumber || 'Unknown',
+        contractNumber: data.contract?.contract_number || 'Unknown',
         contractTitle: data.contract?.title || 'Unknown',
         count: data.supplements.length,
         supplements: data.supplements,
@@ -104,7 +104,7 @@ export default function SupplementsReport({
 
   const getContractInfo = (contractId: number | string) => {
     const contract = contracts.find((c: any) => c.id === contractId || c.id === Number(contractId));
-    return contract ? `${contract.contract_number || contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
+    return contract ? `${contract.contract_number} - ${contract.title}` : 'Unknown Contract';
   };
 
   const getStatusBadge = (status: SupplementStatus) => {

@@ -42,7 +42,7 @@ export default function ModificationsReport({
     const contractModifications = Array.from(byContract.entries())
       .map(([contractId, data]) => ({
         contractId: String(contractId),
-        contractNumber: data.contract?.contract_number || data.contract?.contractNumber || 'Unknown',
+        contractNumber: data.contract?.contract_number || 'Unknown',
         contractTitle: data.contract?.title || 'Unknown',
         modificationCount: data.modifications.length,
         modifications: data.modifications,
@@ -67,7 +67,7 @@ export default function ModificationsReport({
 
   const getContractInfo = (contractId: number | string) => {
     const contract = contracts.find((c: any) => c.id === contractId || c.id === Number(contractId));
-    return contract ? `${contract.contract_number || contract.contractNumber} - ${contract.title}` : 'Unknown Contract';
+    return contract ? `${contract.contract_number} - ${contract.title}` : 'Unknown Contract';
   };
 
   const columns: ExportColumn[] = [
