@@ -37,6 +37,7 @@ export interface CreateContractRequest {
 }
 
 export interface UpdateContractRequest {
+  contract_number?: string;
   client_id: number;
   supplier_id: number;
   client_signer_id?: number;

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, AlertTriangle, FilePlus, DollarSign, BarChart3, Building2, Truck, FolderOpen } from 'lucide-react';
 import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
-import { Contract, ContractStatus } from '@/types';
+import { Contract, ContractStatus, Supplement } from '@/types';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
 };
 
 export default function DashboardPage() {
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [stats, setStats] = useState({
     totalActive: 0,
     expiringSoon: 0,
@@ -43,24 +43,24 @@ export default function DashboardPage() {
           contractsAPI.list(),
           supplementsAPI.list(),
         ]);
-        const contractsList = contractsData as any[];
-        const supplementsList = supplementsData as any[];
+        const contractsList = contractsData as Contract[];
+        const supplementsList = supplementsData as Supplement[];
         setContracts(contractsList);
 
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-        const activeContracts = contractsList.filter((c: any) => c.status === 'active');
-        const expiringSoon = activeContracts.filter((c: any) => {
+        const activeContracts = contractsList.filter((c: Contract) => c.status === 'active');
+        const expiringSoon = activeContracts.filter((c: Contract) => {
           const endDate = new Date(c.end_date);
           return endDate <= thirtyDaysFromNow && endDate >= now;
         });
 
-        const pendingSupplements = supplementsList.filter((s: any) => s.status === 'draft' || s.status === 'approved');
+        const pendingSupplements = supplementsList.filter((s: Supplement) => s.status === 'draft' || s.status === 'approved');
 
         const totalValue = contractsList
-          .filter((c: any) => c.status === 'active')
-          .reduce((sum: number, c: any) => sum + c.amount, 0);
+          .filter((c: Contract) => c.status === 'active')
+          .reduce((sum: number, c: Contract) => sum + c.amount, 0);
 
         setStats({
           totalActive: activeContracts.length,

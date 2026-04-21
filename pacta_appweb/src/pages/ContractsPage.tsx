@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
-import { ContractStatus, ContractType, Contract } from '@/types';
+import { Contract, Client, Supplier, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
@@ -28,10 +28,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function ContractsPage() {
-  const [contracts, setContractsState] = useState<any[]>([]);
-  const [filteredContracts, setFilteredContracts] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [contracts, setContractsState] = useState<Contract[]>([]);
+  const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -63,9 +63,9 @@ export default function ContractsPage() {
         clientsAPI.list(),
         suppliersAPI.list(),
       ]);
-      setContractsState(contractsData as any[]);
-      setClients(clientsData as any[]);
-      setSuppliers(suppliersData as any[]);
+      setContractsState(contractsData as Contract[]);
+      setClients(clientsData as Client[]);
+      setSuppliers(suppliersData as Supplier[]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load data');
     }
@@ -76,8 +76,8 @@ export default function ContractsPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(c => {
-        const client = clients.find(cl => cl.id === c.client_id);
-        const supplier = suppliers.find(s => s.id === c.supplier_id);
+        const client = clients.find(cl => Number(cl.id) === c.client_id);
+        const supplier = suppliers.find(s => Number(s.id) === c.supplier_id);
         return (
           c.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,47 +106,48 @@ export default function ContractsPage() {
     setFilteredContracts(filtered);
   };
 
-  const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internalId' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internal_id' | 'created_by' | 'created_at' | 'updated_at'>) => {
     try {
       if (editingContract) {
         await contractsAPI.update(editingContract.id, {
-          client_id: parseInt(data.clientId),
-          supplier_id: parseInt(data.supplierId),
-          client_signer_id: data.clientSignerId ? parseInt(data.clientSignerId) : undefined,
-          supplier_signer_id: data.supplierSignerId ? parseInt(data.supplierSignerId) : undefined,
-          start_date: data.startDate,
-          end_date: data.endDate,
+          contract_number: data.contract_number,
+          client_id: data.client_id ?? undefined,
+          supplier_id: data.supplier_id ?? undefined,
+          client_signer_id: data.client_signer_id ?? undefined,
+          supplier_signer_id: data.supplier_signer_id ?? undefined,
+          start_date: data.start_date,
+          end_date: data.end_date,
           amount: data.amount,
           type: data.type,
           status: data.status,
           description: data.description,
           object: data.object,
-          fulfillment_place: data.fulfillmentPlace,
-          dispute_resolution: data.disputeResolution,
-          has_confidentiality: data.hasConfidentiality,
+          fulfillment_place: data.fulfillment_place,
+          dispute_resolution: data.dispute_resolution,
+          has_confidentiality: data.has_confidentiality,
           guarantees: data.guarantees,
-          renewal_type: data.renewalType,
+          renewal_type: data.renewal_type,
         });
         toast.success(t('updateSuccess'));
       } else {
         await contractsAPI.create({
-          contract_number: data.contractNumber,
-          client_id: parseInt(data.clientId),
-          supplier_id: parseInt(data.supplierId),
-          client_signer_id: data.clientSignerId ? parseInt(data.clientSignerId) : undefined,
-          supplier_signer_id: data.supplierSignerId ? parseInt(data.supplierSignerId) : undefined,
-          start_date: data.startDate,
-          end_date: data.endDate,
+          contract_number: data.contract_number,
+          client_id: data.client_id ?? undefined,
+          supplier_id: data.supplier_id ?? undefined,
+          client_signer_id: data.client_signer_id ?? undefined,
+          supplier_signer_id: data.supplier_signer_id ?? undefined,
+          start_date: data.start_date,
+          end_date: data.end_date,
           amount: data.amount,
           type: data.type,
           status: data.status,
           description: data.description,
           object: data.object,
-          fulfillment_place: data.fulfillmentPlace,
-          dispute_resolution: data.disputeResolution,
-          has_confidentiality: data.hasConfidentiality,
+          fulfillment_place: data.fulfillment_place,
+          dispute_resolution: data.dispute_resolution,
+          has_confidentiality: data.has_confidentiality,
           guarantees: data.guarantees,
-          renewal_type: data.renewalType,
+          renewal_type: data.renewal_type,
         });
         toast.success(t('createSuccess'));
       }
@@ -200,12 +201,12 @@ export default function ContractsPage() {
   };
 
   const getClientName = (clientId: number) => {
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find(c => String(c.id) === String(clientId));
     return client?.name || 'Unknown';
   };
 
   const getSupplierName = (supplierId: number) => {
-    const supplier = suppliers.find(s => s.id === supplierId);
+    const supplier = suppliers.find(s => String(s.id) === String(supplierId));
     return supplier?.name || 'Unknown';
   };
 
