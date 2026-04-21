@@ -9,8 +9,14 @@ import { exportToCSV, exportToExcel, exportToPDF, formatCurrency, formatStatus, 
 import ExportButtons from './ExportButtons';
 import { Users, Building2 } from 'lucide-react';
 
+// Extended contract type with enriched client/supplier names
+interface EnrichedContract extends Contract {
+  client?: string;
+  supplier?: string;
+}
+
 interface ClientSupplierReportProps {
-  contracts: Contract[];
+  contracts: EnrichedContract[];
   title?: string;
 }
 
@@ -19,9 +25,9 @@ const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 export default function ClientSupplierReport({ contracts, title = 'Client/Supplier Report' }: ClientSupplierReportProps) {
   const reportData = useMemo(() => {
     // Group by client
-    const clientMap = new Map<string, { count: number; totalValue: number; contracts: Contract[] }>();
+    const clientMap = new Map<string, { count: number; totalValue: number; contracts: EnrichedContract[] }>();
     // Group by supplier
-    const supplierMap = new Map<string, { count: number; totalValue: number; contracts: Contract[] }>();
+    const supplierMap = new Map<string, { count: number; totalValue: number; contracts: EnrichedContract[] }>();
 
     contracts.forEach(contract => {
       if (contract.client) {

@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
-import { Contract, Client, Supplier } from '@/types';
+import { Contract, Client, Supplier, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
@@ -111,10 +111,10 @@ export default function ContractsPage() {
       if (editingContract) {
         await contractsAPI.update(editingContract.id, {
           contract_number: data.contract_number,
-          client_id: parseInt(data.client_id),
-          supplier_id: parseInt(data.supplier_id),
-          client_signer_id: data.client_signer_id ? parseInt(data.client_signer_id) : undefined,
-          supplier_signer_id: data.supplier_signer_id ? parseInt(data.supplier_signer_id) : undefined,
+          client_id: data.client_id ?? undefined,
+          supplier_id: data.supplier_id ?? undefined,
+          client_signer_id: data.client_signer_id ?? undefined,
+          supplier_signer_id: data.supplier_signer_id ?? undefined,
           start_date: data.start_date,
           end_date: data.end_date,
           amount: data.amount,
@@ -132,10 +132,10 @@ export default function ContractsPage() {
       } else {
         await contractsAPI.create({
           contract_number: data.contract_number,
-          client_id: parseInt(data.client_id),
-          supplier_id: parseInt(data.supplier_id),
-          client_signer_id: data.client_signer_id ? parseInt(data.client_signer_id) : undefined,
-          supplier_signer_id: data.supplier_signer_id ? parseInt(data.supplier_signer_id) : undefined,
+          client_id: data.client_id ?? undefined,
+          supplier_id: data.supplier_id ?? undefined,
+          client_signer_id: data.client_signer_id ?? undefined,
+          supplier_signer_id: data.supplier_signer_id ?? undefined,
           start_date: data.start_date,
           end_date: data.end_date,
           amount: data.amount,
@@ -201,12 +201,12 @@ export default function ContractsPage() {
   };
 
   const getClientName = (clientId: number) => {
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find(c => String(c.id) === String(clientId));
     return client?.name || 'Unknown';
   };
 
   const getSupplierName = (supplierId: number) => {
-    const supplier = suppliers.find(s => s.id === supplierId);
+    const supplier = suppliers.find(s => String(s.id) === String(supplierId));
     return supplier?.name || 'Unknown';
   };
 
