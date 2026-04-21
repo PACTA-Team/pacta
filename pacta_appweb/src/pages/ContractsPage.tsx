@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ import {
 
 export default function ContractsPage() {
   const [contracts, setContractsState] = useState<Contract[]>([]);
-  const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
+  
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,10 +52,6 @@ export default function ContractsPage() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    filterContracts();
-  }, [contracts, searchTerm, statusFilter, typeFilter, partyFilter]);
-
   const loadData = useCallback(async () => {
     try {
       const [contractsData, clientsData, suppliersData] = await Promise.all([
@@ -71,7 +67,7 @@ export default function ContractsPage() {
     }
   }, []);
 
-  const filterContracts = () => {
+  const filteredContracts = useMemo(() => {
     let filtered = [...contracts];
 
     if (searchTerm) {
@@ -103,8 +99,8 @@ export default function ContractsPage() {
       }
     }
 
-    setFilteredContracts(filtered);
-  };
+    return filtered;
+  }, [contracts, searchTerm, statusFilter, typeFilter, partyFilter, clients, suppliers, user]);
 
   const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internalId' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
     try {
