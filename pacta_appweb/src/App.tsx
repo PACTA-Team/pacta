@@ -9,8 +9,10 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import SetupPage from './pages/SetupPage';
-import ForbiddenPage from './pages/ForbiddenPage';
+import ProfileSetupPage from './pages/ProfileSetupPage';
+import PendingProfilePage from './pages/PendingProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
+import ForbiddenPage from './pages/ForbiddenPage';
 import DownloadPage from './pages/DownloadPage';
 import ChangelogPage from './pages/ChangelogPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -58,6 +60,9 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/setup" element={<SetupPage />} />
+            <Route path="/setup/init" element={<SetupPage />} />
+            <Route path="/setup/profile" element={<ProfileSetupPage />} />
+            <Route path="/pending-profile" element={<PendingProfilePage />} />
             <Route path="/403" element={<ForbiddenPage />} />
             <Route path="/" element={<HomePage />} />
             <Route path="/download" element={<DownloadPage />} />

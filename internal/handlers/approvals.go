@@ -9,13 +9,26 @@ import (
 )
 
 type PendingApproval struct {
+	ID             int       `json:"id"`
+	UserID         int       `json:"user_id"`
+	UserName       string    `json:"user_name"`
+	UserEmail      string    `json:"user_email"`
+	CompanyName   string    `json:"company_name"`
+	CompanyID     *int      `json:"company_id,omitempty"`
+	RequestedRole string    `json:"requested_role"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// PendingActivation represents a pending user activation from setup wizard
+type PendingActivation struct {
 	ID            int       `json:"id"`
 	UserID        int       `json:"user_id"`
 	UserName      string    `json:"user_name"`
 	UserEmail     string    `json:"user_email"`
 	CompanyName   string    `json:"company_name"`
 	CompanyID     *int      `json:"company_id,omitempty"`
-	RequestedRole string    `json:"requested_role"`
+	RoleAtCompany string    `json:"role_at_company"`
 	Status        string    `json:"status"`
 	CreatedAt     time.Time `json:"created_at"`
 }
@@ -29,6 +42,34 @@ func (h *Handler) HandlePendingApprovals(w http.ResponseWriter, r *http.Request)
 	default:
 		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
+
+// listPendingActivations handles GET for pending activations
+func (h *Handler) listPendingActivations(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.DB.Query(`
+		SELECT pa.id, pa.user_id, u.name, u.email, pa.company_name, pa.company_id, pa.role_at_company, pa.status, pa.created_at
+		FROM pending_activations pa
+		JOIN users u ON u.id = pa.user_id
+		WHERE pa.status = 'pending_activation' AND u.deleted_at IS NULL
+		ORDER BY pa.created_at DESC
+	`)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list pending activations")
+		return
+	}
+	defer rows.Close()
+
+	var activations []PendingActivation
+	for rows.Next() {
+		var a PendingActivation
+		rows.Scan(&a.ID, &a.UserID, &a.UserName, &a.UserEmail, &a.CompanyName, &a.CompanyID, &a.RoleAtCompany, &a.Status, &a.CreatedAt)
+		activations = append(activations, a)
+	}
+	if activations == nil {
+		activations = []PendingActivation{}
+	}
+
+	h.JSON(w, http.StatusOK, activations)
 }
 
 func (h *Handler) listPendingApprovals(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +97,16 @@ func (h *Handler) listPendingApprovals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.JSON(w, http.StatusOK, approvals)
+}
+
+// HandlePendingActivations handles GET /api/activations/pending
+func (h *Handler) HandlePendingActivations(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	h.listPendingActivations(w, r)
 }
 
 type ApprovalRequest struct {

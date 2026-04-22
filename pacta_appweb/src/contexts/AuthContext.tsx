@@ -3,14 +3,30 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { User } from '@/types';
 import { checkSetupStatus } from '@/lib/setup-api';
 
+export interface SetupData {
+  company_id?: number;
+  company_name?: string;
+  company_address?: string;
+  company_tax_id?: string;
+  company_phone?: string;
+  company_email?: string;
+  role_at_company: string;
+  first_supplier_id?: number;
+  first_client_id?: number;
+  authorized_signers: Array<{name: string; position: string; email: string}>;
+}
+
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<{ user: User | null; error?: string }>;
+  login: (email: string, password: string) => Promise<{ user: User | null; needs_setup?: boolean; error?: string }>;
   logout: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<{ user: User | null; error?: string }>;
   isAuthenticated: boolean;
   hasPermission: (role: User['role']) => boolean;
   isLoading: boolean;
+  needsSetup: boolean;
+  setupStatus: string;
+  submitSetup: (setupData: SetupData) => Promise<unknown>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,6 +34,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupStatus, setSetupStatus] = useState('');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -28,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(async () => {
         const needsSetup = await checkSetupStatus();
         if (needsSetup) {
-          window.location.href = '/setup';
+          window.location.href = '/setup/init';
         }
       })
       .finally(() => setIsLoading(false));
@@ -36,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => controller.abort();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ user: User | null; error?: string }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ user: User | null; needs_setup?: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -49,9 +67,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const errorMessage = errorData?.error || 'Login failed';
         return { user: null, error: errorMessage };
       }
-      const data = await res.json();
-      setUser(data);
-      return { user: data };
+      const response = await res.json();
+      if (response.needs_setup) {
+        setNeedsSetup(true);
+        setSetupStatus(response.setup_status || '');
+        window.location.href = '/setup/profile';
+        return { user: null, needs_setup: true };
+      }
+      setUser(response);
+      return { user: response };
     } catch (err) {
       return { user: null, error: err instanceof Error ? err.message : 'Network error' };
     }
@@ -98,6 +122,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
   }, [user]);
 
+  const submitSetup = useCallback(async (setupData: SetupData): Promise<unknown> => {
+    const res = await fetch('/api/setup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(setupData),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to submit setup');
+    }
+    const data = await res.json();
+    setNeedsSetup(false);
+    setSetupStatus('pending_activation');
+    return data;
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
@@ -119,6 +159,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: user !== null,
         hasPermission,
         isLoading,
+        needsSetup,
+        setupStatus,
+        submitSetup,
       }}
     >
       {children}

@@ -56,6 +56,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	r.Get("/api/setup/status", h.HandleSetupStatus)
 	r.Post("/api/setup", h.HandleSetup)
 
+	// User setup route (authenticated, for completing user company config)
+	r.Patch("/api/setup", h.HandleUserSetup)
+
 	// Authenticated API routes
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
@@ -149,9 +152,12 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Patch("/api/users/{id}/status", h.HandleUserByID)
 			r.Patch("/api/users/{id}/company", h.HandleUserCompany)
 
-			// Approval routes
+			// Approval routes (protected by RequireRole(auth.RoleAdmin) above)
 			r.Get("/api/approvals/pending", h.HandlePendingApprovals)
 			r.Post("/api/approvals", h.HandlePendingApprovals)
+
+			// Pending activations from setup wizard
+			r.Get("/api/activations/pending", h.HandlePendingActivations)
 
 		// System settings
 		r.Get("/api/system-settings", h.GetSystemSettings)

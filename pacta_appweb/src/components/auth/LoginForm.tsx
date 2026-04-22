@@ -1,13 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { registrationAPI } from '@/lib/registration-api';
@@ -17,26 +15,14 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [showRegister, setShowRegister] = useState(false);
   const [name, setName] = useState('');
-  const [registrationMode, setRegistrationMode] = useState<'email' | 'approval'>('email');
-  const [companyName, setCompanyName] = useState('');
-  const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showVerification, setShowVerification] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation('login');
-
-  useEffect(() => {
-    if (showRegister) {
-      fetch('/api/public/companies')
-        .then(r => r.json())
-        .then(data => setCompanies(Array.isArray(data) ? data : []))
-        .catch(() => setCompanies([]));
-    }
-  }, [showRegister]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,11 +44,12 @@ export default function LoginForm() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const isNewCompany = selectedCompanyId === 'other';
-      const companyParam = isNewCompany ? companyName : undefined;
-      const companyId = isNewCompany ? undefined : (selectedCompanyId ? parseInt(selectedCompanyId) : undefined);
+      if (password !== confirmPassword) {
+        toast.error('Passwords do not match');
+        return;
+      }
       const currentLang = i18n.language.startsWith('es') ? 'es' : 'en';
-      const data = await registrationAPI.register(name, email, password, registrationMode, companyParam, companyId, currentLang) as { status: 'pending_email' | 'pending_approval' | 'success' };
+      const data = await registrationAPI.register(name, email, password, currentLang) as { status: 'pending_email' | 'pending_approval' | 'success' };
       if (data.status === 'pending_email') {
         setVerificationEmail(email);
         setShowVerification(true);
@@ -73,10 +60,8 @@ export default function LoginForm() {
         setName('');
         setEmail('');
         setPassword('');
-        setCompanyName('');
-        setSelectedCompanyId('');
+        setConfirmPassword('');
       } else {
-        // First user: auto-logged in, navigate to dashboard
         toast.success(t('registerSuccess'));
         navigate('/dashboard');
       }
@@ -150,68 +135,15 @@ export default function LoginForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Registration Method</Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="email"
-                    checked={registrationMode === 'email'}
-                    onChange={() => setRegistrationMode('email')}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm">Email verification</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="approval"
-                    checked={registrationMode === 'approval'}
-                    onChange={() => setRegistrationMode('approval')}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm">Admin approval</span>
-                </label>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="company">{t('companyLabel')}</Label>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-muted-foreground/30 text-xs text-muted-foreground hover:border-muted-foreground hover:text-foreground">?</span>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      <p className="text-xs">
-                        {t('companyTip')}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                <SelectTrigger id="company">
-                  <SelectValue placeholder={t('companyPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map(c => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                  ))}
-                  <SelectItem value="other">{t('newCompanyOption')}</SelectItem>
-                </SelectContent>
-              </Select>
-              {selectedCompanyId === 'other' && (
-                <Input
-                  id="companyName"
-                  placeholder="Enter new company name"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  required
-                />
-              )}
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
             </div>
             {showVerification && (
               <div className="space-y-4 pt-4 border-t">
@@ -244,8 +176,7 @@ export default function LoginForm() {
               className="w-full"
               onClick={() => {
                 setShowRegister(false);
-                setCompanyName('');
-                setSelectedCompanyId('');
+                setConfirmPassword('');
               }}
             >
               {t('backToLogin')}

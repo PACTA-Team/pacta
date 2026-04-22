@@ -42,13 +42,11 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
 }
 
 export const registrationAPI = {
-  register: (name: string, email: string, password: string, mode: 'email' | 'approval', companyName?: string, companyId?: number, language?: string) =>
+  register: (name: string, email: string, password: string, language?: string) =>
     fetchJSON<RegistrationResponse>(`${BASE}/register`, {
       method: 'POST',
       body: JSON.stringify({
-        name, email, password, mode,
-        company_name: companyName,
-        company_id: companyId,
+        name, email, password,
         language: language || 'en',
       }),
     }),
