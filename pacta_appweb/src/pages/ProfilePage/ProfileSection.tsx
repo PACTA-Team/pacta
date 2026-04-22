@@ -1,21 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { profileAPI, Profile } from "@/lib/users-api";
+import { getAuditLogs, AuditLog } from "@/lib/audit-api";
 import { toast } from "sonner";
 
 export function ProfileSection() {
   const { t } = useTranslation("profile");
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [activityLogs, setActivityLogs] = useState<AuditLog[]>([]);
 
   useEffect(() => {
     profileAPI
@@ -25,6 +29,9 @@ export function ProfileSection() {
         setName(data.name);
         setEmail(data.email);
         setLoading(false);
+        getAuditLogs(data.id, { limit: 10 })
+          .then(setActivityLogs)
+          .catch(() => setActivityLogs([]));
       })
       .catch(() => {
         toast.error(t("loadError"));
@@ -55,6 +62,15 @@ export function ProfileSection() {
   const formatDate = (date: string | null) => {
     if (!date) return "-";
     return new Date(date).toLocaleDateString();
+  };
+
+  const formatAction = (action: string, entityType: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      LOGIN: { session: "Inició sesión" },
+      CREATE: { user: "Creó usuario", company: "Creó empresa", client: "Creó cliente", supplier: "Creó proveedor", contract: "Creó contrato", supplement: "Creó suplemento" },
+      UPDATE: { user: "Actualizó usuario", company: "Actualizó empresa", client: "Actualizó cliente" },
+    };
+    return labels[action]?.[entityType] || `${action} ${entityType}`;
   };
 
   if (loading) {
@@ -109,6 +125,31 @@ export function ProfileSection() {
               <span>{formatDate(profile?.created_at || null)}</span>
             </div>
           </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-sm font-medium mb-3">{t("activityLog")}</h3>
+          {activityLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
+          ) : (
+            <div className="space-y-2">
+              {activityLogs.slice(0, 10).map((log) => (
+                <div key={log.id} className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">
+                    {formatAction(log.action, log.entity_type)}
+                  </span>
+                  <span className="text-xs">{new Date(log.created_at).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            variant="link"
+            className="mt-2 p-0 h-auto"
+            onClick={() => navigate("/profile/history")}
+          >
+            {t("viewFullHistory")}
+          </Button>
         </div>
 
         <div className="flex justify-end">
