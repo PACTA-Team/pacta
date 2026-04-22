@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -74,4 +75,22 @@ func (h *Handler) HandleAuditLogs(w http.ResponseWriter, r *http.Request) {
 		logs = []auditLogRow{}
 	}
 	h.JSON(w, http.StatusOK, logs)
+}
+
+func (h *Handler) InsertAuditLog(userID int, action, entityType string, entityID *int, prevState, newState *string, r *http.Request) {
+	ip := ""
+	if r != nil {
+		ip = r.RemoteAddr
+	}
+	companyID := 0
+	if r != nil {
+		companyID = h.GetCompanyID(r)
+	}
+	_, err := h.DB.Exec(`
+		INSERT INTO audit_logs (user_id, action, entity_type, entity_id, previous_state, new_state, ip_address, created_at, company_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+	`, userID, action, entityType, entityID, prevState, newState, ip, companyID)
+	if err != nil {
+		log.Printf("[audit] ERROR inserting log: %v", err)
+	}
 }
