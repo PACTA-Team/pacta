@@ -1,16 +1,13 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
-	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
@@ -20,13 +17,11 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Name        string `json:"name"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	Mode        string `json:"mode"`
-	CompanyName string `json:"company_name"`
-	CompanyID   *int   `json:"company_id,omitempty"`
-	Language    string `json:"language"`
+	Name             string `json:"name"`
+	Email           string `json:"email"`
+	Password       string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
+	Language       string `json:"language"`
 }
 
 func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +41,10 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(req.Password) < 8 {
 		h.Error(w, http.StatusBadRequest, "password must be at least 8 characters")
+		return
+	}
+	if req.Password != req.ConfirmPassword {
+		h.Error(w, http.StatusBadRequest, "passwords do not match")
 		return
 	}
 
@@ -72,16 +71,9 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	role := "viewer"
-	status := "active"
-	emailVerificationRequired := h.GetSettingBool("email_verification_required", false)
+	status := "pending_approval"
 	if userCount == 0 {
 		role = "admin"
-	} else {
-		if emailVerificationRequired && req.Mode == "email" {
-			status = "pending_email"
-		} else if req.Mode == "approval" {
-			status = "pending_approval"
-		}
 	}
 
 	// Hash password
@@ -108,105 +100,14 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := result.LastInsertId()
 
-	if userCount > 0 {
-		if req.Mode == "email" {
-			code, err := generateCode()
-			if err != nil {
-				h.Error(w, http.StatusInternalServerError, "failed to generate code")
-				return
-			}
-			codeHash, _ := auth.HashPassword(code)
-			h.DB.Exec(
-				"INSERT INTO registration_codes (user_id, code_hash, expires_at) VALUES (?, ?, ?)",
-				userID, codeHash, time.Now().Add(5*time.Minute),
-			)
-
-			lang := detectLanguage(req.Language, r.Header.Get("Accept-Language"))
-			ctx := context.Background()
-			err = email.SendVerificationCode(ctx, req.Email, code, lang)
-			if err != nil {
-				log.Printf("[register] ERROR sending verification email to %s: %v", req.Email, err)
-				h.Error(w, http.StatusInternalServerError, "failed to send verification email. Please try again or contact support.")
-				return
-			}
-
-			h.JSON(w, http.StatusCreated, map[string]interface{}{
-				"id":      userID,
-				"name":    req.Name,
-				"email":   req.Email,
-				"role":    role,
-				"status":  "pending_email",
-				"message": "Verification code sent. Check your inbox and spam folder.",
-			})
-			return
-		}
-
-		if req.Mode == "approval" {
-			companyName := req.CompanyName
-			if req.CompanyID != nil && *req.CompanyID > 0 {
-				var existingName string
-				err := h.DB.QueryRow("SELECT name FROM companies WHERE id = ? AND deleted_at IS NULL", *req.CompanyID).Scan(&existingName)
-				if err == nil {
-					companyName = existingName
-				}
-			}
-			h.DB.Exec(
-				"INSERT INTO pending_approvals (user_id, company_name, company_id, requested_role) VALUES (?, ?, ?, ?)",
-				userID, companyName, req.CompanyID, "viewer",
-			)
-
-			lang := detectLanguage(req.Language, r.Header.Get("Accept-Language"))
-			ctx := context.Background()
-			sendAdminNotifications(ctx, h.DB, req.Name, req.Email, companyName, lang)
-
-			h.JSON(w, http.StatusCreated, map[string]interface{}{
-				"id":     userID,
-				"name":   req.Name,
-				"email":  req.Email,
-				"role":   role,
-				"status": "pending_approval",
-			})
-			return
-		}
-	}
-
-	// First user or active user: auto-login with company assignment
-	var companyID int
-	err = h.DB.QueryRow("SELECT id FROM companies LIMIT 1").Scan(&companyID)
-	if err != nil && err != sql.ErrNoRows {
-		log.Printf("[register] ERROR querying company: %v", err)
-		h.Error(w, http.StatusInternalServerError, "failed to create session")
-		return
-	}
-
-	session, err := auth.CreateSession(h.DB, int(userID), companyID)
-	if err != nil {
-		log.Printf("[register] ERROR creating session: %v", err)
-		h.Error(w, http.StatusInternalServerError, "failed to create session")
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    session.Token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+	// Return pending response without creating session
+	h.JSON(w, http.StatusCreated, map[string]interface{}{
+		"id":      userID,
+		"name":    req.Name,
+		"email":   req.Email,
+		"status":  "pending_approval",
+		"message": "Your account is pending admin approval. You will be notified once approved.",
 	})
-
-	var u models.User
-	err = h.DB.QueryRow(`
-		SELECT id, name, email, role, status, created_at, updated_at
-		FROM users WHERE id = ? AND deleted_at IS NULL
-	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt)
-	if err != nil {
-		log.Printf("[register] ERROR retrieving created user: %v", err)
-		h.Error(w, http.StatusInternalServerError, "failed to retrieve created user")
-		return
-	}
-
-	h.JSON(w, http.StatusCreated, sanitizeUser(&u))
 }
 
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
