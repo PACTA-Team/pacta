@@ -16,6 +16,7 @@ out/
 
 # Build
 frontend/out/
+pacta_appweb/*.tsbuildinfo
 
 # Env
 .env
