@@ -56,6 +56,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	r.Get("/api/setup/status", h.HandleSetupStatus)
 	r.Post("/api/setup", h.HandleSetup)
 
+	// User setup route (authenticated, for completing user company config)
+	r.Patch("/api/setup", h.HandleUserSetup)
+
 	// Authenticated API routes
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)

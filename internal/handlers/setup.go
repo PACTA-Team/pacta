@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -256,4 +257,153 @@ type setupValidationError struct {
 
 func (e *setupValidationError) Error() string {
 	return e.msg
+}
+
+// UserSetupRequest represents the request body for user setup configuration
+type UserSetupRequest struct {
+	CompanyID         *int                  `json:"company_id,omitempty"`
+	CompanyName       string                `json:"company_name"`
+	CompanyAddress    string                `json:"company_address"`
+	CompanyTaxID      string                `json:"company_tax_id"`
+	CompanyPhone      string                `json:"company_phone"`
+	CompanyEmail      string                `json:"company_email"`
+	RoleAtCompany     string                `json:"role_at_company"`
+	FirstSupplierID   *int                  `json:"first_supplier_id,omitempty"`
+	FirstClientID    *int                  `json:"first_client_id,omitempty"`
+	AuthorizedSigners []AuthorizedSigner    `json:"authorized_signers"`
+}
+
+// AuthorizedSigner represents an authorized signer for a company
+type AuthorizedSigner struct {
+	Name     string `json:"name"`
+	Position string `json:"position"`
+	Email    string `json:"email"`
+}
+
+// HandleUserSetup handles PATCH /api/setup for user company configuration
+func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		h.Error(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	userID := h.getUserID(r)
+	if userID == 0 {
+		h.Error(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	// Check if user already completed setup
+	var existingCompanyID *int
+	err := h.DB.QueryRow("SELECT company_id FROM users WHERE id = ?", userID).Scan(&existingCompanyID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to check user status")
+		return
+	}
+	if existingCompanyID != nil && *existingCompanyID > 0 {
+		h.Error(w, http.StatusConflict, "setup already completed")
+		return
+	}
+
+	var req UserSetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	// Validate role
+	validRoles := map[string]bool{"manager": true, "editor": true, "viewer": true}
+	if req.RoleAtCompany == "" {
+		req.RoleAtCompany = "viewer"
+	}
+	if !validRoles[req.RoleAtCompany] {
+		h.Error(w, http.StatusBadRequest, "invalid role. Must be manager, editor, or viewer")
+		return
+	}
+
+	// Create or get company
+	companyID := req.CompanyID
+
+	// Handle both creating new company and using existing
+	if companyID == nil || *companyID == 0 {
+		// Creating new company
+		if strings.TrimSpace(req.CompanyName) == "" {
+			h.Error(w, http.StatusBadRequest, "company name is required when creating new company")
+			return
+		}
+
+		result, err := h.DB.Exec(
+			"INSERT INTO companies (name, address, tax_id, phone, email, company_type) VALUES (?, ?, ?, ?, ?, 'single')",
+			req.CompanyName, req.CompanyAddress, req.CompanyTaxID, req.CompanyPhone, req.CompanyEmail,
+		)
+		if err != nil {
+			log.Printf("[user-setup] ERROR creating company: %v", err)
+			h.Error(w, http.StatusInternalServerError, "failed to create company")
+			return
+		}
+
+		id, _ := result.LastInsertId()
+		companyID = &id
+	} else {
+		// Verify company exists
+		var count int
+		err := h.DB.QueryRow("SELECT COUNT(*) FROM companies WHERE id = ? AND deleted_at IS NULL", *companyID).Scan(&count)
+		if err != nil || count == 0 {
+			h.Error(w, http.StatusNotFound, "company not found")
+			return
+		}
+	}
+
+	// Update user with company, role
+	_, err = h.DB.Exec(
+		"UPDATE users SET company_id = ?, role = ?, setup_completed = 1, status = 'pending_activation', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		companyID, req.RoleAtCompany, userID,
+	)
+	if err != nil {
+		log.Printf("[user-setup] ERROR updating user: %v", err)
+		h.Error(w, http.StatusInternalServerError, "failed to update user")
+		return
+	}
+
+	// Link user to company
+	h.DB.Exec(
+		"INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)",
+		userID, *companyID,
+	)
+
+	// Insert authorized signers
+	for _, signer := range req.AuthorizedSigners {
+		if strings.TrimSpace(signer.Name) != "" {
+			h.DB.Exec(
+				"INSERT INTO authorized_signers (company_id, name, position, email) VALUES (?, ?, ?, ?)",
+				companyID, signer.Name, signer.Position, signer.Email,
+			)
+		}
+	}
+
+	// Record in pending_activations if first supplier/client provided
+	if req.FirstSupplierID != nil || req.FirstClientID != nil {
+		h.DB.Exec(`
+			INSERT INTO pending_activations (user_id, company_id, company_name, role_at_company, status, first_supplier_id, first_client_id) 
+			VALUES (?, ?, ?, ?, 'pending_activation', ?, ?)`,
+			userID, companyID, req.CompanyName, req.RoleAtCompany, req.FirstSupplierID, req.FirstClientID,
+		)
+	}
+
+	// Send setup completion notification to admins
+	go sendSetupCompletedNotification(userID, req.CompanyName)
+
+	h.JSON(w, http.StatusOK, map[string]interface{}{
+		"success":    true,
+		"message":  "Setup completed. Your account is pending activation.",
+		"company": map[string]interface{}{
+			"id": *companyID,
+		},
+	})
+}
+
+// sendSetupCompletedNotification sends notification to admins about new user setup
+func sendSetupCompletedNotification(userID int, companyName string) {
+	// This would send email to admins - implementation depends on email service
+	log.Printf("[setup] User %d completed setup for company %s", userID, companyName)
 }
