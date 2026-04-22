@@ -381,14 +381,12 @@ func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Record in pending_activations if first supplier/client provided
-	if req.FirstSupplierID != nil || req.FirstClientID != nil {
-		h.DB.Exec(`
-			INSERT INTO pending_activations (user_id, company_id, company_name, role_at_company, status, first_supplier_id, first_client_id) 
-			VALUES (?, ?, ?, ?, 'pending_activation', ?, ?)`,
-			userID, companyID, req.CompanyName, req.RoleAtCompany, req.FirstSupplierID, req.FirstClientID,
-		)
-	}
+	// Always record in pending_activations when user completes setup (unconditional)
+	h.DB.Exec(`
+		INSERT INTO pending_activations (user_id, company_id, company_name, role_at_company, status) 
+		VALUES (?, ?, ?, ?, 'pending_activation')`,
+		userID, companyID, req.CompanyName, req.RoleAtCompany,
+	)
 
 	// Send setup completion notification to admins
 	go sendSetupCompletedNotification(userID, req.CompanyName)

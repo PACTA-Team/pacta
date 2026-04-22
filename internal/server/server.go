@@ -156,6 +156,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Get("/api/approvals/pending", h.HandlePendingApprovals)
 			r.Post("/api/approvals", h.HandlePendingApprovals)
 
+			// Pending activations from setup wizard
+			r.Get("/api/activations/pending", h.HandlePendingActivations)
+
 		// System settings
 		r.Get("/api/system-settings", h.GetSystemSettings)
 		r.Put("/api/system-settings", h.UpdateSystemSettings)
