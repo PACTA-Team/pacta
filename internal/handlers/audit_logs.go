@@ -71,6 +71,10 @@ func (h *Handler) HandleAuditLogs(w http.ResponseWriter, r *http.Request) {
 		rows.Scan(&l.ID, &l.UserID, &l.Action, &l.EntityType, &l.EntityID, &l.PreviousState, &l.NewState, &l.IPAddress, &l.CreatedAt)
 		logs = append(logs, l)
 	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to scan audit logs")
+		return
+	}
 	if logs == nil {
 		logs = []auditLogRow{}
 	}
