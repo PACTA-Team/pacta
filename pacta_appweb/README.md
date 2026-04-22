@@ -136,11 +136,93 @@ To allow network access:
 
 ### API Endpoints
 
-- `POST /next_api/auth/login` - Login with email/password
-- `POST /next_api/auth/register` - Register new user (pending approval)
-- `POST /next_api/auth/setup` - Initial admin setup wizard
-- `GET /next_api/health` - Health check
-- `POST /next_api/upload` - File upload (requires auth)
+#### Authentication
+- `POST /api/auth/login` - Login with email/password
+- `POST /api/auth/logout` - Destroy session
+- `POST /api/auth/register` - Register new user (pending approval)
+- `GET /api/auth/me` - Get current user
+
+#### Contracts
+- `GET /api/contracts` - List contracts (with pagination and filters)
+- `POST /api/contracts` - Create contract
+- `GET /api/contracts/{id}` - Get contract by ID
+- `PUT /api/contracts/{id}` - Update contract
+- `DELETE /api/contracts/{id}` - Soft delete contract
+- `GET /api/contracts/{id}/supplements` - List supplements for contract
+
+#### Supplements
+- `GET /api/supplements` - List supplements (with pagination and filters)
+- `POST /api/supplements` - Create supplement
+- `GET /api/supplements/{id}` - Get supplement by ID
+- `PUT /api/supplements/{id}` - Update supplement
+- `DELETE /api/supplements/{id}` - Delete supplement
+- `PATCH /api/supplements/{id}/status` - Update supplement status
+
+#### Clients & Suppliers
+- `GET /api/clients` - List clients
+- `POST /api/clients` - Create client
+- `GET /api/clients/{id}` - Get client by ID
+- `PUT /api/clients/{id}` - Update client
+- `DELETE /api/clients/{id}` - Soft delete client
+- `GET /api/suppliers` - List suppliers
+- `POST /api/suppliers` - Create supplier
+- `GET /api/suppliers/{id}` - Get supplier by ID
+- `PUT /api/suppliers/{id}` - Update supplier
+- `DELETE /api/suppliers/{id}` - Soft delete supplier
+
+#### Signers
+- `GET /api/signers` - List authorized signers
+- `POST /api/signers` - Create signer
+- `GET /api/signers/{id}` - Get signer by ID
+- `PUT /api/signers/{id}` - Update signer
+- `DELETE /api/signers/{id}` - Soft delete signer
+
+#### Documents
+- `GET /api/documents` - List documents
+- `POST /api/documents` - Upload document
+- `GET /api/documents/{id}/download` - Download document
+- `DELETE /api/documents/{id}` - Delete document
+
+#### Notifications
+- `GET /api/notifications` - List notifications
+- `POST /api/notifications` - Create notification
+- `PATCH /api/notifications/{id}/read` - Mark as read
+- `PATCH /api/notifications/mark-all-read` - Mark all as read
+- `GET /api/notifications/count` - Get unread count
+- `DELETE /api/notifications/{id}` - Delete notification
+
+#### Audit Logs
+- `GET /api/audit-logs` - List audit logs (with filters)
+
+#### Users & Profile
+- `GET /api/users` - List users
+- `POST /api/users` - Create user
+- `GET /api/users/{id}` - Get user by ID
+- `PUT /api/users/{id}` - Update user
+- `DELETE /api/users/{id}` - Soft delete user
+- `PATCH /api/users/{id}/reset-password` - Reset password
+- `PATCH /api/users/{id}/status` - Update user status
+- `GET /api/user/profile` - Get current user profile
+- `PATCH /api/user/profile` - Update profile (name, email)
+- `POST /api/user/change-password` - Change password
+- `POST /api/user/certificate` - Upload certificate
+- `DELETE /api/user/certificate/{type}` - Delete certificate
+
+#### Companies
+- `GET /api/companies` - List companies
+- `POST /api/companies` - Create company
+- `GET /api/companies/{id}` - Get company by ID
+- `PUT /api/companies/{id}` - Update company
+- `DELETE /api/companies/{id}` - Delete company
+- `GET /api/users/me/companies` - List user's companies
+- `PATCH /api/users/me/company/{id}` - Switch active company
+
+#### System
+- `GET /api/health` - Health check
+- `GET /api/setup/status` - Setup status
+- `POST /api/setup` - Initial setup wizard
+- `GET /api/system-settings` - Get system settings
+- `PUT /api/system-settings` - Update system settings
 
 ## Usage Guide
 
@@ -202,13 +284,13 @@ We welcome contributions! Please follow these steps:
 
 Please ensure your code follows the project's coding standards and includes appropriate tests.
 
+## Security
+
+For security policy and vulnerability disclosure, please see the main project's [SECURITY.md](../SECURITY.md).
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for our security policy and vulnerability disclosure process.
 
 ## Deployment
 
