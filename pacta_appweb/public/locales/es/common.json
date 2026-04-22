@@ -1,4 +1,8 @@
 {
+  "client": "Cliente",
+  "supplier": "Proveedor",
+  "all": "Todos",
+  "company": "Empresa",
   "loading": "Cargando...",
   "loadingPage": "Cargando página...",
   "skipToMain": "Ir al contenido principal",

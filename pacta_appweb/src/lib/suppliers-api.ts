@@ -19,6 +19,8 @@ export interface CreateSupplierRequest {
   address: string;
   reu_code: string;
   contacts: string;
+  document_url?: string;
+  document_key?: string;
 }
 
 export interface UpdateSupplierRequest {
@@ -32,11 +34,14 @@ export const suppliersAPI = {
   list: (signal?: AbortSignal) =>
     fetchJSON(BASE, { signal }),
 
+  listByCompany: (companyId: number, signal?: AbortSignal) =>
+    fetchJSON(`${BASE}?company_id=${companyId}`, { signal }),
+
   getById: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, { signal }),
 
-  create: (data: CreateSupplierRequest, signal?: AbortSignal) =>
-    fetchJSON(BASE, {
+  create: (data: CreateSupplierRequest, signal?: AbortSignal, companyId?: number) =>
+    fetchJSON(companyId ? `${BASE}?company_id=${companyId}` : BASE, {
       method: 'POST',
       body: JSON.stringify(data),
       signal,

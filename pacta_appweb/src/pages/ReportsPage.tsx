@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   PieChart,
   Users,
@@ -14,6 +15,8 @@ import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
+import { companiesAPI } from '@/lib/companies-api';
+import { Company } from '@/types';
 import ReportFiltersComponent, { ReportFilters, defaultFilters } from '@/components/reports/ReportFilters';
 import ContractStatusReport from '@/components/reports/ContractStatusReport';
 import FinancialReport from '@/components/reports/FinancialReport';
@@ -21,6 +24,7 @@ import ExpirationReport from '@/components/reports/ExpirationReport';
 import ClientSupplierReport from '@/components/reports/ClientSupplierReport';
 import SupplementsReport from '@/components/reports/SupplementsReport';
 import ModificationsReport from '@/components/reports/ModificationsReport';
+import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 
 type ReportType =
@@ -39,6 +43,7 @@ interface SavedPreset {
 export default function ReportsPage() {
   const { t } = useTranslation('reports');
   const { t: tCommon } = useTranslation('common');
+  const { currentCompany, isMultiCompany } = useCompany();
   const [contracts, setContracts] = useState<any[]>([]);
   const [supplements, setSupplements] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -48,20 +53,24 @@ export default function ReportsPage() {
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters);
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
   const [showFilters, setShowFilters] = useState(true);
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [contractsData, supplementsData, clientsData, suppliersData] = await Promise.all([
+        const [contractsData, supplementsData, clientsData, suppliersData, companiesData] = await Promise.all([
           contractsAPI.list(),
           supplementsAPI.list(),
           clientsAPI.list(),
           suppliersAPI.list(),
+          companiesAPI.listOwnCompanies(),
         ]);
         setContracts(contractsData as any[]);
         setSupplements(supplementsData as any[]);
         setClients(clientsData as any[]);
         setSuppliers(suppliersData as any[]);
+        setOwnCompanies(companiesData);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : tCommon('error'));
       }
@@ -120,8 +129,17 @@ export default function ReportsPage() {
       result = result.filter((c: any) => c.amount <= parseFloat(appliedFilters.amountMax));
     }
 
+    if (companyFilter !== 'all' && currentCompany) {
+      if (companyFilter === 'my') {
+        result = result.filter((c: any) =>
+          String(c.client_id) === String(currentCompany.id) ||
+          String(c.supplier_id) === String(currentCompany.id)
+        );
+      }
+    }
+
     return result;
-  }, [enrichedContracts, appliedFilters]);
+  }, [enrichedContracts, appliedFilters, companyFilter, currentCompany]);
 
   // Filter supplements based on date filters
   const filteredSupplements = useMemo(() => {
@@ -211,16 +229,39 @@ export default function ReportsPage() {
 
         {/* Filters */}
         {showFilters && (
-          <ReportFiltersComponent
-            filters={filters}
-            onFiltersChange={setFilters}
-            onApply={handleApplyFilters}
-            onReset={handleResetFilters}
-            onSavePreset={handleSavePreset}
-            showTypeFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
-            showAmountFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
-            showClientFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
-          />
+          <>
+            {isMultiCompany && (
+              <Card>
+                <CardContent className="flex items-center gap-4 py-3">
+                  <span className="text-sm font-medium">Company:</span>
+                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter by company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Companies</SelectItem>
+                      <SelectItem value="my">My Company Only</SelectItem>
+                      {ownCompanies && ownCompanies.map((company) => (
+                        <SelectItem key={company.id} value={company.id.toString()}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
+            <ReportFiltersComponent
+              filters={filters}
+              onFiltersChange={setFilters}
+              onApply={handleApplyFilters}
+              onReset={handleResetFilters}
+              onSavePreset={handleSavePreset}
+              showTypeFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
+              showAmountFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
+              showClientFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
+            />
+          </>
         )}
 
         {/* Report Type Selection */}

@@ -1,6 +1,7 @@
 
 
 import { useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,8 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
 };
 
 export default function ContractStatusReport({ contracts, title = 'Contracts by Status Report' }: ContractStatusReportProps) {
+  const { t } = useTranslation('reports');
+  const { t: tCommon } = useTranslation('common');
   const chartRef = useRef<HTMLDivElement>(null);
 
   const statusData = useMemo(() => {
@@ -168,20 +171,20 @@ const columns: ExportColumn[] = [
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Contract Number</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>{t('table.contractNumber')}</TableHead>
+                <TableHead>{t('table.title')}</TableHead>
+                <TableHead>{t('table.client')}</TableHead>
+                <TableHead>{t('table.status')}</TableHead>
+                <TableHead>{t('table.startDate')}</TableHead>
+                <TableHead>{t('table.endDate')}</TableHead>
+                <TableHead className="text-right">{t('table.amount')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contracts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    No contracts found matching the filters
+                    {t('table.noRecordsFound')}
                   </TableCell>
                 </TableRow>
               ) : (

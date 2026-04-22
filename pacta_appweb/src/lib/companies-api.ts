@@ -57,8 +57,28 @@ export async function getUserCompanies(): Promise<UserCompany[]> {
   return request<UserCompany[]>('/users/me/companies');
 }
 
+export async function listOwnCompanies(): Promise<Company[]> {
+  const res = await fetch('/api/companies', {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error('Failed to fetch companies');
+  return res.json();
+}
+
 export async function switchCompany(id: number): Promise<{ company_id: number }> {
   return request<{ company_id: number }>(`/users/me/company/${id}`, {
     method: 'PATCH',
   });
 }
+
+export const companiesAPI = {
+  listCompanies,
+  getCompany,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  getUserCompanies,
+  listOwnCompanies,
+  switchCompany,
+};

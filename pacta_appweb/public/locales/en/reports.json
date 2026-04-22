@@ -36,5 +36,21 @@
     "expirations": "Expirations",
     "supplements": "Supplements",
     "modifications": "Modifications"
+  },
+  "table": {
+    "contractNumber": "Contract Number",
+    "title": "Title",
+    "client": "Client",
+    "supplier": "Supplier",
+    "status": "Status",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "amount": "Amount",
+    "type": "Type",
+    "rank": "Rank",
+    "percentOfTotal": "% of Total",
+    "timeRemaining": "Time Remaining",
+    "noRecordsFound": "No records found matching the filters",
+    "noExpiringContracts": "No contracts expiring within 30 days"
   }
 }

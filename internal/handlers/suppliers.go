@@ -30,6 +30,9 @@ func (h *Handler) HandleSuppliers(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
+	if cid := r.URL.Query().Get("company_id"); cid != "" {
+		companyID, _ = strconv.Atoi(cid)
+	}
 	rows, err := h.DB.Query(`
 		SELECT id, name, address, reu_code, contacts, created_at, updated_at
 		FROM suppliers WHERE deleted_at IS NULL AND company_id = ? ORDER BY name
@@ -61,6 +64,9 @@ type createSupplierRequest struct {
 
 func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
+	if cid := r.URL.Query().Get("company_id"); cid != "" {
+		companyID, _ = strconv.Atoi(cid)
+	}
 	var req createSupplierRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.Error(w, http.StatusBadRequest, "invalid request")
