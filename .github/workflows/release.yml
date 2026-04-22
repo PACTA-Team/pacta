@@ -43,6 +43,9 @@ jobs:
       - name: Copy frontend dist
         run: cp -r pacta_appweb/dist cmd/pacta/dist
 
+      - name: Clean build artifacts
+        run: rm -f pacta_appweb/*.tsbuildinfo
+
       - uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
