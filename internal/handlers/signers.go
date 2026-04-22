@@ -33,6 +33,9 @@ func (h *Handler) HandleSigners(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) listSigners(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
+	if cid := r.URL.Query().Get("company_id"); cid != "" {
+		companyID, _ = strconv.Atoi(cid)
+	}
 	rows, err := h.DB.Query(`
 		SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
 		FROM authorized_signers WHERE deleted_at IS NULL AND company_id = ? ORDER BY last_name, first_name

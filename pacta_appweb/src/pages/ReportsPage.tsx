@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   PieChart,
   Users,
@@ -21,6 +22,7 @@ import ExpirationReport from '@/components/reports/ExpirationReport';
 import ClientSupplierReport from '@/components/reports/ClientSupplierReport';
 import SupplementsReport from '@/components/reports/SupplementsReport';
 import ModificationsReport from '@/components/reports/ModificationsReport';
+import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 
 type ReportType =
@@ -39,6 +41,7 @@ interface SavedPreset {
 export default function ReportsPage() {
   const { t } = useTranslation('reports');
   const { t: tCommon } = useTranslation('common');
+  const { currentCompany, isMultiCompany } = useCompany();
   const [contracts, setContracts] = useState<any[]>([]);
   const [supplements, setSupplements] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -48,6 +51,7 @@ export default function ReportsPage() {
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(defaultFilters);
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
   const [showFilters, setShowFilters] = useState(true);
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
 
   useEffect(() => {
     const loadData = async () => {
@@ -120,8 +124,17 @@ export default function ReportsPage() {
       result = result.filter((c: any) => c.amount <= parseFloat(appliedFilters.amountMax));
     }
 
+    if (companyFilter !== 'all' && currentCompany) {
+      if (companyFilter === 'my') {
+        result = result.filter((c: any) =>
+          String(c.client_id) === String(currentCompany.id) ||
+          String(c.supplier_id) === String(currentCompany.id)
+        );
+      }
+    }
+
     return result;
-  }, [enrichedContracts, appliedFilters]);
+  }, [enrichedContracts, appliedFilters, companyFilter, currentCompany]);
 
   // Filter supplements based on date filters
   const filteredSupplements = useMemo(() => {
@@ -211,16 +224,34 @@ export default function ReportsPage() {
 
         {/* Filters */}
         {showFilters && (
-          <ReportFiltersComponent
-            filters={filters}
-            onFiltersChange={setFilters}
-            onApply={handleApplyFilters}
-            onReset={handleResetFilters}
-            onSavePreset={handleSavePreset}
-            showTypeFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
-            showAmountFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
-            showClientFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
-          />
+          <>
+            {isMultiCompany && (
+              <Card>
+                <CardContent className="flex items-center gap-4 py-3">
+                  <span className="text-sm font-medium">Company:</span>
+                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter by company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Companies</SelectItem>
+                      <SelectItem value="my">My Company Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
+            <ReportFiltersComponent
+              filters={filters}
+              onFiltersChange={setFilters}
+              onApply={handleApplyFilters}
+              onReset={handleResetFilters}
+              onSavePreset={handleSavePreset}
+              showTypeFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
+              showAmountFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
+              showClientFilter={activeReport !== 'supplements' && activeReport !== 'modifications'}
+            />
+          </>
         )}
 
         {/* Report Type Selection */}

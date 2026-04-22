@@ -9,16 +9,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Contract, ContractType, ContractStatus, RenewalType, RENEWAL_TYPE_LABELS } from '@/types';
+import { Contract, ContractType, ContractStatus, RenewalType, RENEWAL_TYPE_LABELS, Company } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { signersAPI } from '@/lib/signers-api';
+import { companiesAPI } from '@/lib/companies-api';
 import { documentsAPI, APIDocument } from '@/lib/documents-api';
 import { toast } from 'sonner';
-import { ChevronDown, FileText, Upload, X, Download } from 'lucide-react';
+import { ChevronDown, FileText, Upload, X, Download, Plus } from 'lucide-react';
 import { FieldTooltip } from '@/components/ui/field-tooltip';
+import { SupplierInlineModal } from '@/components/modals/SupplierInlineModal';
+import { ClientInlineModal } from '@/components/modals/ClientInlineModal';
 
 interface ContractFormProps {
   contract?: Contract;
@@ -33,6 +36,10 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [clientSigners, setClientSigners] = useState<any[]>([]);
   const [supplierSigners, setSupplierSigners] = useState<any[]>([]);
+  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
+  const [selectedOwnCompany, setSelectedOwnCompany] = useState<Company | null>(null);
+  const [showNewSupplierModal, setShowNewSupplierModal] = useState(false);
+  const [showNewClientModal, setShowNewClientModal] = useState(false);
 
   const [formData, setFormData] = useState({
     contract_number: (contract as any)?.contract_number || '',
@@ -113,29 +120,37 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
   const ourLabel = ourRole === 'client' ? t('client') : t('supplier');
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadOwnCompanies = async () => {
       try {
-        const [clientsData, suppliersData, allSigners] = await Promise.all([
-          clientsAPI.list(),
-          suppliersAPI.list(),
-          signersAPI.list(),
-        ]);
-        setClients(clientsData as any[]);
-        setSuppliers(suppliersData as any[]);
-
-        if (formData.client_id) {
-          setClientSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.client_id) && s.company_type === 'client'));
+        const companies = await companiesAPI.listOwnCompanies();
+        setOwnCompanies(companies);
+        if (companies.length === 1) {
+          setSelectedOwnCompany(companies[0]);
         }
+      } catch (err) {
+        console.error('Failed to load own companies:', err);
+      }
+    };
+    loadOwnCompanies();
+  }, []);
 
-        if (formData.supplier_id) {
-          setSupplierSigners((allSigners as any[]).filter((s: any) => s.company_id === parseInt(formData.supplier_id) && s.company_type === 'supplier'));
+  useEffect(() => {
+    const loadData = async () => {
+      if (!selectedOwnCompany) return;
+      try {
+        if (ourRole === 'client') {
+          const suppliersData = await suppliersAPI.listByCompany(selectedOwnCompany.id);
+          setSuppliers(suppliersData as any[]);
+        } else {
+          const clientsData = await clientsAPI.listByCompany(selectedOwnCompany.id);
+          setClients(clientsData as any[]);
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load form data');
       }
     };
     loadData();
-  }, []);
+  }, [selectedOwnCompany, ourRole]);
 
   useEffect(() => {
     const loadSigners = async () => {
@@ -257,6 +272,30 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </div>
           )}
 
+          {ownCompanies.length > 1 && !isEditing && (
+            <div className="space-y-2">
+              <Label>Seleccionar Empresa *</Label>
+              <Select
+                value={selectedOwnCompany?.id?.toString() || ''}
+                onValueChange={(value) => {
+                  const company = ownCompanies.find(c => c.id === parseInt(value));
+                  setSelectedOwnCompany(company || null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ownCompanies.map((company) => (
+                    <SelectItem key={company.id} value={company.id.toString()}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="client_id">{ourLabel} *</Label>
@@ -272,6 +311,17 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                   ))}
                 </SelectContent>
               </Select>
+              {ourRole === 'supplier' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => setShowNewClientModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Cliente
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -310,6 +360,17 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                   ))}
                 </SelectContent>
               </Select>
+              {ourRole === 'client' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => setShowNewSupplierModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Proveedor
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -565,6 +626,32 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             </Button>
           </div>
         </form>
+
+        {showNewSupplierModal && selectedOwnCompany && (
+          <SupplierInlineModal
+            companyId={selectedOwnCompany.id}
+            open={showNewSupplierModal}
+            onOpenChange={setShowNewSupplierModal}
+            onSuccess={() => {
+              if (selectedOwnCompany) {
+                suppliersAPI.listByCompany(selectedOwnCompany.id).then(data => setSuppliers(data as any[]));
+              }
+            }}
+          />
+        )}
+
+        {showNewClientModal && selectedOwnCompany && (
+          <ClientInlineModal
+            companyId={selectedOwnCompany.id}
+            open={showNewClientModal}
+            onOpenChange={setShowNewClientModal}
+            onSuccess={() => {
+              if (selectedOwnCompany) {
+                clientsAPI.listByCompany(selectedOwnCompany.id).then(data => setClients(data as any[]));
+              }
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   );

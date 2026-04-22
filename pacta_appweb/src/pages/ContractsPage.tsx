@@ -13,6 +13,7 @@ import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/li
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import ContractForm from '@/components/contracts/ContractForm';
@@ -32,6 +33,7 @@ export default function ContractsPage() {
   const { t } = useTranslation('contracts');
   const { t: tCommon } = useTranslation('common');
   const [searchParams] = useSearchParams();
+  const { currentCompany, isMultiCompany } = useCompany();
 
   const [contracts, setContracts] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -40,6 +42,7 @@ export default function ContractsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [partyFilter, setPartyFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -81,9 +84,20 @@ export default function ContractsPage() {
       const matchesStatus = statusFilter === 'all' || contract.status === statusFilter;
       const matchesType = typeFilter === 'all' || contract.type === typeFilter;
 
+      if (companyFilter !== 'all' && currentCompany) {
+        const isMyCompany = String(contract.client_id) === String(currentCompany.id) ||
+          String(contract.supplier_id) === String(currentCompany.id);
+        if (companyFilter === 'client') {
+          return isMyCompany;
+        }
+        if (companyFilter === 'other') {
+          return !isMyCompany;
+        }
+      }
+
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [contracts, searchTerm, statusFilter, typeFilter]);
+  }, [contracts, searchTerm, statusFilter, typeFilter, companyFilter, currentCompany]);
 
   const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internal_id' | 'created_by' | 'created_at' | 'updated_at'>) => {
     try {
@@ -261,6 +275,18 @@ export default function ContractsPage() {
                     <SelectItem value="supplier">{t('partyFilter.supplier')}</SelectItem>
                   </SelectContent>
                 </Select>
+                {isMultiCompany && (
+                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="client">My Company</SelectItem>
+                      <SelectItem value="other">Other Party</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
             {hasPermission('editor') && (
@@ -279,6 +305,7 @@ export default function ContractsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('contractNumber', 'Contract Number')}</TableHead>
+                      {isMultiCompany && <TableHead className="hidden md:table-cell">Company</TableHead>}
                       <TableHead className="hidden lg:table-cell">{t('client')}/{t('supplier')}</TableHead>
                       <TableHead>{t('startDate')}</TableHead>
                       <TableHead className="hidden sm:table-cell">{t('endDate')}</TableHead>
@@ -290,47 +317,57 @@ export default function ContractsPage() {
                   <TableBody>
                     {filteredContracts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={isMultiCompany ? 8 : 7} className="text-center text-muted-foreground py-8">
                           {t('noContracts')}
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredContracts.map((contract: any) => (
-                        <TableRow key={contract.id}>
-                          <TableCell className="font-medium">{contract.contract_number}</TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <div className="text-sm">
-                              <div>{t('client')}: {getClientName(contract.client_id)}</div>
-                              <div className="text-muted-foreground">{t('supplier')}: {getSupplierName(contract.supplier_id)}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(contract.start_date).toLocaleDateString()}</TableCell>
-                          <TableCell className="hidden sm:table-cell">{new Date(contract.end_date).toLocaleDateString()}</TableCell>
-                          <TableCell>{getStatusBadge(contract.status)}</TableCell>
-                          <TableCell className="hidden md:table-cell">${contract.amount?.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Link to={`/contracts/${contract.id}`}>
-                                <Button variant="ghost" size="sm" aria-label={`View contract ${contract.contract_number}`}>
-                                  <Eye className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                              </Link>
-                              {hasPermission('editor') && (
-                                <Button variant="ghost" size="sm" onClick={() => handleEdit(contract)} aria-label={`Edit contract ${contract.contract_number}`}>
-                                  <Edit className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                              )}
-                              {hasPermission('manager') && (
-                                <Button variant="ghost" size="sm" onClick={() => handleDelete(contract.id)} aria-label={`Delete contract ${contract.contract_number}`}>
-                                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+) : (
+                      filteredContracts.map((contract: any) => {
+                        const isClient = String(contract.client_id) === String(currentCompany?.id);
+                        const isSupplier = String(contract.supplier_id) === String(currentCompany?.id);
+                        const contractCompany = isClient ? 'Client' : isSupplier ? 'Supplier' : 'Other';
+                        return (
+                          <TableRow key={contract.id}>
+                            <TableCell className="font-medium">{contract.contract_number}</TableCell>
+                            {isMultiCompany && (
+                              <TableCell className="hidden md:table-cell text-sm">
+                                {contractCompany}
+                              </TableCell>
+                            )}
+                            <TableCell className="hidden lg:table-cell">
+                              <div className="text-sm">
+                                <div>{t('client')}: {getClientName(contract.client_id)}</div>
+                                <div className="text-muted-foreground">{t('supplier')}: {getSupplierName(contract.supplier_id)}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{new Date(contract.start_date).toLocaleDateString()}</TableCell>
+                            <TableCell className="hidden sm:table-cell">{new Date(contract.end_date).toLocaleDateString()}</TableCell>
+                            <TableCell>{getStatusBadge(contract.status)}</TableCell>
+                            <TableCell className="hidden md:table-cell">${contract.amount?.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Link to={`/contracts/${contract.id}`}>
+                                  <Button variant="ghost" size="sm" aria-label={`View contract ${contract.contract_number}`}>
+                                    <Eye className="h-4 w-4" aria-hidden="true" />
+                                  </Button>
+                                </Link>
+                                {hasPermission('editor') && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleEdit(contract)} aria-label={`Edit contract ${contract.contract_number}`}>
+                                    <Edit className="h-4 w-4" aria-hidden="true" />
+                                  </Button>
+                                )}
+                                {hasPermission('manager') && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleDelete(contract.id)} aria-label={`Delete contract ${contract.contract_number}`}>
+                                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
-                  </TableBody>
+                </TableBody>
                 </Table>
               </div>
             </CardContent>

@@ -19,6 +19,8 @@ export interface CreateClientRequest {
   address: string;
   reu_code: string;
   contacts: string;
+  document_url?: string;
+  document_key?: string;
 }
 
 export interface UpdateClientRequest {
@@ -32,11 +34,14 @@ export const clientsAPI = {
   list: (signal?: AbortSignal) =>
     fetchJSON(BASE, { signal }),
 
+  listByCompany: (companyId: number, signal?: AbortSignal) =>
+    fetchJSON(`${BASE}?company_id=${companyId}`, { signal }),
+
   getById: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, { signal }),
 
-  create: (data: CreateClientRequest, signal?: AbortSignal) =>
-    fetchJSON(BASE, {
+  create: (data: CreateClientRequest, signal?: AbortSignal, companyId?: number) =>
+    fetchJSON(companyId ? `${BASE}?company_id=${companyId}` : BASE, {
       method: 'POST',
       body: JSON.stringify(data),
       signal,

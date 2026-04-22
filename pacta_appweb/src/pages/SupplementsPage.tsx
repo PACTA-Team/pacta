@@ -12,6 +12,7 @@ import { Supplement, SupplementStatus, CreateSupplementRequest } from '@/types';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { contractsAPI } from '@/lib/contracts-api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import SupplementForm from '@/components/supplements/SupplementForm';
 import { Link } from 'react-router-dom';
@@ -37,6 +38,7 @@ export default function SupplementsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, hasPermission } = useAuth();
+  const { currentCompany, isMultiCompany } = useCompany();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +46,7 @@ export default function SupplementsPage() {
   const [contractFilter, setContractFilter] = useState<string>('all');
   const [modificationTypeFilter, setModificationTypeFilter] = useState<string>('all');
   const [supplementPartyFilter, setSupplementPartyFilter] = useState<string>('all');
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -69,23 +72,22 @@ export default function SupplementsPage() {
       filtered = filtered.filter(s => s.modification_type === modificationTypeFilter);
     }
 
-    if (supplementPartyFilter !== 'all' && user?.company_id) {
-      const companyId = user.company_id;
-      if (supplementPartyFilter === 'client') {
+    if (companyFilter !== 'all' && currentCompany) {
+      if (companyFilter === 'client') {
         filtered = filtered.filter(s => {
           const contract = contracts.find(c => c.id === s.contract_id);
-          return String(contract?.client_id) === companyId;
+          return String(contract?.client_id) === String(currentCompany.id);
         });
-      } else if (supplementPartyFilter === 'supplier') {
+      } else if (companyFilter === 'supplier') {
         filtered = filtered.filter(s => {
           const contract = contracts.find(c => c.id === s.contract_id);
-          return String(contract?.supplier_id) === companyId;
+          return String(contract?.supplier_id) === String(currentCompany.id);
         });
       }
     }
 
     return filtered;
-  }, [supplements, searchTerm, statusFilter, contractFilter]);
+  }, [supplements, searchTerm, statusFilter, contractFilter, companyFilter, currentCompany, contracts]);
 
   const totalPages = Math.ceil(filteredSupplements.length / itemsPerPage);
   const paginatedSupplements = useMemo(() => {
@@ -287,6 +289,18 @@ export default function SupplementsPage() {
                 <SelectItem value="supplier">{t('partyFilter.supplier')}</SelectItem>
               </SelectContent>
             </Select>
+            {isMultiCompany && (
+              <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="client">My Company</SelectItem>
+                  <SelectItem value="other">Other Party</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
         {hasPermission('editor') && (
@@ -304,6 +318,7 @@ export default function SupplementsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Supplement Number</TableHead>
+                  {isMultiCompany && <TableHead className="hidden sm:table-cell">Company</TableHead>}
                   <TableHead className="hidden md:table-cell">Parent Contract</TableHead>
                   <TableHead className="hidden lg:table-cell">Description</TableHead>
                   <TableHead>{t('effectiveDate')}</TableHead>
@@ -314,77 +329,85 @@ export default function SupplementsPage() {
 <TableBody>
                   {paginatedSupplements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        {searchTerm || statusFilter !== 'all' || contractFilter !== 'all' ? 'No supplements match your filters' : t('noSupplements')}
+                      <TableCell colSpan={isMultiCompany ? 7 : 6} className="text-center text-muted-foreground py-8">
+                        {searchTerm || statusFilter !== 'all' || contractFilter !== 'all' || companyFilter !== 'all' ? 'No supplements match your filters' : t('noSupplements')}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedSupplements.map((supplement) => (
-                      <TableRow key={supplement.id}>
-                        <TableCell className="font-medium">{supplement.supplement_number}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline dark:text-blue-400">
-                            {getContractInfo(supplement.contract_id)}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell max-w-xs truncate">{supplement.description}</TableCell>
-                        <TableCell>{new Date(supplement.effective_date).toLocaleDateString(i18n.language)}</TableCell>
-                        <TableCell>{getStatusBadge(supplement.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 flex-wrap">
-                          {supplement.status === 'draft' && hasPermission('manager') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-blue-600"
-                              onClick={() => handleStatusChange(supplement.id, 'approved')}
-                              aria-label={`Approve supplement ${supplement.supplement_number}`}
-                            >
-                              <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                            </Button>
+                    paginatedSupplements.map((supplement) => {
+                      const contract = contracts.find(c => c.id === supplement.contract_id);
+                      const isClient = contract && String(contract.client_id) === String(currentCompany?.id);
+                      const isSupplier = contract && String(contract.supplier_id) === String(currentCompany?.id);
+                      const supplementCompany = isClient ? 'Client' : isSupplier ? 'Supplier' : 'Other';
+                      return (
+                        <TableRow key={supplement.id}>
+                          <TableCell className="font-medium">{supplement.supplement_number}</TableCell>
+                          {isMultiCompany && (
+                            <TableCell className="hidden sm:table-cell text-sm">{supplementCompany}</TableCell>
                           )}
-                          {supplement.status === 'approved' && hasPermission('manager') && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-green-600"
-                                onClick={() => handleStatusChange(supplement.id, 'active')}
-                                aria-label={`Activate supplement ${supplement.supplement_number}`}
-                              >
-                                <ArrowUpCircle className="h-4 w-4" aria-hidden="true" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleStatusChange(supplement.id, 'draft')}
-                                aria-label={`Return supplement ${supplement.supplement_number} to draft`}
-                              >
-                                <XCircle className="h-4 w-4" aria-hidden="true" />
-                              </Button>
-                            </>
-                          )}
-                          {hasPermission('editor') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(supplement)} aria-label={`Edit supplement ${supplement.supplement_number}`}>
-                              <Edit className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          )}
-                          {hasPermission('manager') && (
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(supplement.id, supplement.supplement_number)} aria-label={`Delete supplement ${supplement.supplement_number}`}>
-                              <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
+                          <TableCell className="hidden md:table-cell">
+                            <Link to={`/contracts/${supplement.contract_id}`} className="text-blue-600 hover:underline dark:text-blue-400">
+                              {getContractInfo(supplement.contract_id)}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell max-w-xs truncate">{supplement.description}</TableCell>
+                          <TableCell>{new Date(supplement.effective_date).toLocaleDateString(i18n.language)}</TableCell>
+                          <TableCell>{getStatusBadge(supplement.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {supplement.status === 'draft' && hasPermission('manager') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-600"
+                                  onClick={() => handleStatusChange(supplement.id, 'approved')}
+                                  aria-label={`Approve supplement ${supplement.supplement_number}`}
+                                >
+                                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                              )}
+                              {supplement.status === 'approved' && hasPermission('manager') && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-green-600"
+                                    onClick={() => handleStatusChange(supplement.id, 'active')}
+                                    aria-label={`Activate supplement ${supplement.supplement_number}`}
+                                  >
+                                    <ArrowUpCircle className="h-4 w-4" aria-hidden="true" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleStatusChange(supplement.id, 'draft')}
+                                    aria-label={`Return supplement ${supplement.supplement_number} to draft`}
+                                  >
+                                    <XCircle className="h-4 w-4" aria-hidden="true" />
+                                  </Button>
+                                </>
+                              )}
+                              {hasPermission('editor') && (
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(supplement)} aria-label={`Edit supplement ${supplement.supplement_number}`}>
+                                  <Edit className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                              )}
+                              {hasPermission('manager') && (
+                                <Button variant="ghost" size="sm" onClick={() => handleDelete(supplement.id, supplement.supplement_number)} aria-label={`Delete supplement ${supplement.supplement_number}`}>
+                                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                              )}
+                            </div>
+</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       {totalPages > 0 && (
         <div className="flex flex-col items-center gap-4 border-t py-4 sm:flex-row sm:justify-between">
           <PaginationInfo
