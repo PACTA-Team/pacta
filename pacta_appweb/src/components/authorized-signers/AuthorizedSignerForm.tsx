@@ -14,11 +14,11 @@ import { upload } from '@/lib/upload';
 import { toast } from 'sonner';
 import { Upload, FileText, X } from 'lucide-react';
 
-interface AuthorizedSignerFormProps {
-  signer?: AuthorizedSigner;
-  onSubmit: (data: Omit<AuthorizedSigner, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
-  onCancel: () => void;
-}
+ interface AuthorizedSignerFormProps {
+   signer?: AuthorizedSigner;
+   onSubmit: (data: Omit<AuthorizedSigner, 'id' | 'created_by' | 'created_at' | 'updated_at'>) => void;
+   onCancel: () => void;
+ }
 
 export default function AuthorizedSignerForm({ signer, onSubmit, onCancel }: AuthorizedSignerFormProps) {
   const { t } = useTranslation('signers');

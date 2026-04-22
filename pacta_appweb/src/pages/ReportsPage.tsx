@@ -105,12 +105,12 @@ export default function ReportsPage() {
     }
     if (appliedFilters.client) {
       result = result.filter((c: any) =>
-        c.client?.toLowerCase().includes(appliedFilters.client?.toLowerCase())
+        c.client_name?.toLowerCase().includes(appliedFilters.client?.toLowerCase())
       );
     }
     if (appliedFilters.supplier) {
       result = result.filter((c: any) =>
-        c.supplier?.toLowerCase().includes(appliedFilters.supplier?.toLowerCase())
+        c.supplier_name?.toLowerCase().includes(appliedFilters.supplier?.toLowerCase())
       );
     }
     if (appliedFilters.amountMin) {

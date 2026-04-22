@@ -12,11 +12,11 @@ import { upload } from '@/lib/upload';
 import { toast } from 'sonner';
 import { Upload, FileText, X } from 'lucide-react';
 
-interface ClientFormProps {
-  client?: Client;
-  onSubmit: (data: Omit<Client, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => void;
-  onCancel: () => void;
-}
+ interface ClientFormProps {
+   client?: Client;
+   onSubmit: (data: Omit<Client, 'id' | 'created_by' | 'created_at' | 'updated_at'>) => void;
+   onCancel: () => void;
+ }
 
 export default function ClientForm({ client, onSubmit, onCancel }: ClientFormProps) {
   const { t } = useTranslation('clients');

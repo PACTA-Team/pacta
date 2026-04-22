@@ -48,6 +48,8 @@ type contractRow struct {
 	Title               *string   `json:"title,omitempty"`
 	ClientID            int        `json:"client_id"`
 	SupplierID          int        `json:"supplier_id"`
+	ClientName          string     `json:"client_name"`
+	SupplierName        string     `json:"supplier_name"`
 	StartDate           string     `json:"start_date"`
 	EndDate             string     `json:"end_date"`
 	Amount              float64    `json:"amount"`
@@ -66,11 +68,19 @@ type contractRow struct {
 func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
 	rows, err := h.DB.Query(`
-		SELECT id, internal_id, contract_number, title, client_id, supplier_id,
-		       start_date, end_date, amount, type, status, object, fulfillment_place,
-		       dispute_resolution, has_confidentiality, guarantees, renewal_type,
-		       created_at, updated_at
-		FROM contracts WHERE deleted_at IS NULL AND company_id = ? ORDER BY created_at DESC
+		SELECT c.id, c.internal_id, c.contract_number, c.title,
+		       c.client_id, c.supplier_id,
+		       c.start_date, c.end_date, c.amount, c.type, c.status,
+		       c.object, c.fulfillment_place, c.dispute_resolution,
+		       c.has_confidentiality, c.guarantees, c.renewal_type,
+		       c.created_at, c.updated_at,
+		       COALESCE(cl.name, '') AS client_name,
+		       COALESCE(s.name, '') AS supplier_name
+		FROM contracts c
+		LEFT JOIN clients cl ON cl.id = c.client_id AND cl.deleted_at IS NULL
+		LEFT JOIN suppliers s ON s.id = c.supplier_id AND s.deleted_at IS NULL
+		WHERE c.deleted_at IS NULL AND c.company_id = ?
+		ORDER BY c.created_at DESC
 	`, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, err.Error())
@@ -84,7 +94,7 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
 			&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.Object, &c.FulfillmentPlace,
 			&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType,
-			&c.CreatedAt, &c.UpdatedAt); err != nil {
+			&c.CreatedAt, &c.UpdatedAt, &c.ClientName, &c.SupplierName); err != nil {
 			h.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -225,14 +235,22 @@ func (h *Handler) getContract(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
 	var c contractRow
 	err := h.DB.QueryRow(`
-		SELECT id, internal_id, contract_number, title, client_id, supplier_id,
-		       start_date, end_date, amount, type, status, object, fulfillment_place,
-		       dispute_resolution, has_confidentiality, guarantees, renewal_type,
-		       created_at, updated_at
-		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+		SELECT c.id, c.internal_id, c.contract_number, c.title,
+		       c.client_id, c.supplier_id,
+		       c.start_date, c.end_date, c.amount, c.type, c.status,
+		       c.object, c.fulfillment_place, c.dispute_resolution,
+		       c.has_confidentiality, c.guarantees, c.renewal_type,
+		       c.created_at, c.updated_at,
+		       COALESCE(cl.name, '') AS client_name,
+		       COALESCE(s.name, '') AS supplier_name
+		FROM contracts c
+		LEFT JOIN clients cl ON cl.id = c.client_id AND cl.deleted_at IS NULL
+		LEFT JOIN suppliers s ON s.id = c.supplier_id AND s.deleted_at IS NULL
+		WHERE c.id = ? AND c.deleted_at IS NULL AND c.company_id = ?
 	`, id, companyID).Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
 		&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.Object, &c.FulfillmentPlace,
-		&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType, &c.CreatedAt, &c.UpdatedAt)
+		&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType, &c.CreatedAt, &c.UpdatedAt,
+		&c.ClientName, &c.SupplierName)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "contract not found")
 		return

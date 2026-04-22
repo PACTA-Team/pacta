@@ -75,7 +75,7 @@ export default function DashboardPage() {
           pending: 0,
           cancelled: 0,
         };
-        contractsList.forEach((c: any) => {
+        contractsList.forEach((c: Contract) => {
           distribution[c.status as ContractStatus] = (distribution[c.status as ContractStatus] || 0) + 1;
         });
         setStatusDistribution(distribution);
@@ -87,14 +87,14 @@ export default function DashboardPage() {
   }, []);
 
   const expiringContracts = contracts
-    .filter((c: any) => {
+    .filter((c: Contract) => {
       if (c.status !== 'active') return false;
       const now = new Date();
       const endDate = new Date(c.end_date);
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       return endDate <= thirtyDaysFromNow && endDate >= now;
     })
-    .sort((a: any, b: any) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
+    .sort((a: Contract, b: Contract) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
     .slice(0, 5);
 
   const chartData = Object.entries(statusDistribution)
