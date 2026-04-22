@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.2] - 2026-04-21
+
+### Fixed
+- **Restored internal_id column** — Migration 031 recreated the contracts table but lost the `internal_id` column that was added in 011, causing SQL errors in the dashboard
+
 ## [0.42.0] - 2026-04-21
 
 ### Added
