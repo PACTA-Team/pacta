@@ -39,22 +39,22 @@ export default function ModificationsReport({
       byContract.set(s.contract_id, existing);
     });
 
-    const contractModifications = Array.from(byContract.entries())
-      .map(([contractId, data]) => ({
-        contractId: String(contractId),
-        contractNumber: data.contract?.contract_number || 'Unknown',
-        contractTitle: data.contract?.title || 'Unknown',
-        modificationCount: data.modifications.length,
-        modifications: data.modifications,
-        latestModification: data.modifications[0],
-      }))
-      .sort((a, b) => b.modificationCount - a.modificationCount);
+     const contractModifications = Array.from(byContract.entries())
+       .map(([contractId, data]) => ({
+         contractId: String(contractId),
+         contract_number: data.contract?.contract_number || 'Unknown',
+         contractTitle: data.contract?.title || 'Unknown',
+         modificationCount: data.modifications.length,
+         modifications: data.modifications,
+         latestModification: data.modifications[0],
+       }))
+       .sort((a, b) => b.modificationCount - a.modificationCount);
 
     // Chart data - top 10 contracts by modifications
-    const chartData = contractModifications.slice(0, 10).map(c => ({
-      name: c.contractNumber.length > 10 ? c.contractNumber.substring(0, 10) + '...' : c.contractNumber,
-      count: c.modificationCount,
-    }));
+     const chartData = contractModifications.slice(0, 10).map(c => ({
+       name: c.contract_number.length > 10 ? c.contract_number.substring(0, 10) + '...' : c.contract_number,
+       count: c.modificationCount,
+     }));
 
     return {
       sortedSupplements,
@@ -70,23 +70,23 @@ export default function ModificationsReport({
     return contract ? `${contract.contract_number} - ${contract.title}` : 'Unknown Contract';
   };
 
-  const columns: ExportColumn[] = [
-    { key: 'supplementNumber', header: 'Supplement Number' },
-    { key: 'contractInfo', header: 'Contract' },
-    { key: 'modifications', header: 'Modifications Summary' },
-    { key: 'effectiveDate', header: 'Effective Date' },
-    { key: 'status', header: 'Status' },
-    { key: 'updatedAt', header: 'Last Updated' },
-  ];
+   const columns: ExportColumn[] = [
+     { key: 'supplement_number', header: 'Supplement Number' },
+     { key: 'contractInfo', header: 'Contract' },
+     { key: 'modifications', header: 'Modifications Summary' },
+     { key: 'effective_date', header: 'Effective Date' },
+     { key: 'status', header: 'Status' },
+     { key: 'updated_at', header: 'Last Updated' },
+   ];
 
-  const exportData = reportData.sortedSupplements.map(s => ({
-    supplementNumber: s.supplement_number,
-    contractInfo: getContractInfo(s.contract_id),
-    modifications: s.modifications,
-    effectiveDate: formatDate(s.effective_date),
-    status: formatStatus(s.status),
-    updatedAt: formatDate(s.updated_at),
-  }));
+   const exportData = reportData.sortedSupplements.map(s => ({
+     supplement_number: s.supplement_number,
+     contractInfo: getContractInfo(s.contract_id),
+     modifications: s.modifications,
+     effective_date: formatDate(s.effective_date),
+     status: formatStatus(s.status),
+     updated_at: formatDate(s.updated_at),
+   }));
 
   const summary = [
     { label: 'Total Modifications', value: reportData.totalModifications },
@@ -205,12 +205,12 @@ export default function ModificationsReport({
               ) : (
                 reportData.contractModifications.map((item) => (
                   <TableRow key={item.contractId}>
-                    <TableCell>
-                      <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
-                        <div className="font-medium">{item.contractNumber}</div>
-                        <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
-                      </Link>
-                    </TableCell>
+                     <TableCell>
+                       <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                         <div className="font-medium">{item.contract_number}</div>
+                         <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
+                       </Link>
+                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary">{item.modificationCount}</Badge>
                     </TableCell>

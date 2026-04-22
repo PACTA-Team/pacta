@@ -71,7 +71,7 @@ export default function ClientsPage() {
     setFilteredClients(filtered);
   };
 
-  const handleCreateOrUpdate = async (data: Omit<Client, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateOrUpdate = async (data: Omit<Client, 'id' | 'created_by' | 'created_at' | 'updated_at'>) => {
     try {
       if (editingClient) {
         await clientsAPI.update(editingClient.id, {

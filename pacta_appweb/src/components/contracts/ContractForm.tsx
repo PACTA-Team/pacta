@@ -36,22 +36,22 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
   const [formData, setFormData] = useState({
     contract_number: (contract as any)?.contract_number || '',
-    client_id: (contract as any)?.client_id ?? null,
-    supplier_id: (contract as any)?.supplier_id ?? null,
-    client_signer_id: (contract as any)?.client_signer_id ?? null,
-    supplier_signer_id: (contract as any)?.supplier_signer_id ?? null,
-    start_date: (contract as any)?.start_date || '',
-    end_date: (contract as any)?.end_date || '',
+    client_id: ((contract as any)?.client_id ?? contract?.client_id)?.toString() || '',
+    supplier_id: ((contract as any)?.supplier_id ?? contract?.supplier_id)?.toString() || '',
+    client_signer_id: ((contract as any)?.client_signer_id ?? contract?.client_signer_id)?.toString() || '',
+    supplier_signer_id: ((contract as any)?.supplier_signer_id ?? contract?.supplier_signer_id)?.toString() || '',
+    start_date: (contract as any)?.start_date || contract?.start_date || '',
+    end_date: (contract as any)?.end_date || contract?.end_date || '',
     amount: contract?.amount || 0,
     type: contract?.type || 'service' as ContractType,
     status: contract?.status || 'pending' as ContractStatus,
     description: contract?.description || '',
-    object: (contract as any)?.object || '',
-    fulfillment_place: (contract as any)?.fulfillment_place || '',
-    dispute_resolution: (contract as any)?.dispute_resolution || '',
-    has_confidentiality: (contract as any)?.has_confidentiality || false,
-    guarantees: (contract as any)?.guarantees || '',
-    renewal_type: (contract as any)?.renewal_type || '' as RenewalType,
+    object: (contract as any)?.object || contract?.object || '',
+    fulfillment_place: (contract as any)?.fulfillment_place || contract?.fulfillment_place || '',
+    dispute_resolution: (contract as any)?.dispute_resolution || contract?.dispute_resolution || '',
+    has_confidentiality: (contract as any)?.has_confidentiality || contract?.has_confidentiality || false,
+    guarantees: (contract as any)?.guarantees || contract?.guarantees || '',
+    renewal_type: (contract as any)?.renewal_type || contract?.renewal_type || '' as RenewalType,
   });
 
   const [legalFieldsOpen, setLegalFieldsOpen] = useState(false);
@@ -150,24 +150,22 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
     loadSigners();
   }, [formData.client_id, formData.supplier_id]);
 
-  const handleClientChange = (value: string) => {
-    const client_id = value ? parseInt(value, 10) : null;
+  const handleClientChange = (clientId: string) => {
     const fetchSigners = async () => {
       const signers = await signersAPI.list();
-      setClientSigners((signers as any[]).filter((s: any) => s.company_id === client_id && s.company_type === 'client'));
+      setClientSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(clientId) && s.company_type === 'client'));
     };
     fetchSigners();
-    setFormData({ ...formData, client_id, client_signer_id: null });
+    setFormData({ ...formData, client_id: clientId, client_signer_id: '' });
   };
 
-  const handleSupplierChange = (value: string) => {
-    const supplier_id = value ? parseInt(value, 10) : null;
+  const handleSupplierChange = (supplierId: string) => {
     const fetchSigners = async () => {
       const signers = await signersAPI.list();
-      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === supplier_id && s.company_type === 'supplier'));
+      setSupplierSigners((signers as any[]).filter((s: any) => s.company_id === parseInt(supplierId) && s.company_type === 'supplier'));
     };
     fetchSigners();
-    setFormData({ ...formData, supplier_id, supplier_signer_id: null });
+    setFormData({ ...formData, supplier_id: supplierId, supplier_signer_id: '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -208,7 +206,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="contractNumber">Contract Number *</Label>
+              <Label htmlFor="contract_number">Contract Number *</Label>
               <Input
                 id="contract_number"
                 value={formData.contract_number}
@@ -279,8 +277,9 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             <div className="space-y-2">
               <Label htmlFor="client_signer_id">{ourLabel} Authorized Signer *</Label>
               <Select 
-                value={formData.client_signer_id?.toString() ?? ''} 
-                onValueChange={(value) => setFormData({ ...formData, client_signer_id: value ? parseInt(value, 10) : null })}
+                value={formData.client_signer_id} 
+                onValueChange={(value) => setFormData({ ...formData, client_signer_id: value })}
+                disabled={!formData.client_id}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select signer" />
@@ -316,8 +315,8 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
             <div className="space-y-2">
               <Label htmlFor="supplier_signer_id">{counterpartLabel} Authorized Signer *</Label>
               <Select 
-                value={formData.supplier_signer_id?.toString() ?? ''} 
-                onValueChange={(value) => setFormData({ ...formData, supplier_signer_id: value ? parseInt(value, 10) : null })}
+                value={formData.supplier_signer_id} 
+                onValueChange={(value) => setFormData({ ...formData, supplier_signer_id: value })}
                 disabled={!formData.supplier_id}
               >
                 <SelectTrigger>

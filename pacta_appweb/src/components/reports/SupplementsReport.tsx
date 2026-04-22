@@ -69,15 +69,15 @@ export default function SupplementsReport({
       byContract.set(s.contract_id, existing);
     });
 
-    const contractData = Array.from(byContract.entries())
-      .map(([contractId, data]) => ({
-        contractId,
-        contractNumber: data.contract?.contract_number || 'Unknown',
-        contractTitle: data.contract?.title || 'Unknown',
-        count: data.supplements.length,
-        supplements: data.supplements,
-      }))
-      .sort((a, b) => b.count - a.count);
+     const contractData = Array.from(byContract.entries())
+       .map(([contractId, data]) => ({
+         contractId,
+         contract_number: data.contract?.contract_number || 'Unknown',
+         contractTitle: data.contract?.title || 'Unknown',
+         count: data.supplements.length,
+         supplements: data.supplements,
+       }))
+       .sort((a, b) => b.count - a.count);
 
     // Monthly trend
     const monthlyData: Record<string, number> = {};
@@ -121,23 +121,23 @@ export default function SupplementsReport({
     return <Badge variant={variants[status]} className={colors[status]}>{formatStatus(status)}</Badge>;
   };
 
-  const columns: ExportColumn[] = [
-    { key: 'supplementNumber', header: 'Supplement Number' },
-    { key: 'contractInfo', header: 'Parent Contract' },
-    { key: 'description', header: 'Description' },
-    { key: 'effectiveDate', header: 'Effective Date' },
-    { key: 'status', header: 'Status' },
-    { key: 'createdAt', header: 'Created Date' },
-  ];
+   const columns: ExportColumn[] = [
+     { key: 'supplement_number', header: 'Supplement Number' },
+     { key: 'contractInfo', header: 'Parent Contract' },
+     { key: 'description', header: 'Description' },
+     { key: 'effective_date', header: 'Effective Date' },
+     { key: 'status', header: 'Status' },
+     { key: 'created_at', header: 'Created Date' },
+   ];
 
-  const exportData = reportData.filteredSupplements.map(s => ({
-    supplementNumber: s.supplement_number,
-    contractInfo: getContractInfo(s.contract_id),
-    description: s.description,
-    effectiveDate: formatDate(s.effective_date),
-    status: formatStatus(s.status),
-    createdAt: formatDate(s.created_at),
-  }));
+   const exportData = reportData.filteredSupplements.map(s => ({
+     supplement_number: s.supplement_number,
+     contractInfo: getContractInfo(s.contract_id),
+     description: s.description,
+     effective_date: formatDate(s.effective_date),
+     status: formatStatus(s.status),
+     created_at: formatDate(s.created_at),
+   }));
 
   const summary = [
     { label: 'Total Supplements', value: reportData.totalSupplements },
@@ -304,12 +304,12 @@ export default function SupplementsReport({
                   )[0];
                   return (
                     <TableRow key={item.contractId}>
-                      <TableCell>
-                      <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
-                        <div className="font-medium">{item.contractNumber}</div>
-                        <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
-                      </Link>
-                      </TableCell>
+                       <TableCell>
+                       <Link to={`/contracts/${item.contractId}`} className="text-blue-600 hover:underline">
+                         <div className="font-medium">{item.contract_number}</div>
+                         <div className="text-sm text-muted-foreground">{item.contractTitle}</div>
+                       </Link>
+                       </TableCell>
                       <TableCell className="text-center font-bold">{item.count}</TableCell>
                       <TableCell>
                         <div>{latestSupplement?.supplement_number}</div>
