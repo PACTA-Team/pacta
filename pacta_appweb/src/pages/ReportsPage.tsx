@@ -15,6 +15,8 @@ import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
+import { companiesAPI } from '@/lib/companies-api';
+import { Company } from '@/types';
 import ReportFiltersComponent, { ReportFilters, defaultFilters } from '@/components/reports/ReportFilters';
 import ContractStatusReport from '@/components/reports/ContractStatusReport';
 import FinancialReport from '@/components/reports/FinancialReport';
@@ -52,20 +54,23 @@ export default function ReportsPage() {
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
   const [showFilters, setShowFilters] = useState(true);
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [contractsData, supplementsData, clientsData, suppliersData] = await Promise.all([
+        const [contractsData, supplementsData, clientsData, suppliersData, companiesData] = await Promise.all([
           contractsAPI.list(),
           supplementsAPI.list(),
           clientsAPI.list(),
           suppliersAPI.list(),
+          companiesAPI.list(),
         ]);
         setContracts(contractsData as any[]);
         setSupplements(supplementsData as any[]);
         setClients(clientsData as any[]);
         setSuppliers(suppliersData as any[]);
+        setOwnCompanies(companiesData);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : tCommon('error'));
       }
@@ -236,6 +241,11 @@ export default function ReportsPage() {
                     <SelectContent>
                       <SelectItem value="all">All Companies</SelectItem>
                       <SelectItem value="my">My Company Only</SelectItem>
+                      {ownCompanies && ownCompanies.map((company) => (
+                        <SelectItem key={company.id} value={company.id.toString()}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </CardContent>

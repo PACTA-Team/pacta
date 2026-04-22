@@ -196,7 +196,10 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
       return;
     }
     
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      company_id: selectedOwnCompany?.id,
+    });
   };
 
   return (
@@ -280,6 +283,16 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
                 onValueChange={(value) => {
                   const company = ownCompanies.find(c => c.id === parseInt(value));
                   setSelectedOwnCompany(company || null);
+                  // Resetear contraparte y firmantes
+                  setFormData(prev => ({
+                    ...prev,
+                    client_id: '',
+                    supplier_id: '',
+                    client_signer_id: '',
+                    supplier_signer_id: ''
+                  }));
+                  setClientSigners([]);
+                  setSupplierSigners([]);
                 }}
               >
                 <SelectTrigger>

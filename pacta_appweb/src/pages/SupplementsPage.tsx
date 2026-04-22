@@ -8,9 +8,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, CheckCircle, XCircle, ArrowUpCircle, Search } from 'lucide-react';
-import { Supplement, SupplementStatus, CreateSupplementRequest } from '@/types';
+import { Supplement, SupplementStatus, CreateSupplementRequest, Company } from '@/types';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { contractsAPI } from '@/lib/contracts-api';
+import { companiesAPI } from '@/lib/companies-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
@@ -47,6 +48,7 @@ export default function SupplementsPage() {
   const [modificationTypeFilter, setModificationTypeFilter] = useState<string>('all');
   const [supplementPartyFilter, setSupplementPartyFilter] = useState<string>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -83,11 +85,17 @@ export default function SupplementsPage() {
           const contract = contracts.find(c => c.id === s.contract_id);
           return String(contract?.supplier_id) === String(currentCompany.id);
         });
+      } else if (/^\d+$/.test(companyFilter)) {
+        const filterCompanyId = parseInt(companyFilter);
+        filtered = filtered.filter(s => {
+          const contract = contracts.find(c => c.id === s.contract_id);
+          return contract?.client_id === filterCompanyId || contract?.supplier_id === filterCompanyId;
+        });
       }
     }
 
     return filtered;
-  }, [supplements, searchTerm, statusFilter, contractFilter, companyFilter, currentCompany, contracts]);
+  }, [supplements, searchTerm, statusFilter, contractFilter, companyFilter, currentCompany, contracts, ownCompanies]);
 
   const totalPages = Math.ceil(filteredSupplements.length / itemsPerPage);
   const paginatedSupplements = useMemo(() => {
@@ -113,12 +121,14 @@ export default function SupplementsPage() {
     try {
       setLoading(true);
       setError(null);
-      const [supps, contrs] = await Promise.all([
+      const [supps, contrs, companies] = await Promise.all([
         supplementsAPI.list(signal),
         contractsAPI.list(signal),
+        companiesAPI.listOwnCompanies(),
       ]);
       setSupplementsState(supps);
       setContracts(contrs as any);
+      setOwnCompanies(companies);
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
         setError(err.message);
@@ -298,6 +308,11 @@ export default function SupplementsPage() {
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="client">My Company</SelectItem>
                   <SelectItem value="other">Other Party</SelectItem>
+                  {ownCompanies && ownCompanies.map((company) => (
+                    <SelectItem key={company.id} value={company.id.toString()}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}

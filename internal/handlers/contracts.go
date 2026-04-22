@@ -114,6 +114,7 @@ type createContractRequest struct {
 	ContractNumber      string  `json:"contract_number"`
 	Title             *string `json:"title"`
 	ClientID          int     `json:"client_id"`
+	CompanyID         *int    `json:"company_id,omitempty"`
 	SupplierID        int     `json:"supplier_id"`
 	ClientSignerID    *int    `json:"client_signer_id"`
 	SupplierSignerID *int    `json:"supplier_signer_id"`
@@ -163,6 +164,40 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		req.Type = "service"
 	}
 
+	// Use frontend-provided company_id if available, otherwise fall back to session
+	actualCompanyID := companyID
+	if req.CompanyID != nil && *req.CompanyID > 0 {
+		actualCompanyID = *req.CompanyID
+	}
+
+	// Validate that client belongs to the company
+	if req.ClientID > 0 {
+		var clientCompanyID int
+		err := h.DB.QueryRow("SELECT company_id FROM clients WHERE id = ?", req.ClientID).Scan(&clientCompanyID)
+		if err != nil {
+			h.Error(w, http.StatusBadRequest, "client not found")
+			return
+		}
+		if clientCompanyID != actualCompanyID {
+			h.Error(w, http.StatusBadRequest, "client does not belong to selected company")
+			return
+		}
+	}
+
+	// Validate that supplier belongs to the company
+	if req.SupplierID > 0 {
+		var supplierCompanyID int
+		err := h.DB.QueryRow("SELECT company_id FROM suppliers WHERE id = ?", req.SupplierID).Scan(&supplierCompanyID)
+		if err != nil {
+			h.Error(w, http.StatusBadRequest, "supplier not found")
+			return
+		}
+		if supplierCompanyID != actualCompanyID {
+			h.Error(w, http.StatusBadRequest, "supplier does not belong to selected company")
+			return
+		}
+	}
+
 	// Validate foreign key references before INSERT
 	var clientExists int
 	if err := h.DB.QueryRow("SELECT COUNT(*) FROM clients WHERE id = ? AND deleted_at IS NULL", req.ClientID).Scan(&clientExists); err != nil {
@@ -184,7 +219,7 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	internalID, err := h.generateInternalID(companyID)
+	internalID, err := h.generateInternalID(actualCompanyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to generate internal ID")
 		return
@@ -200,7 +235,7 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 	`, internalID, req.ContractNumber, req.Title, req.ClientID, req.SupplierID,
 		req.ClientSignerID, req.SupplierSignerID, req.StartDate, req.EndDate,
 		req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace,
-		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, companyID)
+		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, actualCompanyID)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint") || strings.Contains(err.Error(), "duplicate") {
 			h.Error(w, http.StatusConflict, "contract number '"+req.ContractNumber+"' already exists")

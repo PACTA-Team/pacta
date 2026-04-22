@@ -8,10 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
-import { Contract, Client, Supplier, ContractType, ContractStatus } from '@/types';
+import { Contract, Client, Supplier, Company, ContractType, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
+import { companiesAPI } from '@/lib/companies-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
@@ -43,6 +44,7 @@ export default function ContractsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [partyFilter, setPartyFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -50,14 +52,16 @@ export default function ContractsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [contractsData, clientsData, suppliersData] = await Promise.all([
+      const [contractsData, clientsData, suppliersData, companiesData] = await Promise.all([
         contractsAPI.list(),
         clientsAPI.list(),
         suppliersAPI.list(),
+        companiesAPI.list(),
       ]);
       setContracts(contractsData as any[]);
       setClients(clientsData as any[]);
       setSuppliers(suppliersData as any[]);
+      setOwnCompanies(companiesData as Company[]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load data');
     }
@@ -282,8 +286,11 @@ export default function ContractsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="client">My Company</SelectItem>
-                      <SelectItem value="other">Other Party</SelectItem>
+                      {ownCompanies && ownCompanies.map((company) => (
+                        <SelectItem key={company.id} value={company.id.toString()}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
