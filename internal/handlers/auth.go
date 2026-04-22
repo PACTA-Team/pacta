@@ -127,8 +127,30 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusForbidden, "please verify your email first. Check your inbox for the verification code.")
 		return
 	}
-	if user.Status == "pending_approval" {
-		h.Error(w, http.StatusForbidden, "your account is pending admin approval. You will be notified once approved.")
+
+	// Check if user needs setup (pending_approval or pending_activation means no setup completed)
+	if user.Status == "pending_approval" || user.Status == "pending_activation" {
+		// Create session with company_id = 0 (no company yet)
+		session, err := auth.CreateSession(h.DB, user.ID, 0)
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "failed to create session")
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "session",
+			Value:    session.Token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+		})
+
+		h.JSON(w, http.StatusOK, map[string]interface{}{
+			"user":         sanitizeUser(user),
+			"needs_setup":  true,
+			"setup_status": user.Status,
+		})
 		return
 	}
 
