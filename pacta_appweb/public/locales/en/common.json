@@ -1,4 +1,8 @@
 {
+  "client": "Client",
+  "supplier": "Supplier",
+  "all": "All",
+  "company": "Company",
   "loading": "Loading...",
   "loadingPage": "Loading page...",
   "skipToMain": "Skip to main content",

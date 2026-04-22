@@ -26,5 +26,16 @@
     "all": "Todas las partes",
     "client": "Suplementos como cliente",
     "supplier": "Suplementos como proveedor"
+  },
+  "allContracts": "Todos los contratos",
+  "allTypes": "Todos los tipos",
+  "contract": "Contrato",
+  "type": "Tipo",
+  "status": "Estado",
+  "party": "Parte",
+  "companyFilter": {
+    "all": "Todos",
+    "myCompany": "Mi empresa",
+    "otherParty": "Otra parte"
   }
 }

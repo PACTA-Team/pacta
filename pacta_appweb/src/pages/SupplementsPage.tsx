@@ -259,7 +259,7 @@ export default function SupplementsPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="all">{t('allStatus')}</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
@@ -270,7 +270,7 @@ export default function SupplementsPage() {
                 <SelectValue placeholder="Contract" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Contracts</SelectItem>
+                <SelectItem value="all">{t('allContracts')}</SelectItem>
                 {contracts.map(contract => (
                   <SelectItem key={contract.id} value={String(contract.id)}>
                     {contract.contract_number}
@@ -283,7 +283,7 @@ export default function SupplementsPage() {
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('status') === 'Estado' ? 'Todos los tipos' : 'All Types'}</SelectItem>
+                <SelectItem value="all">{t('allTypes')}</SelectItem>
                 <SelectItem value="modificacion">{t('modificationTypes.modificacion')}</SelectItem>
                 <SelectItem value="prorroga">{t('modificationTypes.prorroga')}</SelectItem>
                 <SelectItem value="concrecion">{t('modificationTypes.concrecion')}</SelectItem>
@@ -291,7 +291,7 @@ export default function SupplementsPage() {
             </Select>
             <Select value={supplementPartyFilter} onValueChange={setSupplementPartyFilter}>
               <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Party" />
+                <SelectValue placeholder={t('party')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('partyFilter.all')}</SelectItem>
@@ -302,12 +302,12 @@ export default function SupplementsPage() {
             {isMultiCompany && (
               <Select value={companyFilter} onValueChange={setCompanyFilter}>
                 <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Company" />
+                  <SelectValue placeholder={t('company')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="client">My Company</SelectItem>
-                  <SelectItem value="other">Other Party</SelectItem>
+                  <SelectItem value="all">{t('companyFilter.all')}</SelectItem>
+                  <SelectItem value="client">{t('companyFilter.myCompany')}</SelectItem>
+                  <SelectItem value="other">{t('companyFilter.otherParty')}</SelectItem>
                   {ownCompanies && ownCompanies.map((company) => (
                     <SelectItem key={company.id} value={company.id.toString()}>
                       {company.name}

@@ -238,7 +238,7 @@ export default function ContractsPage() {
                     <SelectValue placeholder={t('status')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="all">{t('allParties')}</SelectItem>
                     <SelectItem value="active">{t('active')}</SelectItem>
                     <SelectItem value="pending">{t('pending')}</SelectItem>
                     <SelectItem value="expired">{t('expired')}</SelectItem>
@@ -250,7 +250,7 @@ export default function ContractsPage() {
                     <SelectValue placeholder={t('type')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('status') === 'Estado' ? 'Todos' : 'All'}</SelectItem>
+                    <SelectItem value="all">{t('allTypes')}</SelectItem>
                     <SelectItem value="compraventa">{t('contractTypes.compraventa')}</SelectItem>
                     <SelectItem value="suministro">{t('contractTypes.suministro')}</SelectItem>
                     <SelectItem value="permuta">{t('contractTypes.permuta')}</SelectItem>
@@ -282,10 +282,10 @@ export default function ContractsPage() {
                 {isMultiCompany && (
                   <Select value={companyFilter} onValueChange={setCompanyFilter}>
                     <SelectTrigger className="w-full sm:w-40">
-                      <SelectValue placeholder="Company" />
+                      <SelectValue placeholder={t('company')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
+<SelectItem value="all">{t('allStatus')}</SelectItem>
                       {ownCompanies && ownCompanies.map((company) => (
                         <SelectItem key={company.id} value={company.id.toString()}>
                           {company.name}

@@ -28,7 +28,7 @@
     "excel": "Exportar como Excel",
     "csv": "Exportar como CSV"
   },
-  "types": {
+"types": {
     "contracts": "Contratos",
     "financial": "Financiero",
     "clientSupplier": "Clientes y Proveedores",
@@ -36,5 +36,22 @@
     "expirations": "Vencimientos",
     "supplements": "Suplementos",
     "modifications": "Modificaciones"
+  },
+  "table": {
+    "contractNumber": "Número de contrato",
+    "title": "Título",
+    "client": "Cliente",
+    "supplier": "Proveedor",
+    "status": "Estado",
+    "startDate": "Fecha inicio",
+    "endDate": "Fecha fin",
+    "amount": "Monto",
+    "type": "Tipo",
+    "rank": "Posición",
+    "percentOfTotal": "% del total",
+    "timeRemaining": "Tiempo restante",
+    "noRecordsFound": "No se encontraron registros con los filtros aplicados",
+    "noExpiringContracts": "No hay contratos por vencer en 30 días"
   }
+}
 }
