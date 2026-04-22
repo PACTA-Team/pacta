@@ -15,6 +15,7 @@ import DownloadPage from './pages/DownloadPage';
 import ChangelogPage from './pages/ChangelogPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import RegistrationExpiredPage from './pages/RegistrationExpiredPage';
+import PendingProfilePage from './pages/PendingProfilePage';
 
 // Lazy-loaded page components for code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -58,6 +59,11 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/setup" element={<SetupPage />} />
+            <Route path="/pending-profile" element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PendingProfilePage />
+              </Suspense>
+            } />
             <Route path="/403" element={<ForbiddenPage />} />
             <Route path="/" element={<HomePage />} />
             <Route path="/download" element={<DownloadPage />} />

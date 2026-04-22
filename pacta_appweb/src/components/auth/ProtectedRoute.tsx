@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, hasPermission, isLoading } = useAuth();
+  const { isAuthenticated, hasPermission, isLoading, needsSetup, setupStatus, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -24,6 +24,10 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user && (needsSetup || setupStatus === 'pending_approval' || setupStatus === 'pending_activation')) {
+    return <Navigate to="/pending-profile" replace />;
   }
 
   if (requiredRole && !hasPermission(requiredRole)) {
