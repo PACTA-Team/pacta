@@ -30,5 +30,18 @@
   "uploadSuccess": "Certificado subido exitosamente",
   "uploadError": "Error al subir el certificado",
   "deleteSuccess": "Certificado eliminado exitosamente",
-  "deleteError": "Error al eliminar el certificado"
+  "deleteError": "Error al eliminar el certificado",
+  "activityLog": "Registro de actividad",
+  "noActivity": "No hay actividad reciente",
+  "viewFullHistory": "Ver historial completo",
+  "login.session": "Inició sesión",
+  "create.user": "Creó usuario",
+  "create.company": "Creó empresa",
+  "create.client": "Creó cliente",
+  "create.supplier": "Creó proveedor",
+  "create.contract": "Creó contrato",
+  "create.supplement": "Creó suplemento",
+  "update.user": "Actualizó usuario",
+  "update.company": "Actualizó empresa",
+  "update.client": "Actualizó cliente"
 }

@@ -30,5 +30,18 @@
   "uploadSuccess": "Certificate uploaded successfully",
   "uploadError": "Error uploading certificate",
   "deleteSuccess": "Certificate deleted successfully",
-  "deleteError": "Error deleting certificate"
+  "deleteError": "Error deleting certificate",
+  "activityLog": "Activity Log",
+  "noActivity": "No recent activity",
+  "viewFullHistory": "View full history",
+  "login.session": "Logged in",
+  "create.user": "Created user",
+  "create.company": "Created company",
+  "create.client": "Created client",
+  "create.supplier": "Created supplier",
+  "create.contract": "Created contract",
+  "create.supplement": "Created supplement",
+  "update.user": "Updated user",
+  "update.company": "Updated company",
+  "update.client": "Updated client"
 }

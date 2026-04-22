@@ -65,12 +65,8 @@ export function ProfileSection() {
   };
 
   const formatAction = (action: string, entityType: string) => {
-    const labels: Record<string, Record<string, string>> = {
-      LOGIN: { session: "Inició sesión" },
-      CREATE: { user: "Creó usuario", company: "Creó empresa", client: "Creó cliente", supplier: "Creó proveedor", contract: "Creó contrato", supplement: "Creó suplemento" },
-      UPDATE: { user: "Actualizó usuario", company: "Actualizó empresa", client: "Actualizó cliente" },
-    };
-    return labels[action]?.[entityType] || `${action} ${entityType}`;
+    const key = `${action.toLowerCase()}.${entityType}`;
+    return t(key, { defaultValue: `${action} ${entityType}` });
   };
 
   if (loading) {
