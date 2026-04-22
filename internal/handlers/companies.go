@@ -48,6 +48,10 @@ func (h *Handler) HandlePublicCompanies(w http.ResponseWriter, r *http.Request) 
 		}
 		companies = append(companies, c)
 	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
+	}
 	if companies == nil {
 		companies = []PublicCompany{}
 	}
@@ -78,9 +82,12 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
 
-	// Check if user is admin of a parent company (can see all subsidiaries)
 	var companyType string
-	h.DB.QueryRow("SELECT company_type FROM companies WHERE id = ?", companyID).Scan(&companyType)
+	err := h.DB.QueryRow("SELECT company_type FROM companies WHERE id = ?", companyID).Scan(&companyType)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to get company")
+		return
+	}
 
 	var rows *sql.Rows
 	var err error
@@ -121,6 +128,10 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 		}
 		companies = append(companies, c)
 	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
+	}
 
 	if companies == nil {
 		companies = []models.Company{}
@@ -159,6 +170,10 @@ func (h *Handler) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 			h.Error(w, http.StatusBadRequest, "parent company not found")
 			return
 		}
+		if parentType != "parent" {
+			h.Error(w, http.StatusBadRequest, "parent company must be a parent type")
+			return
+		}
 	}
 
 	result, err := h.DB.Exec(
@@ -170,8 +185,16 @@ func (h *Handler) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, _ := result.LastInsertId()
-	h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 0)", userID, id)
+	id, err := result.LastInsertId()
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create company")
+		return
+	}
+	_, err = h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 0)", userID, id)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to link user to company")
+		return
+	}
 
 	h.auditLog(r, userID, id, "create", "company", &id, nil, map[string]interface{}{
 		"name": req.Name,
