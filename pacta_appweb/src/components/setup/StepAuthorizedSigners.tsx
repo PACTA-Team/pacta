@@ -18,11 +18,13 @@ interface AuthorizedSignersFormData {
 interface StepAuthorizedSignersProps {
   data: AuthorizedSignersFormData;
   onChange: (data: AuthorizedSignersFormData) => void;
-  onNext: () => void;
+  onNext?: () => void;
   onPrev: () => void;
+  onSubmit?: () => void;
+  loading?: boolean;
 }
 
-export default function StepAuthorizedSigners({ data, onChange, onNext, onPrev }: StepAuthorizedSignersProps) {
+export default function StepAuthorizedSigners({ data, onChange, onNext, onPrev, onSubmit, loading }: StepAuthorizedSignersProps) {
   const { t } = useTranslation('setup');
   const signers = data.authorizedSigners || [];
 
@@ -51,6 +53,9 @@ export default function StepAuthorizedSigners({ data, onChange, onNext, onPrev }
   const hasValidSigners = signers.every(
     (s) => s.name.trim().length >= 2 && s.position.trim().length >= 2 && isEmailValid(s.email)
   );
+
+  const canProceed = signers.length === 0 || hasValidSigners;
+  const isLastStep = !!onSubmit;
 
   return (
     <Card>
@@ -134,9 +139,15 @@ export default function StepAuthorizedSigners({ data, onChange, onNext, onPrev }
           <Button variant="outline" onClick={onPrev} className="flex-1">
             {t('back', { ns: 'common' })}
           </Button>
-          <Button onClick={onNext} className="flex-1" disabled={signers.length === 0 || !hasValidSigners}>
-            {t('next', { ns: 'common' })}
-          </Button>
+          {isLastStep ? (
+            <Button onClick={onSubmit} className="flex-1" disabled={!canProceed || loading}>
+              {loading ? t('loading', { ns: 'common' }) : t('complete', { ns: 'common' })}
+            </Button>
+          ) : (
+            <Button onClick={onNext} className="flex-1" disabled={!canProceed}>
+              {t('next', { ns: 'common' })}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

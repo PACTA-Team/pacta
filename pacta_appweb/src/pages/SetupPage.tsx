@@ -8,6 +8,7 @@ import SetupWizard from '@/components/setup/SetupWizard';
 export default function SetupPage() {
   const navigate = useNavigate();
   const [checked, setChecked] = useState(false);
+  const [isInitialSetup, setIsInitialSetup] = useState(false);
   const { t } = useTranslation('setup');
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export default function SetupPage() {
         if (!data.needs_setup) {
           navigate('/403', { replace: true });
         } else {
+          setIsInitialSetup(true);
           setChecked(true);
         }
       })
@@ -32,6 +34,11 @@ export default function SetupPage() {
         </div>
       </div>
     );
+  }
+
+  if (!isInitialSetup) {
+    navigate('/setup/profile', { replace: true });
+    return null;
   }
 
   return <SetupWizard />;

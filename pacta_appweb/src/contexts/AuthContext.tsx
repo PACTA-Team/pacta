@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(async () => {
         const needsSetup = await checkSetupStatus();
         if (needsSetup) {
-          window.location.href = '/setup';
+          window.location.href = '/setup/init';
         }
       })
       .finally(() => setIsLoading(false));
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.needs_setup) {
         setNeedsSetup(true);
         setSetupStatus(response.setup_status || '');
-        window.location.href = '/setup';
+        window.location.href = '/setup/profile';
         return { user: null, needs_setup: true };
       }
       setUser(response);

@@ -26,7 +26,7 @@ export default function HomePage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.needs_setup) {
-          navigate('/setup', { replace: true });
+          navigate('/setup/init', { replace: true });
         } else {
           setIsSetup(true);
         }
