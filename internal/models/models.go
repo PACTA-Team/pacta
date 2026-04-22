@@ -22,6 +22,8 @@ type User struct {
 	DigitalSignatureKey   *string    `json:"digital_signature_key,omitempty"`
 	PublicCertURL         *string    `json:"public_cert_url,omitempty"`
 	PublicCertKey         *string    `json:"public_cert_key,omitempty"`
+	SetupCompleted        bool       `json:"setup_completed"`
+	RoleAtCompany         string     `json:"role_at_company,omitempty"`
 }
 
 type Client struct {
