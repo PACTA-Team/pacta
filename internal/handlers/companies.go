@@ -173,6 +173,10 @@ func (h *Handler) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 	id, _ := result.LastInsertId()
 	h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 0)", userID, id)
 
+	h.auditLog(r, userID, id, "create", "company", &id, nil, map[string]interface{}{
+		"name": req.Name,
+	})
+
 	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "name": req.Name})
 }
 
