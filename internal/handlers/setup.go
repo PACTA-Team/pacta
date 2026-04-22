@@ -343,7 +343,8 @@ func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
 		}
 
 		id, _ := result.LastInsertId()
-		companyID = &id
+		idInt := int(id)
+		companyID = &idInt
 	} else {
 		// Verify company exists
 		var count int

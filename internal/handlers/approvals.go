@@ -62,7 +62,7 @@ func (h *Handler) listPendingActivations(w http.ResponseWriter, r *http.Request)
 	var activations []PendingActivation
 	for rows.Next() {
 		var a PendingActivation
-		rows.Scan(&a.ID, &a.UserID, &a.UserName, &a.UserEmail, &a.CompanyName, &a.CompanyID, &a.RequestedRole, &a.Status, &a.CreatedAt)
+		rows.Scan(&a.ID, &a.UserID, &a.UserName, &a.UserEmail, &a.CompanyName, &a.CompanyID, &a.RoleAtCompany, &a.Status, &a.CreatedAt)
 		activations = append(activations, a)
 	}
 	if activations == nil {
