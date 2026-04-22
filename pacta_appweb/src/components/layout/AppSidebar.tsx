@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
+import ContractIcon from '@/images/contract_icon.svg?react';
 import {
   LayoutDashboard,
   FileText,
@@ -235,29 +236,30 @@ export default function AppSidebar({
     );
   }
 
-  // Tablet/Desktop floating sidebar with glassmorphism
+  // Tablet/Desktop integrated sidebar
   return (
     <div
       className={cn(
-        'fixed left-4 top-4 bottom-4 flex flex-col rounded-2xl border shadow-lg backdrop-blur-md bg-background/80 transition-all duration-300',
+        'flex flex-col border-r bg-background transition-all duration-300 h-full',
         collapsed ? 'w-20' : 'w-64'
       )}
     >
       {/* Header with logo and collapse toggle */}
       <div className={cn('flex items-center justify-between p-4', collapsed ? 'justify-center' : '')}>
         {!collapsed ? (
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-primary">PACTA</h1>
-            <p className="text-xs text-muted-foreground truncate">Contract Management</p>
+          <div className="min-w-0 flex items-center gap-2">
+            <ContractIcon className="h-8 w-8" />
+            <div>
+              <h1 className="text-xl font-bold text-primary">PACTA</h1>
+              <p className="text-xs text-muted-foreground truncate">Contract Management</p>
+            </div>
           </div>
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl text-primary">
-            <FileText className="h-6 w-6" />
-          </div>
+          <ContractIcon className="h-10 w-10" />
         )}
         <button
           onClick={() => handleCollapsedChange(!collapsed)}
-          className={cn('flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors', collapsed && 'hidden')}
+          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (

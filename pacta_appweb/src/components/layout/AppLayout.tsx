@@ -105,17 +105,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         Skip to main content
       </a>
 
-      <AppSidebar 
-        device={device} 
-        collapsed={sidebarCollapsed} 
-        onCollapsedChange={setSidebarCollapsed}
-        mobileMenuOpen={mobileMenuOpen}
-        onMobileMenuClose={() => setMobileMenuOpen(false)}
-      />
-      <div 
-        className="flex-1 flex flex-col overflow-hidden"
-        style={{ marginLeft: isMobile ? 0 : (sidebarCollapsed ? 80 : 256) }}
-      >
+      {/* Desktop/Tablet: Integrated sidebar in flex container */}
+      {device !== 'mobile' && (
+        <AppSidebar 
+          device={device} 
+          collapsed={sidebarCollapsed} 
+          onCollapsedChange={setSidebarCollapsed}
+        />
+      )}
+      
+      {/* Mobile: sidebar as drawer overlay (handle separately) */}
+      {device === 'mobile' && (
+        <AppSidebar 
+          device={device}
+          mobileMenuOpen={mobileMenuOpen}
+          onMobileMenuClose={() => setMobileMenuOpen(false)}
+        />
+      )}
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
          <header role="banner" className="border-b bg-card px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4">
            {/* Mobile: Menu button (visible solo <768px) */}
            <Button
