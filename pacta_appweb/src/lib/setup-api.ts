@@ -66,6 +66,35 @@ export async function checkSetupStatus(): Promise<boolean> {
   }
 }
 
+export interface SetupData {
+  company_id?: number;
+  company_name?: string;
+  company_address?: string;
+  company_tax_id?: string;
+  company_phone?: string;
+  company_email?: string;
+  role_at_company: string;
+  first_supplier_id?: number;
+  first_client_id?: number;
+  authorized_signers: Array<{ name: string; position: string; email: string }>;
+}
+
+export const setupAPI = {
+  submitSetup: async (data: SetupData) => {
+    const response = await fetch('/api/setup', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Setup failed');
+    }
+    return response.json();
+  },
+};
+
 export async function runSetup(data: SetupRequest): Promise<SetupResponse | null> {
   try {
     const res = await fetch('/api/setup', {
