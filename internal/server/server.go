@@ -152,7 +152,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Patch("/api/users/{id}/status", h.HandleUserByID)
 			r.Patch("/api/users/{id}/company", h.HandleUserCompany)
 
-			// Approval routes
+			// Approval routes (protected by RequireRole(auth.RoleAdmin) above)
 			r.Get("/api/approvals/pending", h.HandlePendingApprovals)
 			r.Post("/api/approvals", h.HandlePendingApprovals)
 

@@ -100,6 +100,15 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := result.LastInsertId()
 
+	// Create pending approval entry for admin review (company_name left empty since removed from registration)
+	_, err = h.DB.Exec(`
+		INSERT INTO pending_approvals (user_id, company_name, status) 
+		VALUES (?, ?, 'pending')`, userID, "")
+	if err != nil {
+		log.Printf("[register] ERROR inserting pending approval: %v", err)
+		// Continue - user was created, just log the error
+	}
+
 	// Return pending response without creating session
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
 		"id":      userID,
