@@ -192,6 +192,46 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 
 ---
 
+## Phase 5 - Filtros y Paginación (v0.42.0)
+
+### What Changed
+La Phase 5 introduce paginación y filtros en las páginas principales, además de campos legales para compliance y mejoras en la experiencia de usuario.
+
+### New Features Added
+- **Paginación en ContractsPage y SupplementsPage** — Paginación server-side para mejorar rendimiento en listas grandes
+- **Filtros combinados** — Filtros por estado, tipo, fecha, y búsqueda de texto
+- **client_name y supplier_name en API** — Campos incluidos directamente en respuestas de contratos
+- **DL-304 Legal Fields** — 8 campos legales para compliance normativo:
+  - `obligation_type` — Tipo de obligación contractual
+  - `jurisdiction` — Jurisdicción aplicable
+  - `governing_law` — Ley reguladora
+  - `dispute_resolution` — Resolución de disputas
+  - `liability_limit` — Límite de responsabilidad
+  - `penalty_clause` — Cláusula penal
+  - `termination_notice_days` — Días de notificación
+  - `exclusive_jurisdiction` — Jurisdicción exclusiva
+- **Decreto No. 310 Taxonomy** — Tipos de contrato basados en el decreto regulatorio
+- **Campo modification_type** — Tipo de modificación en suplementos
+- **contract_title nullable** — Título ahora opcional
+- **FieldTooltip component** — Tooltips informativos para campos legales
+- **Conditional legal fields** — Campos legales visibles solo para Admin/Manager
+- **Document upload** — Carga de documentos desde ContractForm
+- **Contextual role selector** — Selector de rol según contexto
+
+### Technical Additions
+- **Database migrations:** 4 (031-034)
+- **Files Modified:** ~20
+- **Lines Added:** ~800
+
+### Bug Fixes
+- **snake_case standardization** — Estandarización completa del frontend
+- **TypeScript any[] removal** — Tiposstrong reemplazan `any[]`
+- **Supplement status preservation** — Estado se conserva en updates
+- **AuthContext error logging** — Logging añadido en catch blocks
+- **Duplicate interfaces** — Eliminadas interfaces duplicadas
+
+---
+
 ## User Profile & Certificates (v0.41.0)
 
 ### What Changed
@@ -484,7 +524,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.40.1 | Current | Settings persistence fix: Added email_verification_required setting with secure defaults, backend logic to respect toggle during registration, individual save buttons per settings section |
+| v0.42.0 | Current | Phase 5 - Filtros y Paginación: Paginación y filtros en ContractsPage/SupplementsPage; DL-304 Legal Fields: 8 nuevos campos legales (obligation_type, jurisdiction, governing_law, dispute_resolution, liability_limit, penalty_clause, termination_notice_days, exclusive_jurisdiction); Decreto No. 310: Taxonomy de tipos de contrato; modification_type en suplementos; contract_title nullable; FieldTooltip component; Campos legales condicionales por rol; Document upload en ContractForm; Contextual role selector; snake_case standardization; TypeScript any[] removal; Bug fixes (Supplement status, AuthContext logging, duplicate interfaces) |
+| v0.41.0 | Previous | User Profile API (GET/PATCH /api/user/profile, POST /api/user/change-password), User Certificates API (POST/DELETE /api/user/certificate), Profile page con sub-routes (/profile/account, /profile/security, /profile/certificates), audit logging |
 | v0.40.0 | Previous | QA Bug Fixes: Device detection fix (blank screens), Settings tabs mobile fix, UserDropdown mobile access to theme/language/notifications, capitalize class for settings labels, missing translations (settings/users), email_verification_required toggle |
 | v0.39.1 | - | Build fix: Duplicate imports removed in AppLayout.tsx, UserDropdown component added |
 | v0.39.0 | - | Header User Dropdown: User profile moved from sidebar to header with UserDropdown component, responsive design (desktop/tablet/mobile), AppSidebar cleanup, CompanySelector in header |

@@ -166,12 +166,7 @@ go run ./cmd/pacta
 
 ## Security
 
-- **Local-only binding** — Server listens on `127.0.0.1` only
-- **httpOnly, SameSite=Strict cookies** — Prevents XSS token theft
-- **bcrypt password hashing** — Cost factor 10
-- **Parameterized SQL queries** — No SQL injection vectors
-- **Server-side session management** — Full control over session lifecycle
-- **Role-based authorization** — Enforced at the API handler level
+For security policy and vulnerability disclosure, please see [SECURITY.md](SECURITY.md).
 
 ---
 

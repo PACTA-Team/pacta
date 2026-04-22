@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-04-21
+
+### Added
+- **Phase 5 - Filtros y Paginación** — Paginación y filtros en ContractsPage y SupplementsPage para mejorar el rendimiento y UX en listas grandes
+- **client_name y supplier_name en API** — Nuevos campos añadidos a las respuestas de API de contratos para incluir nombres de cliente y proveedor directamente
+- **DL-304 Legal Fields** — Nuevos campos legales para compliance:
+  - `obligation_type`, `jurisdiction`, `governing_law`, `dispute_resolution`, `liability_limit`, `penalty_clause`, `termination_notice_days`, `exclusive_jurisdiction`
+- **Decreto No. 310** — Taxonomy de tipos de contrato basada en el Decreto No. 310 para cumplimiento legal
+- **Campo modification_type en Suplementos** — Nuevo campo para especificar el tipo de modificación
+- **Campo contract_title nullable** — El campo título de contrato ahora es nullable para mayor flexibilidad
+- **Component FieldTooltip** — Nuevo componente para mostrar tooltips en campos legales del formulario de contratos
+- **Campos legales condicionales** — Campos legales que se muestran/ocultan según el rol del usuario (Admin/Manager)
+- **Document upload en ContractForm** — Carga de documentos directamente desde el formulario de contratos
+- **Contextual role selector** — Selector de rol contextual en formularios basado en el contexto de la operación
+
+### Fixed
+- **snake_case standardization** — Estandarización completa de nomenclatura snake_case en todo el frontend para consistencia con el backend
+- **TypeScript any[] removal** — Reemplazo de tipos `any[]` con tipos strong en todo el código TypeScript
+- **Supplement status preservation** — Preservar el estado del suplemento durante la actualización
+- **AuthContext error logging** — Añadido logging en bloques catch vacíos en AuthContext
+- **Duplicate interfaces removal** — Eliminación de interfaces duplicadas en el código
+
+### Technical Details
+- **Database migrations:** 4 nuevas migraciones
+- **Files Modified:** ~15 archivos frontend, ~5 archivos backend
+- **Lines Added:** ~800
+- **Backend version:** v0.42.0 sincronizado con frontend
+
+## [0.41.0] - 2026-04-19
+
+### Added
+- **User Profile API** — Nuevos endpoints backend para gestión de perfil:
+  - GET /api/user/profile — Obtener perfil del usuario actual
+  - PATCH /api/user/profile — Actualizar nombre y email
+  - POST /api/user/change-password — Cambiar contraseña con validación
+- **User Certificates API** — Nuevos endpoints para gestión de certificados digitales:
+  - POST /api/user/certificate — Subir certificado P12 o público
+  - DELETE /api/user/certificate/{type} — Eliminar certificado
+- **Audit Logging** — Cambios de perfil, contraseña y certificados registrados
+
+### Technical Details
+- **Files Modified:** 4 (`internal/handlers/user.go`, `internal/handlers/profile.go`, `internal/server/server.go`)
+- **Files Created:** 2 (migration 030_user_certificates.sql, `internal/handlers/profile.go`)
+- **Lines Added:** ~300
+
 ## [0.40.1] - 2026-04-18
 
 ### Added
