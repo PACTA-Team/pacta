@@ -71,3 +71,14 @@ export async function switchCompany(id: number): Promise<{ company_id: number }>
     method: 'PATCH',
   });
 }
+
+export const companiesAPI = {
+  listCompanies,
+  getCompany,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+  getUserCompanies,
+  listOwnCompanies,
+  switchCompany,
+};
