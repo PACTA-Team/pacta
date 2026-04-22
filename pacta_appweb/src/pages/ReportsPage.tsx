@@ -64,7 +64,7 @@ export default function ReportsPage() {
           supplementsAPI.list(),
           clientsAPI.list(),
           suppliersAPI.list(),
-          companiesAPI.list(),
+          companiesAPI.listOwnCompanies(),
         ]);
         setContracts(contractsData as any[]);
         setSupplements(supplementsData as any[]);

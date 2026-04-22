@@ -56,7 +56,7 @@ export default function ContractsPage() {
         contractsAPI.list(),
         clientsAPI.list(),
         suppliersAPI.list(),
-        companiesAPI.list(),
+        companiesAPI.listOwnCompanies(),
       ]);
       setContracts(contractsData as any[]);
       setClients(clientsData as any[]);

@@ -198,7 +198,7 @@ export default function ContractForm({ contract, onSubmit, onCancel }: ContractF
     
     onSubmit({
       ...formData,
-      company_id: selectedOwnCompany?.id,
+      company_id: selectedOwnCompany?.id ?? 1,
     });
   };
 
