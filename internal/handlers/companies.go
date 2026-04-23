@@ -62,7 +62,7 @@ func (h *Handler) HandleCompanyByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.Error(w, http.StatusBadRequest, "invalid company ID")
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
 		return
 	}
 
@@ -90,10 +90,10 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var rows *sql.Rows
-	var err error
+	var queryErr error
 
 	if companyType == "parent" {
-		rows, err = h.DB.Query(`
+		rows, queryErr = h.DB.Query(`
 			SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
 			       p.name as parent_name, c.created_by, c.created_at, c.updated_at
 			FROM companies c
@@ -102,7 +102,7 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 			ORDER BY c.company_type DESC, c.name
 		`)
 	} else {
-		rows, err = h.DB.Query(`
+		rows, queryErr = h.DB.Query(`
 			SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
 			       p.name as parent_name, c.created_by, c.created_at, c.updated_at
 			FROM companies c
@@ -111,6 +111,10 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 			WHERE uc.user_id = ? AND c.deleted_at IS NULL
 			ORDER BY c.company_type DESC, c.name
 		`, userID)
+	}
+	if queryErr != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
 	}
 
 	if err != nil {
@@ -196,7 +200,8 @@ func (h *Handler) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.auditLog(r, userID, id, "create", "company", &id, nil, map[string]interface{}{
+	idInt := int(id)
+	h.auditLog(r, userID, idInt, "create", "company", &idInt, nil, map[string]interface{}{
 		"name": req.Name,
 	})
 
