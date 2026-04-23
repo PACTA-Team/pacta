@@ -27,7 +27,7 @@ import { Separator } from '@/components/ui/separator';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import CompanySelector from '@/components/CompanySelector';
-import ErrorBoundary from '@/components/common/ErrorBoundary';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
@@ -259,20 +259,39 @@ export default function AppSidebar({
               </div>
             }
           >
-            <ContractIcon
-              className="h-10 w-10 text-primary"
-              aria-label="PACTA Logo"
+            <span
               role="img"
-            />
+              aria-label="PACTA Logo"
+              className="h-10 w-10 flex items-center justify-center text-primary"
+            >
+              <ContractIcon className="h-10 w-10" aria-hidden="true" />
+            </span>
           </ErrorBoundary>
             <div>
               <h1 className="text-xl font-bold text-primary">PACTA</h1>
               <p className="text-xs text-muted-foreground truncate">Contract Management</p>
             </div>
           </div>
-        ) : (
-          <ContractIcon className="h-10 w-10" />
-        )}
+         ) : (
+            <ErrorBoundary
+              fallback={
+                <div
+                  className="h-10 w-10 flex items-center justify-center bg-primary/10 rounded-md"
+                  aria-label="PACTA Logo"
+                >
+                  <span className="text-sm font-bold text-primary">P</span>
+                </div>
+              }
+            >
+              <span
+                role="img"
+                aria-label="PACTA Logo"
+                className="h-10 w-10 flex items-center justify-center text-primary"
+              >
+                <ContractIcon className="h-10 w-10" aria-hidden="true" />
+              </span>
+            </ErrorBoundary>
+         )}
         <button
           onClick={() => handleCollapsedChange(!collapsed)}
           className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
