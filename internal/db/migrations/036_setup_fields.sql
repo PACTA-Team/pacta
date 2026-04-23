@@ -1,3 +1,4 @@
+-- +goose Up
 -- Add setup_completed and role_at_company fields to users
 ALTER TABLE users ADD COLUMN setup_completed BOOLEAN DEFAULT 0;
 ALTER TABLE users ADD COLUMN role_at_company VARCHAR(50) DEFAULT NULL;
@@ -21,3 +22,8 @@ CREATE TABLE IF NOT EXISTS pending_activations (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (company_id) REFERENCES companies(id)
 );
+
+-- +goose Down
+DROP TABLE IF EXISTS pending_activations;
+ALTER TABLE users DROP COLUMN IF EXISTS role_at_company;
+ALTER TABLE users DROP COLUMN IF EXISTS setup_completed;
