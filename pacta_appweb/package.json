@@ -83,6 +83,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vite": "^8.0.7",
+    "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.3"
   }
 }
