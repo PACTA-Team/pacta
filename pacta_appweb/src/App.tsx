@@ -34,6 +34,7 @@ const UsersPage = lazy(() => import('./pages/UsersPage'));
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage/HistoryPage'));
 
 // Loading fallback component
 const PageLoadingFallback = () => (
@@ -171,6 +172,13 @@ function App() {
               <ProtectedRoute>
                 <Suspense fallback={<PageLoadingFallback />}>
                   <AppLayout><ProfilePage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile/history" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><HistoryPage /></AppLayout>
                 </Suspense>
               </ProtectedRoute>
             } />

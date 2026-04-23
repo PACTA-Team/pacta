@@ -188,6 +188,8 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.InsertAuditLog(user.ID, "LOGIN", "session", nil, nil, nil, r)
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    session.Token,

@@ -48,6 +48,10 @@ func (h *Handler) HandlePublicCompanies(w http.ResponseWriter, r *http.Request) 
 		}
 		companies = append(companies, c)
 	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
+	}
 	if companies == nil {
 		companies = []PublicCompany{}
 	}
@@ -58,7 +62,7 @@ func (h *Handler) HandleCompanyByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.Error(w, http.StatusBadRequest, "invalid company ID")
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
 		return
 	}
 
@@ -78,15 +82,18 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
 
-	// Check if user is admin of a parent company (can see all subsidiaries)
 	var companyType string
-	h.DB.QueryRow("SELECT company_type FROM companies WHERE id = ?", companyID).Scan(&companyType)
+	err := h.DB.QueryRow("SELECT company_type FROM companies WHERE id = ?", companyID).Scan(&companyType)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to get company")
+		return
+	}
 
 	var rows *sql.Rows
-	var err error
+	var queryErr error
 
 	if companyType == "parent" {
-		rows, err = h.DB.Query(`
+		rows, queryErr = h.DB.Query(`
 			SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
 			       p.name as parent_name, c.created_by, c.created_at, c.updated_at
 			FROM companies c
@@ -95,7 +102,7 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 			ORDER BY c.company_type DESC, c.name
 		`)
 	} else {
-		rows, err = h.DB.Query(`
+		rows, queryErr = h.DB.Query(`
 			SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
 			       p.name as parent_name, c.created_by, c.created_at, c.updated_at
 			FROM companies c
@@ -104,6 +111,10 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 			WHERE uc.user_id = ? AND c.deleted_at IS NULL
 			ORDER BY c.company_type DESC, c.name
 		`, userID)
+	}
+	if queryErr != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
 	}
 
 	if err != nil {
@@ -120,6 +131,10 @@ func (h *Handler) handleListCompanies(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		companies = append(companies, c)
+	}
+	if err := rows.Err(); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to list companies")
+		return
 	}
 
 	if companies == nil {
@@ -159,6 +174,10 @@ func (h *Handler) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 			h.Error(w, http.StatusBadRequest, "parent company not found")
 			return
 		}
+		if parentType != "parent" {
+			h.Error(w, http.StatusBadRequest, "parent company must be a parent type")
+			return
+		}
 	}
 
 	result, err := h.DB.Exec(
@@ -170,8 +189,21 @@ func (h *Handler) handleCreateCompany(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, _ := result.LastInsertId()
-	h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 0)", userID, id)
+	id, err := result.LastInsertId()
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create company")
+		return
+	}
+	_, err = h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 0)", userID, id)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to link user to company")
+		return
+	}
+
+	idInt := int(id)
+	h.auditLog(r, userID, idInt, "create", "company", &idInt, nil, map[string]interface{}{
+		"name": req.Name,
+	})
 
 	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "name": req.Name})
 }
