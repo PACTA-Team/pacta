@@ -178,10 +178,10 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Documentation | Complete (v0.18.0 — README redesign with badges/changelog table, Linux production guide, Windows local guide, GitHub repo branding; plus v0.36.0 BREVO-SETUP.md step-by-step Brevo configuration guide) |
 | CI/CD Pipeline | Complete (GoReleaser on GitHub Actions) |
 | Multi-platform Builds | Complete (Linux amd64/arm64, macOS amd64/arm64, Windows amd64) |
-| Frontend Pages | 15 pages created (Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |
-| Frontend Security | Hardened (route guards, XSS prevention, code splitting) |
-| Frontend Accessibility | WCAG 2.2 AA compliant (skip nav, ARIA, keyboard nav) |
-| Frontend Performance | Optimized (lazy loading, memoization, build config) |
+| Frontend Pages | Complete (15 pages created: Dashboard, Contracts, Clients, Suppliers, Signers, Setup, Login, etc.) |
+| Frontend Security | Complete (Hardened: route guards, XSS prevention, code splitting) |
+| Frontend Accessibility | Complete (WCAG 2.2 AA compliant: skip nav, ARIA, keyboard nav) |
+| Frontend Performance | Complete (Optimized: lazy loading, memoization, build config) |
 | Database Migrations | Complete (v0.20.4 -- goose v3, 20 migrations with up/down support, dirty state tracking, `goose_db_version` table) |
 | Setup Flow Security | Complete (v0.21.0 -- fresh install redirect to /setup, /setup route guard redirects to /403, ForbiddenPage component, HomePage `needs_setup` bug fix) |
 | Setup Mode Auto-Advance | Complete (v0.22.0 -- click mode card to auto-advance, tactile card feedback, focus-visible accessibility, "Cambiar a..." toggle button) |
@@ -189,46 +189,166 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | User Profile API | Complete (v0.41.0 -- GET/PATCH /api/user/profile, POST /api/user/change-password, audit logging) |
 | User Certificates API | Complete (v0.41.0 -- POST/DELETE /api/user/certificate for P12 and public certs, audit logging) |
 | Profile Page | Complete (v0.41.0 -- ProfilePage with sub-routes (/profile/account, /profile/security, /profile/certificates), profile i18n) |
+| Audit History | Complete (v0.43.0 -- full-history audit screen with pagination/filters, TypeScript audit-api wrapper, activity log block in User Profile, expanded logging for CREATE company and LOGIN actions, user_id nullable migration) |
+| Multi-Company Contracts | Complete (v0.43.0 -- company_id on contracts table with FK validation, company-scoped contract listings and forms, conditional Company field in ContractForm, signers scoped by company, migration 037) |
+| Setup Flow Refactor | Complete (v0.43.0 -- GET /api/setup endpoint, enhanced wizard (company info, role selection, dynamic signers), setup_completed field, pending_activations → pending_approvals, route protection for pending_setup, tutorial mode toggle, AuthContext updates, auto-redirect on completion, migration 036) |
 
 ---
 
-## Phase 5 - Filtros y Paginación (v0.42.0)
+## Audit History & Multi-Company & Setup Refactor (v0.43.0)
 
 ### What Changed
-La Phase 5 introduce paginación y filtros en las páginas principales, además de campos legales para compliance y mejoras en la experiencia de usuario.
 
-### New Features Added
-- **Paginación en ContractsPage y SupplementsPage** — Paginación server-side para mejorar rendimiento en listas grandes
-- **Filtros combinados** — Filtros por estado, tipo, fecha, y búsqueda de texto
-- **client_name y supplier_name en API** — Campos incluidos directamente en respuestas de contratos
-- **DL-304 Legal Fields** — 8 campos legales para compliance normativo:
-  - `obligation_type` — Tipo de obligación contractual
-  - `jurisdiction` — Jurisdicción aplicable
-  - `governing_law` — Ley reguladora
-  - `dispute_resolution` — Resolución de disputas
-  - `liability_limit` — Límite de responsabilidad
-  - `penalty_clause` — Cláusula penal
-  - `termination_notice_days` — Días de notificación
-  - `exclusive_jurisdiction` — Jurisdicción exclusiva
-- **Decreto No. 310 Taxonomy** — Tipos de contrato basados en el decreto regulatorio
-- **Campo modification_type** — Tipo de modificación en suplementos
-- **contract_title nullable** — Título ahora opcional
-- **FieldTooltip component** — Tooltips informativos para campos legales
-- **Conditional legal fields** — Campos legales visibles solo para Admin/Manager
-- **Document upload** — Carga de documentos desde ContractForm
-- **Contextual role selector** — Selector de rol según contexto
+Version 0.43.0 introduces three major feature clusters: comprehensive audit history visibility, multi-company scoping for contracts, and a fully refactored setup flow with tutorial mode. This release also includes 12 significant bug fixes across the frontend and backend.
+
+---
+
+### Audit History
+
+#### Full-History Audit Screen
+A dedicated audit log page (`/audit`) provides complete visibility into all system actions:
+- **Server-side pagination** — Efficient handling of large audit datasets
+- **Combined filters** — Filter by entity_type, action, user, and date range
+- **Sortable columns** — entity_type, action, user_id, created_at, metadata
+- **Metadata viewer** — Expandable JSON state capture for update operations
+- **Export capability** — CSV export of filtered results (planned)
+
+#### Audit API TypeScript Wrapper
+New `src/lib/audit-api.ts` module with typed methods:
+- `list(params)` — Paginated listing with filters
+- `listByContract(contractId)` — All audit entries for a specific contract
+- `listByEntityType(entityType, entityId)` — Audit trail for any entity (contract, client, supplier, signer, supplement, document)
+
+#### Activity Log in User Profile
+The User Profile page (`/profile/account`) now includes an **Activity Log** block showing the current user's own actions:
+- Recent logins
+- Profile updates
+- Password changes
+- Certificate uploads/deletions
+- Contract/supplement creations and modifications
+- Limited to last 20 entries for performance
+
+#### Expanded System Logging
+Backend logging coverage increased:
+- `CREATE company` — admin creates a new company
+- `LOGIN` — successful user authentication (previously only logged failures)
+- All existing CRUD operations continue to be logged with full JSON state
+
+#### Database Migration
+`035_audit_log_action_user_id_nullable.sql` — Makes `user_id` nullable in `audit_logs` to support system-initiated actions (e.g., first-run setup, automated systems) where no user context exists.
+
+---
+
+### Multi-Company Contracts
+
+#### Company-Scoped Contracts
+Contracts now belong to a company, enforcing data isolation in multi-company deployments:
+- `company_id` column added to `contracts` table (NOT NULL)
+- TypeScript `Contract` type extended with `company_id?: number`
+- FK constraint ensures contract's company matches the authenticated user's active company
+- All contract listings automatically filtered by `company_id`
+- ContractForm displays Company field (read-only in single-company mode, selectable in multi-company mode)
+- New contracts inherit the user's active company automatically
+
+#### Signer Scoping
+Authorized signers are now company-scoped:
+- Signers can only be created/updated within the user's active company
+- ContractForm signer dropdowns filtered by company
+- Existing signers retain their company association
+
+#### Database Migration
+`037_contracts_company_id_fk.sql` — Adds `company_id` FK to contracts with backfill: all existing contracts assigned to the user's primary company at migration time.
+
+---
+
+### Setup Flow Refactor
+
+#### New Setup Status Endpoint
+`GET /api/setup` returns the current setup state:
+```json
+{
+  "completed": true/false,
+  "company_mode": "single" | "multi",
+  "pending_approvals": 3,
+  "needs_profile": false
+}
+```
+
+#### Enhanced Setup Wizard
+The first-run wizard (`/setup`) has been redesigned with 4 steps:
+1. **Welcome** — Intro screen with mode explanation
+2. **Company Info** — Company name, tax_id, address (always shown; single-company mode pre-fills these)
+3. **Role Selection** — Choose initial user role (Viewer / Editor / Manager / Admin)
+4. **Signers** — Dynamic signer addition (add/remove multiple signers, name + email fields)
+
+Features:
+- **Tutorial mode toggle** — Dismissible tips per page, persisted in localStorage
+- **Route protection** — Users with `pending_setup` flag are redirected to `/setup` automatically
+- **Auto-redirect** — On completion, user is redirected to `/dashboard`
+- **Better validation** — Company info required for multi-company mode; signer emails validated
+
+#### AuthContext State
+New React context values:
+- `setupCompleted` — boolean indicating if setup wizard has been completed
+- `needsProfile` — true if user must complete profile (legacy users from upgrade path)
+- `tutorialMode` — boolean controlling per-page tip visibility
+
+#### Database Migration
+`036_setup_completed_and_pending_activations.sql` — Renames `pending_activations` column to `pending_approvals` (clearer semantics) and adds `setup_completed` boolean flag to `users` table (default false, set true on wizard completion).
+
+---
 
 ### Technical Additions
-- **Database migrations:** 4 (031-034)
-- **Files Modified:** ~20
-- **Lines Added:** ~800
 
-### Bug Fixes
-- **snake_case standardization** — Estandarización completa del frontend
-- **TypeScript any[] removal** — Tiposstrong reemplazan `any[]`
-- **Supplement status preservation** — Estado se conserva en updates
-- **AuthContext error logging** — Logging añadido en catch blocks
-- **Duplicate interfaces** — Eliminadas interfaces duplicadas
+#### Backend (25 files modified/created)
+- `internal/handlers/setup.go` — Refactored wizard logic
+- `internal/handlers/audit.go` — Expanded logging (CREATE company, LOGIN), user_id nullable support
+- `internal/handlers/contracts.go` — Company_id FK validation, company scoping
+- `internal/models/models.go` — `AuditLog` action/user_id updates, `Contract.CompanyID`, `User.SetupCompleted`, `User.PendingApprovals`
+- `internal/db/migrations/035_audit_log_action_user_id_nullable.sql`
+- `internal/db/migrations/036_setup_completed_and_pending_activations.sql`
+- `internal/db/migrations/037_contracts_company_id_fk.sql`
+- `internal/server/server.go` — New `/api/setup` endpoint
+- `internal/auth/auth.go` — Session + company resolution updates
+- 15+ other handler/helper updates for company scoping
+
+#### Frontend (~30 files modified/created)
+- `src/pages/AuditPage.tsx` — Full-history audit UI
+- `src/pages/ProfilePage.tsx` — Activity log block added
+- `src/lib/audit-api.ts` — New typed API wrapper
+- `src/contexts/AuthContext.tsx` — `setupCompleted`, `needsProfile`, `tutorialMode` state
+- `src/components/ActivityLogBlock.tsx` — Reusable activity log component
+- `src/pages/SetupPage.tsx` — Wizard refactor (4 steps, dynamic signers)
+- `src/components/SetupWizard.tsx`, `StepCompany.tsx`, `StepRoleSelect.tsx`, `StepSigners.tsx`
+- `src/components/CompanyField.tsx` — Conditional company selector in ContractForm
+- `src/pages/ContractsPage.tsx`, `src/components/ContractForm.tsx` — Company scoping integration
+- 10+ component updates for company field visibility and signer filtering
+- i18n updates: `src/locales/en/audit.json`, `es/audit.json`, setup.json, contracts.json
+
+#### Scale
+- **Total files changed:** ~55
+- **Lines added:** ~1,200
+- **Migrations:** 3 (035, 036, 037)
+- **New API endpoints:** 1 (`GET /api/setup`)
+- **New frontend pages:** 1 (`AuditPage`)
+- **New components:** 6 (ActivityLogBlock, SetupWizard, StepCompany, StepRoleSelect, StepSigners, CompanyField)
+
+---
+
+### Bug Fixes (v0.43.0)
+
+1. **SVG blank page in desktop sidebar** — Fixed DOMException when rendering inline SVGs in Chrome (proper `dangerouslySetInnerHTML` usage)
+2. **CI compilation errors in companies handler** — Fixed `companies.go` import cycle and struct field visibility for GitHub Actions builder
+3. **i18n translation gaps** — Completed translations for audit, multi-company, and setup flows (es/en)
+4. **Malformed JSON in audit responses** — Fixed `json.RawMessage` marshaling in audit list endpoint
+5. **Contract FK validation errors** — Corrected company_id constraint checking; improved error messages
+6. **Signers not appearing in contract details** — Fixed company-scoped signer fetch in `ContractDetailsPage`
+7. **Setup wizard navigation stuck** — Fixed step transition state machine; proper form validation per step
+8. **Pending users registration flow** — Fixed approval flow where `pending_approvals` count was inaccurate
+9. **Component duplication/imports** — Removed duplicate imports in `ContractForm`, `SupplementsPage`
+10. **TypeScript any[] residuals** — Replaced remaining `any[]` with `Contract[]`, `AuditLog[]`, etc.
+11. **Missing ErrorBoundary in App** — Added top-level error boundary to catch rendering errors
+12. **Sidebar mobile drawer state** — Fixed drawer open/close race condition on route changes
 
 ---
 
@@ -524,7 +644,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.42.0 | Current | Phase 5 - Filtros y Paginación: Paginación y filtros en ContractsPage/SupplementsPage; DL-304 Legal Fields: 8 nuevos campos legales (obligation_type, jurisdiction, governing_law, dispute_resolution, liability_limit, penalty_clause, termination_notice_days, exclusive_jurisdiction); Decreto No. 310: Taxonomy de tipos de contrato; modification_type en suplementos; contract_title nullable; FieldTooltip component; Campos legales condicionales por rol; Document upload en ContractForm; Contextual role selector; snake_case standardization; TypeScript any[] removal; Bug fixes (Supplement status, AuthContext logging, duplicate interfaces) |
+| v0.43.0 | Current | Audit History & Multi-Company Contracts & Setup Flow Refactor: Full-history audit screen with pagination/filters; TypeScript audit-api wrapper (list, listByContract, listByEntityType); Activity log block in User Profile; Expanded logging (CREATE company, LOGIN); Multi-company contracts with company_id FK validation and company-scoped listings/forms; Conditional Company field in ContractForm; Signers scoped by company; Setup flow refactor with GET /api/setup endpoint; Enhanced 4-step wizard (company info, role selection, dynamic signers); setup_completed field; pending_activations → pending_approvals; Route protection for pending_setup; Tutorial mode toggle; AuthContext state updates; Auto-redirect on completion; ~25 backend + ~30 frontend files modified; ~1200 lines added; 3 migrations (035-037); 12 major bug fixes (SVG blank page, CI compilation errors, i18n gaps, malformed JSON, FK validation, signers not appearing, setup wizard stuck, pending users flow, component duplication, TypeScript any[] residuals, missing ErrorBoundary, sidebar mobile drawer) |
+| v0.42.0 | Previous | Phase 5 - Filtros y Paginación: Paginación y filtros en ContractsPage/SupplementsPage; DL-304 Legal Fields: 8 nuevos campos legales (obligation_type, jurisdiction, governing_law, dispute_resolution, liability_limit, penalty_clause, termination_notice_days, exclusive_jurisdiction); Decreto No. 310: Taxonomy de tipos de contrato; modification_type en suplementos; contract_title nullable; FieldTooltip component; Campos legales condicionales por rol; Document upload en ContractForm; Contextual role selector; snake_case standardization; TypeScript any[] removal; Bug fixes (Supplement status, AuthContext logging, duplicate interfaces) |
 | v0.41.0 | Previous | User Profile API (GET/PATCH /api/user/profile, POST /api/user/change-password), User Certificates API (POST/DELETE /api/user/certificate), Profile page con sub-routes (/profile/account, /profile/security, /profile/certificates), audit logging |
 | v0.40.0 | Previous | QA Bug Fixes: Device detection fix (blank screens), Settings tabs mobile fix, UserDropdown mobile access to theme/language/notifications, capitalize class for settings labels, missing translations (settings/users), email_verification_required toggle |
 | v0.39.1 | - | Build fix: Duplicate imports removed in AppLayout.tsx, UserDropdown component added |
@@ -576,6 +697,50 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 ---
 
 ## Progress Tracking
+
+### Completed (v0.43.0)
+
+**Audit History Implementation:**
+- [x] Full-history audit screen (`/audit`) with server-side pagination and combined filters (entity_type, action, user, date range)
+- [x] TypeScript `audit-api.ts` wrapper with `list()`, `listByContract()`, `listByEntityType()` methods
+- [x] Activity log block in User Profile page (displays current user's recent actions)
+- [x] Expanded backend logging: `CREATE company` and `LOGIN` actions now captured
+- [x] Migration 035: `audit_logs.user_id` nullable for system-initiated actions
+- [x] i18n translations for audit page (en/es)
+
+**Multi-Company Contracts:**
+- [x] `company_id` added to `contracts` table (NOT NULL) with FK constraint
+- [x] TypeScript `Contract` type extended with `company_id?: number`
+- [x] Contract listings filtered by authenticated user's active company
+- [x] Company field in ContractForm (conditional: read-only in single-company mode, selectable in multi-company)
+- [x] Signers scoped by company in ContractForm dropdowns
+- [x] Migration 037: Backfill existing contracts to user's primary company
+- [x] Full FK validation in contract create/update handlers
+
+**Setup Flow Refactor:**
+- [x] New `GET /api/setup` endpoint returning setup state (completed, company_mode, pending_approvals, needs_profile)
+- [x] Enhanced 4-step wizard: Welcome → Company Info → Role Selection → Signers (with dynamic add/remove)
+- [x] `setup_completed` boolean field on `users` table
+- [x] `pending_activations` renamed to `pending_approvals` in users table (migration 036)
+- [x] Route protection: users with `pending_setup` redirected to `/setup`
+- [x] Tutorial mode toggle (dismissible per-page tips, localStorage persistence)
+- [x] AuthContext gains `setupCompleted`, `needsProfile`, `tutorialMode` state
+- [x] Auto-redirect to `/dashboard` on wizard completion
+- [x] i18n for setup wizard steps and validation messages
+
+**Bug Fixes (12 major):**
+- [x] SVG blank page in desktop sidebar (DOMException on inline SVG rendering)
+- [x] CI compilation errors in companies handler (import cycle, struct visibility)
+- [x] i18n translation gaps for audit/multi-company/setup flows
+- [x] Malformed JSON in audit list responses (`json.RawMessage` marshaling)
+- [x] Contract FK validation errors (company_id constraint enforcement)
+- [x] Signers not appearing in contract details (company scoping bug)
+- [x] Setup wizard navigation stuck (step transition state machine fix)
+- [x] Pending users registration flow (approval count accuracy)
+- [x] Component duplication/imports cleanup (ContractForm, SupplementsPage)
+- [x] TypeScript any[] residuals replaced with typed arrays
+- [x] Missing ErrorBoundary in App.tsx added
+- [x] Sidebar mobile drawer state race condition fixed
 
 ### Completed (v0.26.0)
 

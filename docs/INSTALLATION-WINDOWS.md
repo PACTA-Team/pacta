@@ -28,7 +28,7 @@ This guide covers installing and running PACTA on Windows for local, individual 
 Or use PowerShell:
 
 ```powershell
-$VERSION = "0.18.0"
+$VERSION = "0.43.0"
 Invoke-WebRequest -Uri "https://github.com/PACTA-Team/pacta/releases/download/v$VERSION/pacta_${VERSION}_windows_amd64.tar.gz" -OutFile "pacta_${VERSION}_windows_amd64.tar.gz"
 Invoke-WebRequest -Uri "https://github.com/PACTA-Team/pacta/releases/download/v$VERSION/pacta_${VERSION}_checksums.txt" -OutFile "pacta_${VERSION}_checksums.txt"
 ```
@@ -66,7 +66,7 @@ cd C:\PACTA
 
 You should see output like:
 ```
-PACTA v0.18.0 starting...
+PACTA v0.43.0 starting...
 Server listening on http://127.0.0.1:3000
 Opening browser...
 ```
@@ -75,12 +75,15 @@ Your default browser will open automatically to `http://127.0.0.1:3000`.
 
 ### 5. Log In
 
-| Field    | Value              |
-|----------|--------------------|
-| Email    | admin@pacta.local  |
-| Password | admin123           |
+After first run, PACTA opens the Setup Wizard at http://127.0.0.1:3000/setup. Complete the wizard:
 
-> **Security note:** Change the default credentials after first login.
+1. Company information (name, address, tax ID)
+2. Admin account creation (email + password)
+3. Role selection (Viewer/Editor/Manager/Admin)
+4. Authorized signers registration (optional)
+5. Tutorial mode (optional)
+
+Upon completion, you'll be redirected to the login page. Sign in with the admin credentials you created.
 
 ---
 
@@ -129,10 +132,7 @@ New-NetFirewallRule -DisplayName "PACTA" -Direction Inbound -LocalPort 3000 -Pro
 
 ## Post-Installation Verification
 
-1. Open your browser to `http://127.0.0.1:3000`
-2. You should see the PACTA landing page
-3. Click **Login** and sign in with default credentials
-4. Verify you can access the dashboard
+Verify you can access the Setup Wizard at http://127.0.0.1:3000/setup and complete the initial configuration.
 
 ---
 

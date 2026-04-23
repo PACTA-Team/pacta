@@ -7,7 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-04-23
+
+### Added
+- **Audit History Complete** — Full-history audit system with:
+  - **Full-history screen** — Paginated, filterable audit log table with entity type, action, user, timestamp, and metadata columns
+  - **TypeScript API wrapper** — New `audit-api.ts` module with `list()`, `listByContract()`, `listByEntityType()` methods
+  - **Activity log block in profile** — User profile page now displays personal audit trail (own actions only)
+  - **Action logging** — CREATE company and LOGIN actions now captured in audit log
+- **Multi-Company Support in Contracts** — Full multi-company data isolation for contracts:
+  - `company_id` added to Contract type with proper foreign key validation
+  - All contract API endpoints filtered by company context
+  - ContractForm company field conditional rendering (visible only in multi-company mode)
+  - Contract list filtered by active company
+  - Signers creation properly scoped to company
+- **Setup Flow Refactor** — Modernized setup experience:
+  - New `GET /api/setup` endpoint returning current setup status and configuration
+  - Enhanced setup wizard with improved stepper UI and progress persistence
+  - Company step (name, address, tax ID) moved to step 2 for logical flow
+  - Role selection step for admin user with Viewer/Editor/Manager/Admin options
+  - Signers step with dynamic signer addition and validation
+  - `setup_completed` boolean field added to users table
+  - `pending_activations` table renamed to `pending_approvals` with clearer semantics
+  - Route protection for users with `pending_setup` status (redirected to /setup)
+  - Tutorial mode toggle for first-time users (dismissible tips per page)
+  - AuthContext state expanded to track `setupCompleted`, `needsProfile`, `tutorialMode`
+  - Setup completion now triggers automatic redirect to dashboard
+
+### Fixed
+- **SVG blank page in sidebar** — Fixed DOMException by replacing direct SVG import with lucide-react icon
+- **CI compilation errors** — Fixed build failures from missing imports and type mismatches in GitHub Actions
+- **i18n translation gaps** — Added missing translation keys for audit history, multi-company, and setup flow (en/es)
+- **Malformed JSON in API responses** — Fixed JSON serialization issues in audit log and contract endpoints
+- **Contract FK validation** — Fixed foreign key constraint failures when creating contracts without company_id
+- **Signers not appearing** — Fixed signers not showing in contract details after creation due to missing company filter
+- **Setup wizard stuck** — Fixed wizard navigation issues when switching between single/multi-company modes
+- **Pending users flow** — Fixed first-user registration flow properly assigning admin role and company
+- **Component duplication** — Removed duplicate imports and unused components causing build warnings
+- **TypeScript any[] errors** — Replaced remaining `any[]` types with proper interfaces in audit and contract modules
+- **Missing ErrorBoundary** — Added global error boundary to App.tsx for better error handling
+- **Sidebar mobile drawer** — Fixed missing `sidebarOpen` state declaration causing blank pages
+
+### Documentation
+- **Audit History design doc** — `docs/plans/2026-04-23-audit-history-design.md` (full-history UI, API design, data model)
+- **Audit History implementation plan** — `docs/plans/2026-04-23-audit-history-implementation.md`
+- **Multi-Company Contracts design** — `docs/plans/2026-04-23-multi-company-contracts-design.md` (company scoping, FK strategy, UI patterns)
+- **Setup Flow Refactor design** — `docs/plans/2026-04-23-setup-flow-refactor-design.md` (wizard UX, endpoint design, state management)
+
+### Technical Details
+- **Database migrations:** 3 new migrations
+  - `035_audit_log_action_user_id_nullable.sql` — Makes `user_id` nullable for system/background actions
+  - `036_setup_completed_and_pending_activations.sql` — Adds `setup_completed` to users, renames `pending_activations` to `pending_approvals`
+  - `037_contracts_company_id_fk.sql` — Adds `company_id` to contracts with foreign key constraint and existing data backfill
+- **Files Modified:** ~25 backend files, ~30 frontend files
+- **Lines Added:** ~1,200 (backend: ~600, frontend: ~600)
+- **API endpoints added:**
+  - `GET /api/setup` — Returns setup status and configuration
+  - `GET /api/audit-logs` — List audit logs with filters (entity_type, entity_id, user_id, action, date range)
+  - `GET /api/audit-logs/contract/{id}` — Audit history for specific contract
+  - `GET /api/audit-logs/entity/{type}/{id}` — Generic entity audit fetch
+- **No breaking changes** — All existing functionality preserved; migrations applied automatically
+
+---
+
 ## [0.42.2] - 2026-04-21
+
+### Fixed
+- **Restored internal_id column** — Migration 031 recreated the contracts table but lost the `internal_id` column that was added in 011, causing SQL errors in the dashboard
+
+## [0.42.0] - 2026-04-21
 
 ### Fixed
 - **Restored internal_id column** — Migration 031 recreated the contracts table but lost the `internal_id` column that was added in 011, causing SQL errors in the dashboard
