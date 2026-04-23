@@ -73,6 +73,61 @@ Regla concreta para evitar este error en el futuro.
 
 <!-- Las lecciones se registran a continuación en orden cronológico inverso -->
 
+## [003] SVG como Componente React: Falta de Plugin SVGR en Vite Causa Página en Blanco
+
+**Fecha**: 2026-04-22
+**Tags**: frontend, config, rendering, vite, svg
+**Severity**: critical
+
+### Contexto
+Se integró el logo de la aplicación (SVG) en el sidebar usando `import ContractIcon from '@/images/contract_icon.svg?react'`. La aplicación funcionaba en desarrollo pero al hacer build o en ciertos estados, la página se quedaba en blanco en vista de escritorio.
+
+### Síntomas
+- Página completamente en blanco (white screen) en desktop view
+- Sin errores visibles en consola del navegador (error silencioso de React)
+- Al inspeccionar con devtools: `ContractIcon` importado como string (URL) en lugar de componente React
+- Al intentar renderizar `<ContractIcon />`, React falla porque recibe un string en lugar de un componente válido
+
+### Causa Raíz
+1. **Configuración Vite incompleta**: El proyecto tenía declaraciones TypeScript para módulos `*.svg?react` en `src/types/svg.d.ts`, pero NO estaba instalado ni configurado `vite-plugin-svgr` en `vite.config.ts`.
+2. **Type/runtime mismatch**: TypeScript creía que `ContractIcon` era un componente React (por las declaraciones de tipo), pero en runtime Vite, sin el plugin, trataba `.svg` como asset estático y devolvía la URL como string.
+3. **Resultado**: React intentó renderizar un string como componente → TypeError → página en blanco.
+
+### Solución
+1. Instalar `vite-plugin-svgr` como devDependency: `npm install -D vite-plugin-svgr`
+2. Configurar `vite.config.ts`:
+   ```ts
+   import svgr from 'vite-plugin-svgr';
+   plugins: [
+     react(),
+     svgr({ svgo: true, titleProp: true, ref: true }),
+     tailwindcss()
+   ]
+   ```
+3. Añadir `ErrorBoundary` component para manejo graceful de fallos
+4. Mejorar accesibilidad: `aria-label`, `role="img"`, `title` en el SVG
+
+### Regla de Prevención
+> **Siempre verificar plugins de Vite para imports especiales**. Cuando se use cualquier import con query suffix (`?react`, `?url`, `?raw`), asegurar que el plugin correspondiente está instalado y configurado.
+>
+> - `*.svg?react` → requiere `vite-plugin-svgr`
+> - `*.module.css` → requiere `@vitejs/plugin-react` (ya incluye CSS modules)
+> - Verificar `vite.config.ts` antes de asumir que un import type tendrá soporte runtime
+> - Los errores de "component is not a function" o pantallas en blanco con imports de assets suelen indicar falta de plugin
+
+### Referencias
+- Archivos modificados: `pacta_appweb/vite.config.ts`, `pacta_appweb/src/components/layout/AppSidebar.tsx`
+- Nuevo archivo: `pacta_appweb/src/components/common/ErrorBoundary.tsx`
+- Diseño: `docs/plans/2026-04-22-fix-svg-rendering-design.md`
+- Commits:
+  - `ebcc35b` feat: add vite-plugin-svgr for SVG React components
+  - `c93d9cd` config: enable SVGR plugin for SVG React component imports
+  - `3c98a57` feat: add ErrorBoundary component for graceful SVG failure handling
+  - `a25f911` fix: wrap logo in ErrorBoundary and add accessibility attributes
+  - `92b65b6` build: verify SVG plugin configuration works
+
+---
+
 ## [002] Inconsistencia de Tipos: any[] vs Tipos Strongly-Typed
 
 **Fecha**: 2026-04-20
