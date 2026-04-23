@@ -10,20 +10,24 @@
 
 PACTA es una plataforma de gestión de contratos con enfoque local-first, diseñada para organizaciones que requieren control total sobre sus datos. Distribuido como un único binario sin dependencias externas, se ejecuta completamente en tu máquina — sin nube, sin servidores de terceros, sin datos saliendo de tu infraestructura.
 
+🇺🇸 [Read in English →](../README.md)
+
 ---
 
 ## Características
 
 - **Gestión de Contratos** — Operaciones CRUD completas con borrado suave, seguimiento de versiones y flujos de estado
-- **Página de Inicio Moderna** — Landing page animada con Framer Motion, vitrina de características y acceso rápido al login
+- **Registro Híbrido** — Verificación por código de correo (vía SMTP local) o aprobación de administrador con asignación de empresa
 - **Gestión de Partes** — Registro centralizado de clientes, proveedores y firmantes autorizados
 - **Flujos de Aprobación** — Aprobaciones estructuradas de suplementos con estados de borrador, aprobado y activo
 - **Adjuntos de Documentos** — Vincula documentos de respaldo directamente a contratos y partes
 - **Notificaciones y Alertas** — Recordatorios automáticos para contratos por expirar y próximas renovaciones
-- **Pista de Auditoría** — Registro inmutable de todas las operaciones para cumplimiento y responsabilidad
+- **Pista de Auditoría** — Pantalla de historial completo con filtrado, paginación y registro de actividad de usuario; log inmutable de todas las operaciones para cumplimiento
 - **Control de Acceso Basado en Roles** — Permisos granulares entre roles de administrador, gerente, editor y visor
-- **Soporte Multi-Empresa** — Modos de empresa única y matriz + subsidiarias con aislamiento completo de datos
-- **Asistente de Configuración** — Configuración inicial guiada para usuario administrador, clientes y proveedores
+- **Soporte Multi-Empresa** — Aislamiento completo de datos entre empresas; contratos con ámbito por empresa con validación FK; soporte para modos de empresa única y multi-empresa
+- **Panel de Aprobación de Administrador** — Aprobaciones de usuarios pendientes con asignación de empresa y notificaciones por correo
+- **Asistente de Configuración** — Asistente multi-paso mejorado con configuración de empresa, selección de roles, paso de firmantes, modo tutorial y protección de rutas para configuración pendiente
+- **Página de Perfil** — Perfil de usuario con información de cuenta, cambio de contraseña, gestión de certificados y registro de actividad personal
 - **Tema Claro/Oscuro** — Alternancia de tema con conciencia del sistema y preferencias persistentes
 - **Cero Dependencias Externas** — Un único binario estático, SQLite embebido, sin servidor de base de datos necesario
 
@@ -39,8 +43,8 @@ Obtén la última versión para tu plataforma desde la página de [Releases](htt
 
 | Plataforma | Guía |
 |------------|-------|
-| 🐧 Linux (Producción) | [Guía de Instalación →](INSTALLATION-LINUX.md) |
-| 🪟 Windows (Local) | [Guía de Instalación →](INSTALLATION-WINDOWS.md) |
+| 🐧 Linux (Producción) | [Guía de Instalación →](docs/INSTALLATION-LINUX.md) |
+| 🪟 Windows (Local) | [Guía de Instalación →](docs/INSTALLATION-WINDOWS.md) |
 | 🍎 macOS | Descarga `.tar.gz` desde [Releases](https://github.com/PACTA-Team/pacta/releases), extrae, ejecuta `./pacta` |
 
 ### 3. Ejecutar
@@ -55,9 +59,11 @@ La aplicación se inicia en `http://127.0.0.1:3000` y abre tu navegador automát
 
 En la primera ejecución, PACTA abre un **Asistente de Configuración** en tu navegador. Navega a `/setup` (o espera la redirección automática) para configurar:
 
-1. **Crear cuenta de administrador** — Elige tu correo electrónico y contraseña
-2. **Agregar clientes** — Registra los clientes de tu organización (opcional, se puede omitir)
-3. **Agregar proveedores** — Registra proveedores (opcional, se puede omitir)
+1. **Información de la empresa** — Detalles básicos de la organización
+2. **Cuenta de administrador** — Correo electrónico y contraseña para el administrador principal
+3. **Selección de roles** — Elige roles y permisos de usuario
+4. **Registro de firmantes** — Agrega firmantes autorizados de contratos
+5. **Modo tutorial** — Recorrido guiado opcional
 
 Una vez completada la configuración, serás redirigido a la página de inicio de sesión. Usa las credenciales que creaste para iniciar sesión.
 
@@ -69,11 +75,11 @@ Una vez completada la configuración, serás redirigido a la página de inicio d
 
 | SO      | Arquitectura | Formato         | Guía |
 |---------|-------------|-----------------|------|
-| Linux   | amd64       | `.tar.gz`, `.deb` | [Guía Linux →](INSTALLATION-LINUX.md) |
-| Linux   | arm64       | `.tar.gz`, `.deb` | [Guía Linux →](INSTALLATION-LINUX.md) |
+| Linux   | amd64       | `.tar.gz`, `.deb` | [Guía Linux →](docs/INSTALLATION-LINUX.md) |
+| Linux   | arm64       | `.tar.gz`, `.deb` | [Guía Linux →](docs/INSTALLATION-LINUX.md) |
 | macOS   | amd64       | `.tar.gz`       | Extrae y ejecuta `./pacta` |
 | macOS   | arm64       | `.tar.gz`       | Extrae y ejecuta `./pacta` |
-| Windows | amd64       | `.tar.gz`       | [Guía Windows →](INSTALLATION-WINDOWS.md) |
+| Windows | amd64       | `.tar.gz`       | [Guía Windows →](docs/INSTALLATION-WINDOWS.md) |
 
 ---
 
@@ -120,20 +126,24 @@ PACTA sigue una arquitectura minimalista y autocontenida:
 
 ## Referencia de API
 
-| Método   | Ruta                  | Auth | Descripción              |
-|----------|-----------------------|------|--------------------------|
-| `POST`   | `/api/auth/login`     | No   | Autenticar usuario       |
-| `POST`   | `/api/auth/logout`    | Sí   | Destruir sesión          |
-| `GET`    | `/api/auth/me`        | Sí   | Obtener usuario actual   |
-| `GET`    | `/api/contracts`      | Sí   | Listar contratos         |
-| `POST`   | `/api/contracts`      | Sí   | Crear contrato           |
-| `GET`    | `/api/contracts/{id}` | Sí   | Obtener contrato por ID  |
-| `PUT`    | `/api/contracts/{id}` | Sí   | Actualizar contrato      |
-| `DELETE` | `/api/contracts/{id}` | Sí   | Borrado suave de contrato|
-| `GET`    | `/api/clients`        | Sí   | Listar clientes          |
-| `POST`   | `/api/clients`        | Sí   | Crear cliente            |
-| `GET`    | `/api/suppliers`      | Sí   | Listar proveedores       |
-| `POST`   | `/api/suppliers`      | Sí   | Crear proveedor          |
+| Método   | Ruta                  | Auth | Descripción                          |
+|----------|-----------------------|------|--------------------------------------|
+| `POST`   | `/api/auth/register`  | No   | Registrar nuevo usuario              |
+| `POST`   | `/api/auth/login`     | No   | Autenticar usuario                   |
+| `POST`   | `/api/auth/logout`    | Sí   | Destruir sesión                      |
+| `GET`    | `/api/auth/me`        | Sí   | Obtener usuario actual               |
+| `GET`    | `/api/contracts`      | Sí   | Listar contratos                     |
+| `POST`   | `/api/contracts`      | Sí   | Crear contrato                       |
+| `GET`    | `/api/contracts/{id}` | Sí   | Obtener contrato por ID              |
+| `PUT`    | `/api/contracts/{id}` | Sí   | Actualizar contrato                  |
+| `DELETE` | `/api/contracts/{id}` | Sí   | Borrado suave de contrato            |
+| `GET`    | `/api/clients`        | Sí   | Listar clientes                      |
+| `POST`   | `/api/clients`        | Sí   | Crear cliente                        |
+| `GET`    | `/api/suppliers`      | Sí   | Listar proveedores                   |
+| `POST`   | `/api/suppliers`      | Sí   | Crear proveedor                      |
+| `GET`    | `/api/setup`          | No   | Obtener estado de configuración      |
+| `GET`    | `/api/audit-logs`     | Sí   | Listar registros de auditoría con filtros |
+| `GET`    | `/api/audit-logs/contract/{id}` | Sí | Historial de auditoría para un contrato |
 
 ---
 

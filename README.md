@@ -22,11 +22,12 @@ PACTA is a local-first contract management platform designed for organizations t
 - **Approval Workflows** — Structured supplement approvals with draft, approved, and active states
 - **Document Attachments** — Link supporting documents directly to contracts and parties
 - **Notifications & Alerts** — Automated reminders for expiring contracts and upcoming renewals
-- **Audit Trail** — Immutable log of all operations for compliance and accountability
+- **Audit Trail** — Full-history screen with filtering, pagination, and user activity log; immutable log of all operations for compliance
 - **Role-Based Access Control** — Granular permissions across admin, manager, editor, and viewer roles
-- **Multi-Company Support** — Single company and parent + subsidiaries modes with complete data isolation
+- **Multi-Company Support** — Full data isolation across companies; contracts scoped by company with FK validation; support for single-company and multi-company modes
 - **Admin Approval Dashboard** — Pending user approvals with company assignment and email notifications
-- **Setup Wizard** — Guided initial configuration for admin user, clients, and suppliers
+- **Setup Wizard** — Enhanced multi-step wizard with company configuration, role selection, signers step, tutorial mode, and route protection for pending setup
+- **Profile Page** — User profile with account info, password change, certificate management, and personal activity log
 - **Dark/Light Theme** — System-aware theme toggle with persistent preferences
 - **Zero External Dependencies** — Single static binary, embedded SQLite, no database server required
 
@@ -58,9 +59,11 @@ The application starts on `http://127.0.0.1:3000` and opens your browser automat
 
 On first run, PACTA opens a **Setup Wizard** in your browser. Navigate to `/setup` (or wait for the automatic redirect) to configure:
 
-1. **Create admin account** — Choose your email and password
-2. **Add clients** — Register your organization's clients (optional, can be skipped)
-3. **Add suppliers** — Register suppliers (optional, can be skipped)
+1. **Company information** — Basic organization details
+2. **Admin account** — Email and password for the primary administrator
+3. **Role selection** — Choose user roles and permissions
+4. **Signers registration** — Add authorized contract signers
+5. **Tutorial mode** — Optional guided walkthrough
 
 Once setup is complete, you'll be redirected to the login page. Use the credentials you created to log in.
 
@@ -137,6 +140,9 @@ PACTA follows a minimalist, self-contained architecture:
 | `POST`   | `/api/clients`        | Yes  | Create client          |
 | `GET`    | `/api/suppliers`      | Yes  | List suppliers         |
 | `POST`   | `/api/suppliers`      | Yes  | Create supplier        |
+| `GET`    | `/api/setup`          | No   | Get setup status       |
+| `GET`    | `/api/audit-logs`     | Yes  | List audit logs with filters |
+| `GET`    | `/api/audit-logs/contract/{id}` | Yes | Audit history for a contract |
 
 ---
 

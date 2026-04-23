@@ -23,7 +23,7 @@ PACTA is a single static binary with zero runtime dependencies. It works on any 
 ### 1. Download the .deb package
 
 ```bash
-VERSION="0.18.0"
+VERSION="0.43.0"
 wget "https://github.com/PACTA-Team/pacta/releases/download/v${VERSION}/pacta_${VERSION}_linux_amd64.deb"
 wget "https://github.com/PACTA-Team/pacta/releases/download/v${VERSION}/pacta_${VERSION}_checksums.txt"
 ```
@@ -51,7 +51,7 @@ sudo dpkg -i pacta_${VERSION}_linux_amd64.deb
 pacta --version
 ```
 
-Expected output: `v0.18.0`
+Expected output: `v0.43.0`
 
 ---
 
@@ -60,7 +60,7 @@ Expected output: `v0.18.0`
 ### 1. Download the tarball
 
 ```bash
-VERSION="0.18.0"
+VERSION="0.43.0"
 ARCH="amd64"  # or "arm64"
 wget "https://github.com/PACTA-Team/pacta/releases/download/v${VERSION}/pacta_${VERSION}_linux_${ARCH}.tar.gz"
 wget "https://github.com/PACTA-Team/pacta/releases/download/v${VERSION}/pacta_${VERSION}_checksums.txt"
@@ -261,11 +261,16 @@ sudo firewall-cmd --reload
    ```
    Expected: `200`
 
-4. Open your browser and navigate to `https://pacta.example.com`
+4. Open your browser and navigate to `https://pacta.example.com` (or `http://127.0.0.1:3000` if testing locally). The Setup Wizard will launch automatically on first run.
 
-5. Log in with default credentials:
-   - Email: `admin@pacta.local`
-   - Password: `admin123`
+5. Complete the Setup Wizard:
+   1. Configure company information (name, address, tax ID)
+   2. Create admin account (email + password)
+   3. Select role for admin user
+   4. Register authorized signers (optional, can skip)
+   5. Finish wizard — you'll be redirected to the login page automatically
+
+6. Log in with the admin credentials you created.
 
 ---
 
@@ -274,7 +279,7 @@ sudo firewall-cmd --reload
 ### Debian Package
 
 ```bash
-VERSION="0.19.0"  # New version
+VERSION="0.43.0"  # New version
 wget "https://github.com/PACTA-Team/pacta/releases/download/v${VERSION}/pacta_${VERSION}_linux_amd64.deb"
 sudo dpkg -i pacta_${VERSION}_linux_amd64.deb
 sudo systemctl restart pacta
@@ -284,7 +289,7 @@ pacta --version
 ### Tarball
 
 ```bash
-VERSION="0.19.0"  # New version
+VERSION="0.43.0"  # New version
 wget "https://github.com/PACTA-Team/pacta/releases/download/v${VERSION}/pacta_${VERSION}_linux_amd64.tar.gz"
 tar xzf pacta_${VERSION}_linux_amd64.tar.gz
 sudo mv pacta /usr/local/bin/pacta
