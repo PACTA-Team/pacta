@@ -283,7 +283,6 @@ func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int)
 // Returns a temporary URL (presigned-like) and storage key for later cleanup.
 // Used by ContractForm for draft document uploads before contract creation.
 func (h *Handler) uploadTempDocument(w http.ResponseWriter, r *http.Request) {
-	companyID := h.GetCompanyID(r)
 
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		if strings.Contains(err.Error(), "request body too large") {
