@@ -130,6 +130,8 @@ type createContractRequest struct {
 	HasConfidentiality *bool  `json:"has_confidentiality,omitempty"`
 	Guarantees        *string `json:"guarantees"`
 	RenewalType       *string `json:"renewal_type"`
+	DocumentURL       *string `json:"document_url"`        // Required: uploaded temporary document URL
+	DocumentKey       *string `json:"document_key"`        // For tracking/cleanup
 }
 
 func (h *Handler) generateInternalID(companyID int) (string, error) {
@@ -219,6 +221,16 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate document upload (required)
+	if req.DocumentURL == nil || *req.DocumentURL == "" {
+		h.Error(w, http.StatusBadRequest, "document_url is required")
+		return
+	}
+	if req.DocumentKey == nil || *req.DocumentKey == "" {
+		h.Error(w, http.StatusBadRequest, "document_key is required")
+		return
+	}
+
 	internalID, err := h.generateInternalID(actualCompanyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to generate internal ID")
@@ -301,104 +313,128 @@ func (h *Handler) updateContract(w http.ResponseWriter, r *http.Request, id int)
 		return
 	}
 
-	// Validate foreign key references before UPDATE
-	var clientExists int
-	if err := h.DB.QueryRow("SELECT COUNT(*) FROM clients WHERE id = ? AND deleted_at IS NULL", req.ClientID).Scan(&clientExists); err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to update contract")
-		return
-	}
-	if clientExists == 0 {
+	// Validate client belongs to user's company
+	var clientCompanyID int
+	if err := h.DB.QueryRow("SELECT company_id FROM clients WHERE id = ? AND deleted_at IS NULL", req.ClientID).Scan(&clientCompanyID); err != nil {
 		h.Error(w, http.StatusBadRequest, "client not found")
 		return
 	}
-
-	var supplierExists int
-	if err := h.DB.QueryRow("SELECT COUNT(*) FROM suppliers WHERE id = ? AND deleted_at IS NULL", req.SupplierID).Scan(&supplierExists); err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to update contract")
+	if clientCompanyID != companyID {
+		h.Error(w, http.StatusBadRequest, "client does not belong to your company")
 		return
 	}
-	if supplierExists == 0 {
+
+	// Validate supplier belongs to user's company
+	var supplierCompanyID int
+	if err := h.DB.QueryRow("SELECT company_id FROM suppliers WHERE id = ? AND deleted_at IS NULL", req.SupplierID).Scan(&supplierCompanyID); err != nil {
 		h.Error(w, http.StatusBadRequest, "supplier not found")
 		return
 	}
-
-	// Fetch previous state for audit
-	var prevTitle, prevStartDate, prevEndDate, prevType, prevStatus string
-	var prevClientID, prevSupplierID int
-	var prevAmount float64
-	var prevDescription *string
-	var prevClientSignerID, prevSupplierSignerID *int
-	var prevObject, prevFulfillmentPlace, prevDisputeResolution, prevGuarantees, prevRenewalType *string
-	err := h.DB.QueryRow(`
-		SELECT title, client_id, supplier_id, client_signer_id, supplier_signer_id,
-		       start_date, end_date, amount, type, status, description,
-		       object, fulfillment_place, dispute_resolution, guarantees, renewal_type
-		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
-	`, id, companyID).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
-		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription,
-		&prevObject, &prevFulfillmentPlace, &prevDisputeResolution, &prevGuarantees, &prevRenewalType)
-	if err != nil {
-		h.Error(w, http.StatusNotFound, "contract not found")
+	if supplierCompanyID != companyID {
+		h.Error(w, http.StatusBadRequest, "supplier does not belong to your company")
 		return
 	}
 
-	_, err = h.DB.Exec(`
-		UPDATE contracts SET title=?, client_id=?, supplier_id=?,
-			client_signer_id=?, supplier_signer_id=?, start_date=?, end_date=?,
-			amount=?, type=?, status=?, description=?, object=?, fulfillment_place=?,
-			dispute_resolution=?, has_confidentiality=?, guarantees=?, renewal_type=?,
-			updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL AND company_id = ?
-	`, req.Title, req.ClientID, req.SupplierID, req.ClientSignerID, req.SupplierSignerID,
-		req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description,
-		req.Object, req.FulfillmentPlace, req.DisputeResolution, req.HasConfidentiality,
-		req.Guarantees, req.RenewalType, id, companyID)
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to update contract")
-		return
-	}
+  // Fetch previous state for audit
+  var prevTitle, prevStartDate, prevEndDate, prevType, prevStatus string
+  var prevClientID, prevSupplierID int
+  var prevAmount float64
+  var prevDescription, prevClientSignerID, prevSupplierSignerID, prevObject, prevFulfillmentPlace, prevDisputeResolution, prevGuarantees, prevRenewalType, prevDocumentURL, prevDocumentKey *string
+  err := h.DB.QueryRow(`
+  		SELECT title, client_id, supplier_id, client_signer_id, supplier_signer_id,
+  		       start_date, end_date, amount, type, status, description,
+  		       object, fulfillment_place, dispute_resolution, guarantees, renewal_type,
+  		       document_url, document_key
+  		FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?
+  `, id, companyID).Scan(&prevTitle, &prevClientID, &prevSupplierID, &prevClientSignerID, &prevSupplierSignerID,
+  		&prevStartDate, &prevEndDate, &prevAmount, &prevType, &prevStatus, &prevDescription,
+  		&prevObject, &prevFulfillmentPlace, &prevDisputeResolution, &prevGuarantees, &prevRenewalType,
+  		&prevDocumentURL, &prevDocumentKey)
+  if err != nil {
+  	h.Error(w, http.StatusNotFound, "contract not found")
+  	return
+  }
 
-	var prevState map[string]interface{}
-	if prevTitle != "" {
-		prevState = map[string]interface{}{
-			"id":                    id,
-			"title":                 prevTitle,
-			"client_id":             prevClientID,
-			"supplier_id":           prevSupplierID,
-			"client_signer_id":      prevClientSignerID,
-			"supplier_signer_id":    prevSupplierSignerID,
-			"start_date":            prevStartDate,
-			"end_date":              prevEndDate,
-			"amount":              prevAmount,
-			"type":                prevType,
-			"status":              prevStatus,
-			"description":         prevDescription,
-			"object":              prevObject,
-			"fulfillment_place":    prevFulfillmentPlace,
-			"dispute_resolution":  prevDisputeResolution,
-			"guarantees":        prevGuarantees,
-			"renewal_type":       prevRenewalType,
-		}
-	}
-	h.auditLog(r, h.getUserID(r), companyID, "update", "contract", &id, prevState, map[string]interface{}{
-		"title":               req.Title,
-		"client_id":           req.ClientID,
-		"supplier_id":         req.SupplierID,
-		"client_signer_id":    req.ClientSignerID,
-		"supplier_signer_id": req.SupplierSignerID,
-		"start_date":          req.StartDate,
-		"end_date":            req.EndDate,
-		"amount":             req.Amount,
-		"type":               req.Type,
-		"status":             req.Status,
-		"description":        req.Description,
-		"object":             req.Object,
-		"fulfillment_place": req.FulfillmentPlace,
-		"dispute_resolution": req.DisputeResolution,
-		"guarantees":        req.Guarantees,
-		"renewal_type":       req.RenewalType,
-	})
-	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+  // Build UPDATE SET dynamically based on provided fields
+  var sets []string
+  var args []interface{}
+
+  // Always update these fields
+  sets = append(sets, "title=?", "client_id=?", "supplier_id=?", "client_signer_id=?", "supplier_signer_id=?", "start_date=?", "end_date=?", "amount=?", "type=?", "status=?", "description=?", "object=?", "fulfillment_place=?", "dispute_resolution=?", "has_confidentiality=?", "guarantees=?", "renewal_type=?", "updated_at=CURRENT_TIMESTAMP")
+  args = append(args, req.Title, req.ClientID, req.SupplierID, req.ClientSignerID, req.SupplierSignerID, req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace, req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType)
+
+  // Conditionally update document_url and document_key if provided
+  if req.DocumentURL != nil && *req.DocumentURL != "" {
+  	// Validate HTTPS
+  	if !strings.HasPrefix(*req.DocumentURL, "https://") {
+  		h.Error(w, http.StatusBadRequest, "document_url must be HTTPS")
+  		return
+  	}
+  	sets = append(sets, "document_url=?", "document_key=?")
+  	args = append(args, *req.DocumentURL, *req.DocumentKey)
+  }
+
+  args = append(args, id, companyID)
+
+  query := fmt.Sprintf(`UPDATE contracts SET %s WHERE id=? AND deleted_at IS NULL AND company_id = ?`, strings.Join(sets, ", "))
+  _, err = h.DB.Exec(query, args...)
+  if err != nil {
+  	h.Error(w, http.StatusInternalServerError, "failed to update contract")
+  	return
+  }
+
+  var prevState map[string]interface{}
+  if prevTitle != "" {
+  	prevState = map[string]interface{}{
+  		"id":                    id,
+  		"title":                 prevTitle,
+  		"client_id":             prevClientID,
+  		"supplier_id":           prevSupplierID,
+  		"client_signer_id":      prevClientSignerID,
+  		"supplier_signer_id":    prevSupplierSignerID,
+  		"start_date":            prevStartDate,
+  		"end_date":              prevEndDate,
+  		"amount":              prevAmount,
+  		"type":                prevType,
+  		"status":              prevStatus,
+  		"description":         prevDescription,
+  		"object":              prevObject,
+  		"fulfillment_place":    prevFulfillmentPlace,
+  		"dispute_resolution":  prevDisputeResolution,
+  		"guarantees":        prevGuarantees,
+  		"renewal_type":       prevRenewalType,
+  		"document_url":        prevDocumentURL,
+  		"document_key":        prevDocumentKey,
+  	}
+  }
+
+  newState := map[string]interface{}{
+  	"title":               req.Title,
+  	"client_id":           req.ClientID,
+  	"supplier_id":         req.SupplierID,
+  	"client_signer_id":    req.ClientSignerID,
+  	"supplier_signer_id": req.SupplierSignerID,
+  	"start_date":          req.StartDate,
+  	"end_date":            req.EndDate,
+  	"amount":             req.Amount,
+  	"type":               req.Type,
+  	"status":             req.Status,
+  	"description":        req.Description,
+  	"object":             req.Object,
+  	"fulfillment_place": req.FulfillmentPlace,
+  	"dispute_resolution": req.DisputeResolution,
+  	"guarantees":        req.Guarantees,
+  	"renewal_type":       req.RenewalType,
+  }
+
+  // Include document fields if provided
+  if req.DocumentURL != nil && *req.DocumentURL != "" {
+  	newState["document_url"] = *req.DocumentURL
+  	newState["document_key"] = *req.DocumentKey
+  }
+
+  h.auditLog(r, h.getUserID(r), companyID, "update", "contract", &id, prevState, newState)
+  h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *Handler) deleteContract(w http.ResponseWriter, r *http.Request, id int) {
