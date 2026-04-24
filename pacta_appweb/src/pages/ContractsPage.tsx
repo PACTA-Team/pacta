@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import { Contract, Client, Supplier, Company, ContractType, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
+import type { ContractSubmitData } from '@/types/contract';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { companiesAPI } from '@/lib/companies-api';
@@ -18,6 +19,8 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import ContractForm from '@/components/contracts/ContractForm';
+import { useOwnCompanies } from '@/hooks/useOwnCompanies';
+import { useCompanyFilter } from '@/hooks/useCompanyFilter';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +47,8 @@ export default function ContractsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [partyFilter, setPartyFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
-  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
+  const [viewRole, setViewRole] = useState<'client' | 'supplier' | null>(null);
+  const { ownCompanies, selectedOwnCompany, setSelectedOwnCompany, loading: loadingCompanies } = useOwnCompanies();
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -52,16 +56,14 @@ export default function ContractsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [contractsData, clientsData, suppliersData, companiesData] = await Promise.all([
+      const [contractsData, clientsData, suppliersData] = await Promise.all([
         contractsAPI.list(),
         clientsAPI.list(),
         suppliersAPI.list(),
-        companiesAPI.listOwnCompanies(),
       ]);
       setContracts(contractsData as any[]);
       setClients(clientsData as any[]);
       setSuppliers(suppliersData as any[]);
-      setOwnCompanies(companiesData as Company[]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load data');
     }
@@ -78,32 +80,18 @@ export default function ContractsPage() {
     }
   }, [searchParams]);
 
-  const filteredContracts = useMemo(() => {
-    return contracts.filter((contract: any) => {
-      const matchesSearch =
-        searchTerm === '' ||
-        contract.contract_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.description?.toLowerCase().includes(searchTerm.toLowerCase());
+  // Determine effective company filter: viewRole takes precedence over specific company ID
+  const effectiveCompanyFilter = viewRole || companyFilter;
 
-      const matchesStatus = statusFilter === 'all' || contract.status === statusFilter;
-      const matchesType = typeFilter === 'all' || contract.type === typeFilter;
+  // Use the useCompanyFilter hook with ourRole parameter
+  const filteredContracts = useCompanyFilter(
+    contracts,
+    currentCompany,
+    effectiveCompanyFilter,
+    viewRole || undefined
+  );
 
-      if (companyFilter !== 'all' && currentCompany) {
-        const isMyCompany = String(contract.client_id) === String(currentCompany.id) ||
-          String(contract.supplier_id) === String(currentCompany.id);
-        if (companyFilter === 'client') {
-          return isMyCompany;
-        }
-        if (companyFilter === 'other') {
-          return !isMyCompany;
-        }
-      }
-
-      return matchesSearch && matchesStatus && matchesType;
-    });
-  }, [contracts, searchTerm, statusFilter, typeFilter, companyFilter, currentCompany]);
-
-  const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internal_id' | 'created_by' | 'created_at' | 'updated_at'>) => {
+  const handleCreateOrUpdate = async (data: ContractSubmitData) => {
     try {
       if (editingContract) {
         const updateData: UpdateContractRequest = {
@@ -123,6 +111,8 @@ export default function ContractsPage() {
           has_confidentiality: data.has_confidentiality,
           guarantees: data.guarantees,
           renewal_type: data.renewal_type,
+          document_url: data.document_url ? String(data.document_url) : undefined,
+          document_key: data.document_key ? String(data.document_key) : undefined,
         };
         await contractsAPI.update(editingContract.id, updateData);
         toast.success(t('updateSuccess'));
@@ -145,6 +135,8 @@ export default function ContractsPage() {
           has_confidentiality: data.has_confidentiality,
           guarantees: data.guarantees,
           renewal_type: data.renewal_type,
+          document_url: data.document_url ? String(data.document_url) : undefined,
+          document_key: data.document_key ? String(data.document_key) : undefined,
         };
         await contractsAPI.create(createData);
         toast.success(t('createSuccess'));
@@ -269,7 +261,17 @@ export default function ContractsPage() {
                     <SelectItem value="otro">{t('contractTypes.otro')}</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={partyFilter} onValueChange={setPartyFilter}>
+                <Select value={partyFilter} onValueChange={(value) => {
+                  setPartyFilter(value);
+                  // When selecting "Como cliente" or "Como proveedor", set viewRole accordingly
+                  if (value === 'client') {
+                    setViewRole('client');
+                  } else if (value === 'supplier') {
+                    setViewRole('supplier');
+                  } else {
+                    setViewRole(null);
+                  }
+                }}>
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Party" />
                   </SelectTrigger>
@@ -280,12 +282,15 @@ export default function ContractsPage() {
                   </SelectContent>
                 </Select>
                 {isMultiCompany && (
-                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                  <Select value={companyFilter} onValueChange={(value) => {
+                    setCompanyFilter(value);
+                    setViewRole(null); // Clear viewRole when selecting specific company
+                  }}>
                     <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder={t('company')} />
                     </SelectTrigger>
                     <SelectContent>
-<SelectItem value="all">{t('allStatus')}</SelectItem>
+                      <SelectItem value="all">{t('allCompanies')}</SelectItem>
                       {ownCompanies && ownCompanies.map((company) => (
                         <SelectItem key={company.id} value={company.id.toString()}>
                           {company.name}
@@ -374,7 +379,7 @@ export default function ContractsPage() {
                         );
                       })
                     )}
-                </TableBody>
+                  </TableBody>
                 </Table>
               </div>
             </CardContent>

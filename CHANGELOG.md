@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Contract Form Refactor — Complete Data & Tests** — Overhauled contract creation/editing with full field coverage and comprehensive testing:
+  - Added all missing contract fields to form: contract_number, dates, amount, type, status, description, object, fulfillment_place, dispute_resolution, guarantees, renewal_type, has_confidentiality
+  - Unified client/supplier form via `ContraparteForm` component with dynamic role-based labels
+  - `ContractFormWrapper` now integrates all fields via `onFieldChange` callback, with required validation and `isSubmitting` state
+  - Document HEAD verification now includes 5s timeout and AbortController cancellation
+  - New `ContractDocumentUpload` component for mandatory document upload with TTL handling
+  - New hooks: `useOwnCompanies`, `useCompanyFilter` for multi-company isolation
+  - New backend validation: `updateContract` now enforces company ownership on client and supplier (security fix)
+  - New optimized endpoint `GET /api/signers?company_id&company_type` for efficient signer fetching
+  - SQLite migration adds `document_url` column to contracts table
+  - Comprehensive test coverage:
+    * Unit tests for ContractFormWrapper (validation, isSubmitting, HEAD verification edge cases)
+    * E2E tests with Playwright for loading states, document expiry, optimized fetch
+  - Playwright test infrastructure: config, setupTests, env test
+
+### Fixed
+- **Security — Contract update ownership bypass** — `updateContract` now verifies that client and supplier belong to the user's company (CVE-like)
+- **Incomplete contract form** — Form could not create/update contracts due to missing fields; now all required fields are present and validated
+- **Document verification hangs** — HEAD request now times out after 5s and respects AbortController
+- **Dead code** — Removed unreachable code block in `SupplementsPage.tsx` (lines 456-489)
+
+
 ## [0.43.0] - 2026-04-23
 
 ### Added

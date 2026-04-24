@@ -123,6 +123,8 @@ export interface Contract {
   has_confidentiality?: boolean;
   guarantees?: string;
   renewal_type?: string;
+  document_url?: string;   // URL del documento almacenado (S3, etc.)
+  document_key?: string;   // Storage key para cleanup
   created_by?: number;
   created_at: string;
   updated_at: string;

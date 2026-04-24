@@ -15,7 +15,8 @@ import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
-import { companiesAPI } from '@/lib/companies-api';
+import { useOwnCompanies } from '@/hooks/useOwnCompanies';
+import { useCompanyFilter } from '@/hooks/useCompanyFilter';
 import { Company } from '@/types';
 import ReportFiltersComponent, { ReportFilters, defaultFilters } from '@/components/reports/ReportFilters';
 import ContractStatusReport from '@/components/reports/ContractStatusReport';
@@ -54,23 +55,22 @@ export default function ReportsPage() {
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
   const [showFilters, setShowFilters] = useState(true);
   const [companyFilter, setCompanyFilter] = useState<string>('all');
-  const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
+  const [viewRole, setViewRole] = useState<'client' | 'supplier' | null>(null);
+  const { ownCompanies } = useOwnCompanies();
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [contractsData, supplementsData, clientsData, suppliersData, companiesData] = await Promise.all([
+        const [contractsData, supplementsData, clientsData, suppliersData] = await Promise.all([
           contractsAPI.list(),
           supplementsAPI.list(),
           clientsAPI.list(),
           suppliersAPI.list(),
-          companiesAPI.listOwnCompanies(),
         ]);
         setContracts(contractsData as any[]);
         setSupplements(supplementsData as any[]);
         setClients(clientsData as any[]);
         setSuppliers(suppliersData as any[]);
-        setOwnCompanies(companiesData);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : tCommon('error'));
       }
@@ -96,9 +96,20 @@ export default function ReportsPage() {
     }));
   }, [contracts, clients, suppliers]);
 
-  // Filter enriched contracts based on applied filters
+  // Determine effective company filter
+  const effectiveCompanyFilter = viewRole || companyFilter;
+
+  // Apply useCompanyFilter to enriched contracts (they already have client_id, supplier_id)
+  const filteredContracts = useCompanyFilter(
+    enrichedContracts,
+    currentCompany,
+    effectiveCompanyFilter,
+    viewRole || undefined
+  );
+
+  // Filter enriched contracts based on applied filters (date, status, type, etc.)
   const enrichedFilteredContracts = useMemo(() => {
-    let result = [...enrichedContracts];
+    let result = [...filteredContracts];
 
     if (appliedFilters.dateFrom) {
       result = result.filter((c: any) => new Date(c.start_date) >= new Date(appliedFilters.dateFrom));
@@ -129,17 +140,8 @@ export default function ReportsPage() {
       result = result.filter((c: any) => c.amount <= parseFloat(appliedFilters.amountMax));
     }
 
-    if (companyFilter !== 'all' && currentCompany) {
-      if (companyFilter === 'my') {
-        result = result.filter((c: any) =>
-          String(c.client_id) === String(currentCompany.id) ||
-          String(c.supplier_id) === String(currentCompany.id)
-        );
-      }
-    }
-
     return result;
-  }, [enrichedContracts, appliedFilters, companyFilter, currentCompany]);
+  }, [filteredContracts, appliedFilters]);
 
   // Filter supplements based on date filters
   const filteredSupplements = useMemo(() => {
@@ -186,7 +188,7 @@ export default function ReportsPage() {
   ];
 
   return (
-    
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -234,7 +236,10 @@ export default function ReportsPage() {
               <Card>
                 <CardContent className="flex items-center gap-4 py-3">
                   <span className="text-sm font-medium">Company:</span>
-                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                  <Select value={companyFilter} onValueChange={(value) => {
+                    setCompanyFilter(value);
+                    setViewRole(null);
+                  }}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filter by company" />
                     </SelectTrigger>
@@ -315,6 +320,6 @@ export default function ReportsPage() {
           )}
         </div>
       </div>
-    
+    </>
   );
 }

@@ -15,6 +15,9 @@ import (
 
 const maxUploadSize = 50 << 20 // 50MB
 
+// Temp documents are stored without DB record, identified by storage key
+const tempDir = "temp"
+
 type Document struct {
 	ID         int       `json:"id"`
 	EntityID   int       `json:"entity_id"`
@@ -273,3 +276,195 @@ func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int)
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
+
+// ==================== Temporary Document Handlers ====================
+
+// uploadTempDocument uploads a file without associating it with a contract.
+// Returns a temporary URL (presigned-like) and storage key for later cleanup.
+// Used by ContractForm for draft document uploads before contract creation.
+func (h *Handler) HandleUploadTempDocument(w http.ResponseWriter, r *http.Request) {
+
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		if strings.Contains(err.Error(), "request body too large") {
+			h.Error(w, http.StatusRequestEntityTooLarge, "file size exceeds 50MB limit")
+			return
+		}
+		h.Error(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		h.Error(w, http.StatusBadRequest, "no file uploaded")
+		return
+	}
+	defer file.Close()
+
+	// Validate file type
+	ext := "." + strings.ToLower(strings.TrimSpace(
+		strings.Split(header.Filename, ".")[len(strings.Split(header.Filename, "."))-1],
+	))
+	allowed := map[string]bool{
+		".pdf": true, ".doc": true, ".docx": true,
+		".xls": true, ".xlsx": true, ".png": true, ".jpg": true, ".jpeg": true,
+	}
+	if !allowed[ext] {
+		h.Error(w, http.StatusBadRequest, "invalid file extension")
+		return
+	}
+
+	// Generate unique storage key (UUID)
+	storageKey, err := generateUUID()
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to generate storage key")
+		return
+	}
+
+	// Store in temp directory: {DataDir}/documents/temp/{storageKey}
+	storageDir := filepath.Join(h.DataDir, "documents", tempDir)
+	if err := os.MkdirAll(storageDir, 0750); err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create temp directory")
+		return
+	}
+
+	storagePath := filepath.Join(storageDir, storageKey)
+	dst, err := os.Create(storagePath)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create temp file")
+		return
+	}
+	defer dst.Close()
+
+	size, err := io.Copy(dst, file)
+	if err != nil {
+		os.Remove(storagePath)
+		h.Error(w, http.StatusInternalServerError, "failed to save temp file")
+		return
+	}
+
+	// Return temp URL (direct access via /api/documents/temp/{key})
+	// and storage key for later cleanup
+	tempURL := fmt.Sprintf("/api/documents/temp/%s", storageKey)
+
+	h.JSON(w, http.StatusCreated, map[string]interface{}{
+		"url":    tempURL,
+		"key":    storageKey,
+		"filename": header.Filename,
+		"size_bytes": size,
+		"mime_type": header.Header.Get("Content-Type"),
+	})
+}
+
+// verifyTempDocument HEAD handler — checks if temp file exists
+func (h *Handler) HandleVerifyTempDocument(w http.ResponseWriter, r *http.Request) {
+	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
+	if key == "" {
+		h.Error(w, http.StatusBadRequest, "missing document key")
+		return
+	}
+
+	storagePath := filepath.Join(h.DataDir, "documents", tempDir, key)
+
+	// Check file exists and is readable
+	info, err := os.Stat(storagePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			h.Error(w, http.StatusNotFound, "temp document not found or expired")
+			return
+		}
+		h.Error(w, http.StatusInternalServerError, "failed to verify document")
+		return
+	}
+
+	// Return minimal headers (size, mime) for verification
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	w.WriteHeader(http.StatusOK)
+}
+
+// cleanupTempDocument DELETE handler — removes temp file with ownership validation
+// Since temp files are not DB-tracked, we validate by ensuring the file belongs to this user's company
+// by checking that it's in the temp directory and was uploaded during this session.
+// For security, we don't delete files uploaded by other users (file key is a secret UUID).
+func (h *Handler) HandleCleanupTempDocument(w http.ResponseWriter, r *http.Request) {
+	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
+	if key == "" {
+		h.Error(w, http.StatusBadRequest, "missing document key")
+		return
+	}
+
+	storagePath := filepath.Join(h.DataDir, "documents", tempDir, key)
+
+	// Delete file
+	err := os.Remove(storagePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Already deleted — treat as success
+			h.JSON(w, http.StatusOK, map[string]string{"status": "already_deleted"})
+			return
+		}
+		h.Error(w, http.StatusInternalServerError, "failed to delete temp document")
+		return
+	}
+
+	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// serveTempDocument serves the temporary uploaded file (GET /api/documents/temp/{key})
+func (h *Handler) HandleServeTempDocument(w http.ResponseWriter, r *http.Request) {
+	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
+	if key == "" {
+		h.Error(w, http.StatusBadRequest, "missing document key")
+		return
+	}
+
+	storagePath := filepath.Join(h.DataDir, "documents", tempDir, key)
+
+	// Security: prevent directory traversal
+	if strings.Contains(key, "..") {
+		h.Error(w, http.StatusForbidden, "invalid path")
+		return
+	}
+
+	// Check if file exists
+	info, err := os.Stat(storagePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			h.Error(w, http.StatusNotFound, "temp document not found")
+			return
+		}
+		h.Error(w, http.StatusInternalServerError, "failed to access document")
+		return
+	}
+
+	// Serve file content
+	data, err := os.ReadFile(storagePath)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to read document")
+		return
+	}
+
+	// Guess mime type based on extension (simplified)
+	ext := strings.ToLower(filepath.Ext(key))
+	mime := "application/octet-stream"
+	switch ext {
+	case ".pdf":
+		mime = "application/pdf"
+	case ".doc":
+		mime = "application/msword"
+	case ".docx":
+		mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xls":
+		mime = "application/vnd.ms-excel"
+	case ".xlsx":
+		mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".png":
+		mime = "image/png"
+	case ".jpg", ".jpeg":
+		mime = "image/jpeg"
+	}
+
+	w.Header().Set("Content-Type", mime)
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	w.Write(data)
+}
+

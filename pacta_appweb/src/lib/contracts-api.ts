@@ -34,6 +34,8 @@ export interface CreateContractRequest {
   has_confidentiality?: boolean;
   guarantees?: string;
   renewal_type?: string;
+  document_url?: string;
+  document_key?: string;
 }
 
 export interface UpdateContractRequest {
@@ -54,6 +56,8 @@ export interface UpdateContractRequest {
   has_confidentiality?: boolean;
   guarantees?: string;
   renewal_type?: string;
+  document_url?: string;
+  document_key?: string;
 }
 
 export const contractsAPI = {

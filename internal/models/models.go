@@ -86,6 +86,8 @@ type Contract struct {
 	HasConfidentiality *bool      `json:"has_confidentiality,omitempty"`
 	Guarantees        *string    `json:"guarantees,omitempty"`
 	RenewalType       *string    `json:"renewal_type,omitempty"`
+	DocumentURL       *string    `json:"document_url,omitempty"`
+	DocumentKey       *string    `json:"document_key,omitempty"`
 	CreatedBy         *int       `json:"created_by,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`

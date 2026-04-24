@@ -1,3 +1,5 @@
+import logger from './logger';
+
 interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -37,7 +39,7 @@ async function apiRequest<T = any>(
     if (error instanceof ApiError) {
       throw error;
     }
-    console.error('API request error:', error);
+    logger.error('API request error:', error);
     throw new ApiError(500, 'Network error or invalid response');
   }
 }
