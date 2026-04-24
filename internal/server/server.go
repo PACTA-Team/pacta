@@ -53,6 +53,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		"/api/setup/status",
 		"/api/setup",
 	}))
+	r.Use(middleware.RateLimit())
 
 	// Auth routes (no auth required, exempt from CSRF via global config)
 	r.Post("/api/auth/login", h.HandleLogin)
