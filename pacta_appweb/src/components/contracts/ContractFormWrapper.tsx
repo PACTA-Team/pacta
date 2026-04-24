@@ -17,6 +17,7 @@ import { ClientInlineModal } from '@/components/modals/ClientInlineModal';
 import { SupplierInlineModal } from '@/components/modals/SupplierInlineModal';
 import { SignerInlineModal } from '@/components/modals/SignerInlineModal';
 import { upload } from '@/lib/upload';
+import logger from '@/lib/logger';
 
 interface ContractFormWrapperProps {
   contract?: Contract | null;
@@ -162,21 +163,20 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
     };
   }, [selectedOwnCompany, ourRole, formDataRef.current.client_id, formDataRef.current.supplier_id]);
 
-  // ─── Handlers ───
-
+   // ─── Handlers ───
    const handleCompanyChange = (value: string) => {
-     const company = ownCompanies.find(c => c.id === parseInt(value));
-     if (company) {
-       setSelectedOwnCompany(company);
-       // Reset form state
-       formDataRef.current = {};
-       setPendingDocument(null);
-       toast.success('Documento reiniciado por cambio de empresa');
-       setClients([]);
-       setSuppliers([]);
-       setSigners([]);
-     }
-   };
+      const company = ownCompanies.find(c => c.id === parseInt(value));
+      if (company) {
+        setSelectedOwnCompany(company);
+        // Reset form state
+        formDataRef.current = {};
+        setPendingDocument(null);
+        toast.success('Documento reiniciado por cambio de empresa');
+        setClients([]);
+        setSuppliers([]);
+        setSigners([]);
+      }
+    };
 
   const handleRoleChange = (value: 'client' | 'supplier') => {
     setOurRole(value);
@@ -193,17 +193,17 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
     setSigners([]); // Will be repopulated by effect
   };
 
-   const handleSupplierIdChange = (supplierId: string) => {
-     formDataRef.current.supplier_id = supplierId;
-     formDataRef.current.client_id = undefined;
-     // Reload signers for this supplier
-     setSigners([]); // Will be repopulated by effect
-   };
+    const handleSupplierIdChange = (supplierId: string) => {
+      formDataRef.current.supplier_id = supplierId;
+      formDataRef.current.client_id = undefined;
+      // Reload signers for this supplier
+      setSigners([]); // Will be repopulated by effect
+    };
 
-   const handleClientSignerIdChange = (clientSignerId: string) => {
-     formDataRef.current.client_signer_id = clientSignerId;
-     formDataRef.current.supplier_signer_id = undefined;
-   };
+    const handleClientSignerIdChange = (clientSignerId: string) => {
+      formDataRef.current.client_signer_id = clientSignerId;
+      formDataRef.current.supplier_signer_id = undefined;
+    };
 
     const handleSupplierSignerIdChange = (supplierSignerId: string) => {
       formDataRef.current.supplier_signer_id = supplierSignerId;
@@ -218,15 +218,17 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
       setPendingDocument(doc);
     };
 
-  const handleRemoveDocument = () => {
-    if (pendingDocument) {
-      upload.cleanupTemporary(pendingDocument.key).catch(console.error);
-    }
-    setPendingDocument(null);
-  };
+    const handleRemoveDocument = () => {
+      if (pendingDocument) {
+        upload.cleanupTemporary(pendingDocument.key).catch(err =>
+          logger.error('Failed to cleanup temp document on remove:', err)
+        );
+      }
+      setPendingDocument(null);
+    };
 
-   // ─── Submit with Document Verification ───
-   const handleSubmit = async (e: React.FormEvent) => {
+    // ─── Submit with Document Verification ───
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedOwnCompany) {
         toast.error('Seleccione una empresa');
@@ -234,11 +236,34 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
       }
 
       // Validate required contract fields
-      const requiredFields: (keyof ContractSubmitData)[] = ['contract_number', 'start_date', 'end_date', 'amount', 'type', 'status'];
+      const requiredFields: (keyof ContractSubmitData)[] = [
+        'contract_number', 'start_date', 'end_date', 'amount', 'type', 'status'
+      ];
       for (const field of requiredFields) {
         const value = formDataRef.current[field];
         if (value === undefined || value === '' || value === null) {
           toast.error(`Field ${field} is required`);
+          return;
+        }
+      }
+
+      // Validate counterparty and signer based on role
+      if (ourRole === 'client') {
+        if (!formDataRef.current.supplier_id) {
+          toast.error('Seleccione un proveedor');
+          return;
+        }
+        if (!formDataRef.current.client_signer_id) {
+          toast.error('Seleccione un representante autorizado del cliente');
+          return;
+        }
+      } else {
+        if (!formDataRef.current.client_id) {
+          toast.error('Seleccione un cliente');
+          return;
+        }
+        if (!formDataRef.current.supplier_signer_id) {
+          toast.error('Seleccione un representante autorizado del proveedor');
           return;
         }
       }
@@ -288,6 +313,16 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
         };
 
         await onSubmit(submitData as ContractSubmitData);
+
+        // Cleanup temporary document after successful submit (non-blocking)
+        if (pendingDocument) {
+          try {
+            await upload.cleanupTemporary(pendingDocument.key);
+          } catch (cleanupErr) {
+            logger.error('Failed to cleanup temp document after submit:', cleanupErr);
+            // Don't block success flow on cleanup failure
+          }
+        }
         setPendingDocument(null);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Error al guardar contrato';
@@ -420,27 +455,37 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
         </form>
 
         {/* Modals */}
-        {showNewClientModal && selectedOwnCompany && (
-          <ClientInlineModal
-            companyId={selectedOwnCompany.id}
-            open={showNewClientModal}
-            onOpenChange={setShowNewClientModal}
-            onSuccess={() => {
-              clientsAPI.listByCompany(selectedOwnCompany.id).then(setClients).catch(console.error);
-            }}
-          />
-        )}
+          {showNewClientModal && selectedOwnCompany && (
+            <ClientInlineModal
+              companyId={selectedOwnCompany.id}
+              open={showNewClientModal}
+              onOpenChange={setShowNewClientModal}
+              onSuccess={async () => {
+                try {
+                  const data = await clientsAPI.listByCompany(selectedOwnCompany.id);
+                  setClients(data);
+                } catch (error) {
+                  logger.error('Failed to load clients after creation:', error);
+                }
+              }}
+            />
+          )}
 
-        {showNewSupplierModal && selectedOwnCompany && (
-          <SupplierInlineModal
-            companyId={selectedOwnCompany.id}
-            open={showNewSupplierModal}
-            onOpenChange={setShowNewSupplierModal}
-            onSuccess={() => {
-              suppliersAPI.listByCompany(selectedOwnCompany.id).then(setSuppliers).catch(console.error);
-            }}
-          />
-        )}
+          {showNewSupplierModal && selectedOwnCompany && (
+            <SupplierInlineModal
+              companyId={selectedOwnCompany.id}
+              open={showNewSupplierModal}
+              onOpenChange={setShowNewSupplierModal}
+              onSuccess={async () => {
+                try {
+                  const data = await suppliersAPI.listByCompany(selectedOwnCompany.id);
+                  setSuppliers(data);
+                } catch (error) {
+                  logger.error('Failed to load suppliers after creation:', error);
+                }
+              }}
+            />
+          )}
 
         {showNewSignerModal && selectedOwnCompany && (
           <SignerInlineModal

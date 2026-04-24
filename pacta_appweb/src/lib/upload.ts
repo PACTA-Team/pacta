@@ -1,3 +1,5 @@
+import logger from './logger';
+
 export const upload = {
   /**
    * Upload a file to temporary storage (not yet associated with a contract).
@@ -41,11 +43,11 @@ export const upload = {
         credentials: 'include',
       });
       if (!response.ok) {
-        console.warn(`cleanupTemporary: failed for key ${key}: HTTP ${response.status}`);
+        logger.warn(`cleanupTemporary: failed for key ${key}: HTTP ${response.status}`);
       }
       return response.ok;
     } catch (err) {
-      console.error('cleanupTemporary error:', err);
+      logger.error('cleanupTemporary error:', err);
       return false;
     }
   }

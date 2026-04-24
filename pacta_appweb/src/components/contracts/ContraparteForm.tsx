@@ -6,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Contract, Client, Supplier, AuthorizedSigner, ContractType, ContractStatus, RenewalType, ContractSubmitData } from '@/types';
+import { Contract, Client, Supplier, AuthorizedSigner, ContractType, ContractStatus, RenewalType } from '@/types';
+import type { ContractSubmitData } from '@/types/contract';
 import { ChevronDown, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ContractDocumentUpload } from './ContractDocumentUpload';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CONTRACT_TYPE_LABELS } from '@/types';
 import { RENEWAL_TYPE_LABELS } from '@/types';
+import logger from '@/lib/logger';
 
 interface ContraparteFormProps {
   type: 'client' | 'supplier';
@@ -199,7 +201,7 @@ export default function ContraparteForm({
           credentials: 'include',
         });
       } catch (err) {
-        console.error('Failed to cleanup temp document:', err);
+        logger.error('Failed to cleanup temp document:', err);
       }
     }
     onDocumentRemove();

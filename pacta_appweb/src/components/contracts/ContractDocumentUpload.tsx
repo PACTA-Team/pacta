@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, FileText, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { upload } from '@/lib/upload';
+import logger from '@/lib/logger';
 
 interface ContractDocumentUploadProps {
   required?: boolean;
@@ -37,7 +38,9 @@ export function ContractDocumentUpload({
       if (pendingDocument) {
         const isAlreadyAssociated = existingDocuments.some(doc => doc.url === pendingDocument.url);
         if (!isAlreadyAssociated) {
-          upload.cleanupTemporary(pendingDocument.key).catch(console.error);
+          upload.cleanupTemporary(pendingDocument.key).catch(err =>
+            logger.error('Failed to cleanup temp document on unmount:', err)
+          );
         }
       }
     };
@@ -87,7 +90,7 @@ export function ContractDocumentUpload({
           credentials: 'include',
         });
       } catch (err) {
-        console.error('Failed to cleanup temp document:', err);
+        logger.error('Failed to cleanup temp document:', err);
       }
     }
     onRemove();

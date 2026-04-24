@@ -61,6 +61,8 @@ type contractRow struct {
 	HasConfidentiality  *bool      `json:"has_confidentiality,omitempty"`
 	Guarantees         *string   `json:"guarantees,omitempty"`
 	RenewalType        *string   `json:"renewal_type,omitempty"`
+	DocumentURL        *string   `json:"document_url,omitempty"`
+	DocumentKey        *string   `json:"document_key,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
@@ -73,6 +75,7 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 		       c.start_date, c.end_date, c.amount, c.type, c.status,
 		       c.object, c.fulfillment_place, c.dispute_resolution,
 		       c.has_confidentiality, c.guarantees, c.renewal_type,
+		       c.document_url, c.document_key,
 		       c.created_at, c.updated_at,
 		       COALESCE(cl.name, '') AS client_name,
 		       COALESCE(s.name, '') AS supplier_name
@@ -94,6 +97,7 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
 			&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.Object, &c.FulfillmentPlace,
 			&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType,
+			&c.DocumentURL, &c.DocumentKey,
 			&c.CreatedAt, &c.UpdatedAt, &c.ClientName, &c.SupplierName); err != nil {
 			h.Error(w, http.StatusInternalServerError, err.Error())
 			return
@@ -231,6 +235,12 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate HTTPS for document_url
+	if !strings.HasPrefix(*req.DocumentURL, "https://") {
+		h.Error(w, http.StatusBadRequest, "document_url must be HTTPS")
+		return
+	}
+
 	internalID, err := h.generateInternalID(actualCompanyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to generate internal ID")
@@ -242,12 +252,14 @@ func (h *Handler) createContract(w http.ResponseWriter, r *http.Request) {
 		INSERT INTO contracts (internal_id, contract_number, title, client_id, supplier_id,
 			client_signer_id, supplier_signer_id, start_date, end_date, amount,
 			type, status, description, object, fulfillment_place, dispute_resolution,
-			has_confidentiality, guarantees, renewal_type, created_by, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			has_confidentiality, guarantees, renewal_type, created_by, company_id,
+			document_url, document_key)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, internalID, req.ContractNumber, req.Title, req.ClientID, req.SupplierID,
 		req.ClientSignerID, req.SupplierSignerID, req.StartDate, req.EndDate,
 		req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace,
-		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, actualCompanyID)
+		req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType, userID, actualCompanyID,
+		req.DocumentURL, req.DocumentKey)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint") || strings.Contains(err.Error(), "duplicate") {
 			h.Error(w, http.StatusConflict, "contract number '"+req.ContractNumber+"' already exists")
@@ -287,6 +299,7 @@ func (h *Handler) getContract(w http.ResponseWriter, r *http.Request, id int) {
 		       c.start_date, c.end_date, c.amount, c.type, c.status,
 		       c.object, c.fulfillment_place, c.dispute_resolution,
 		       c.has_confidentiality, c.guarantees, c.renewal_type,
+		       c.document_url, c.document_key,
 		       c.created_at, c.updated_at,
 		       COALESCE(cl.name, '') AS client_name,
 		       COALESCE(s.name, '') AS supplier_name
@@ -296,8 +309,9 @@ func (h *Handler) getContract(w http.ResponseWriter, r *http.Request, id int) {
 		WHERE c.id = ? AND c.deleted_at IS NULL AND c.company_id = ?
 	`, id, companyID).Scan(&c.ID, &c.InternalID, &c.ContractNumber, &c.Title, &c.ClientID, &c.SupplierID,
 		&c.StartDate, &c.EndDate, &c.Amount, &c.Type, &c.Status, &c.Object, &c.FulfillmentPlace,
-		&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType, &c.CreatedAt, &c.UpdatedAt,
-		&c.ClientName, &c.SupplierName)
+		&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType,
+		&c.DocumentURL, &c.DocumentKey,
+		&c.CreatedAt, &c.UpdatedAt, &c.ClientName, &c.SupplierName)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "contract not found")
 		return
