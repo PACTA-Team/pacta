@@ -42,6 +42,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 	r := chi.NewRouter()
 	r.Use(middleware.NewCORS())
+	r.Use(middleware.SecurityHeaders())
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	// Apply CSRF protection globally with auth endpoints exempt
