@@ -19,12 +19,20 @@ async function apiRequest<T = any>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> {
+  // Get CSRF token from cookie
+  const csrfCookie = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('_csrf_token='));
+  const csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : null;
+
   try {
     const response = await fetch(`/api${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         ...options?.headers,
       },
+      credentials: 'include',
       ...options,
     });
 

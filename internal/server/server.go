@@ -44,8 +44,17 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	r.Use(middleware.NewCORS())
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	// Apply CSRF protection globally with auth endpoints exempt
+	r.Use(middleware.CSRFProtection([]string{
+		"/api/auth/login",
+		"/api/auth/register",
+		"/api/auth/logout",
+		"/api/auth/verify-code",
+		"/api/setup/status",
+		"/api/setup",
+	}))
 
-	// Auth routes (no auth required)
+	// Auth routes (no auth required, exempt from CSRF via global config)
 	r.Post("/api/auth/login", h.HandleLogin)
 	r.Post("/api/auth/register", h.HandleRegister)
 	r.Post("/api/auth/logout", h.HandleLogout)
@@ -54,7 +63,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// Public companies list (for registration form)
 	r.Get("/api/public/companies", h.HandlePublicCompanies)
 
-	// Setup routes (no auth required, gated by first-run check)
+	// Setup routes (no auth required, gated by first-run check, exempt from CSRF via global config)
 	r.Get("/api/setup/status", h.HandleSetupStatus)
 	r.Post("/api/setup", h.HandleSetup)
 
