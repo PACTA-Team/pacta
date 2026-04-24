@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import { Contract, Client, Supplier, Company, ContractType, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
+import type { ContractSubmitData } from '@/types/contract';
 import { clientsAPI } from '@/lib/clients-api';
 import { suppliersAPI } from '@/lib/suppliers-api';
 import { companiesAPI } from '@/lib/companies-api';
@@ -90,7 +91,7 @@ export default function ContractsPage() {
     viewRole || undefined
   );
 
-  const handleCreateOrUpdate = async (data: Omit<Contract, 'id' | 'internal_id' | 'created_by' | 'created_at' | 'updated_at'>) => {
+  const handleCreateOrUpdate = async (data: ContractSubmitData) => {
     try {
       if (editingContract) {
         const updateData: UpdateContractRequest = {

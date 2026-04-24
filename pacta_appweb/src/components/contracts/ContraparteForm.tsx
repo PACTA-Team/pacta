@@ -51,6 +51,7 @@ export default function ContraparteForm({
   onDocumentRemove,
   isLoading = false,
   loadingSigners = false,
+  onFieldChange,
 }: ContraparteFormProps) {
   const { t } = useTranslation('contracts');
 
@@ -68,7 +69,7 @@ export default function ContraparteForm({
    const [startDate, setStartDate] = useState(contract?.start_date || '');
    const [endDate, setEndDate] = useState(contract?.end_date || '');
    const [amount, setAmount] = useState<number | ''>(contract?.amount ?? '');
-   const [type, setType] = useState<ContractType | ''>(contract?.type || '');
+    const [contractType, setContractType] = useState<ContractType | ''>(contract?.type || '');
    const [status, setStatus] = useState<ContractStatus>(contract?.status || 'active');
    const [description, setDescription] = useState(contract?.description || '');
    const [object, setObject] = useState(contract?.object || '');
@@ -78,7 +79,7 @@ export default function ContraparteForm({
    const [fulfillmentPlace, setFulfillmentPlace] = useState(contract?.fulfillment_place || '');
    const [disputeResolution, setDisputeResolution] = useState(contract?.dispute_resolution || '');
    const [guarantees, setGuarantees] = useState(contract?.guarantees || '');
-   const [renewalType, setRenewalType] = useState<RenewalType | ''>(contract?.renewal_type || '');
+    const [renewalType, setRenewalType] = useState<RenewalType | ''>((contract?.renewal_type as RenewalType | undefined) || '');
 
    // Initialize from contract if editing
    useEffect(() => {
@@ -99,7 +100,7 @@ export default function ContraparteForm({
        setStartDate(contract.start_date || '');
        setEndDate(contract.end_date || '');
        setAmount(contract.amount ?? '');
-       setType(contract.type || '');
+        setContractType(contract.type || '');
        setStatus(contract.status || 'active');
        setDescription(contract.description || '');
        setObject(contract.object || '');
@@ -107,7 +108,7 @@ export default function ContraparteForm({
        setFulfillmentPlace(contract.fulfillment_place || '');
        setDisputeResolution(contract.dispute_resolution || '');
        setGuarantees(contract.guarantees || '');
-       setRenewalType(contract.renewal_type || '');
+        setRenewalType((contract.renewal_type as RenewalType | undefined) || '');
      }
      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [contract, isClientRole]);
@@ -150,10 +151,10 @@ export default function ContraparteForm({
      setAmount(val);
      onFieldChange?.('amount', val);
    };
-   const handleTypeChange = (value: ContractType) => {
-     setType(value);
-     onFieldChange?.('type', value);
-   };
+    const handleTypeChange = (value: ContractType) => {
+      setContractType(value);
+      onFieldChange?.('type', value);
+    };
    const handleStatusChange = (value: ContractStatus) => {
      setStatus(value);
      onFieldChange?.('status', value);
@@ -239,13 +240,12 @@ export default function ContraparteForm({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <Select
-          id={`counterpart-${type}`}
-          value={selectedCounterpartId}
-          onValueChange={handleCounterpartChange}
-          disabled={isLoading}
-        >
-          <SelectTrigger>
+         <Select
+           value={selectedCounterpartId}
+           onValueChange={handleCounterpartChange}
+           disabled={isLoading}
+         >
+           <SelectTrigger id={`counterpart-${type}`}>
             <SelectValue placeholder={`Select ${counterpartLabel.toLowerCase()}`} />
           </SelectTrigger>
           <SelectContent>
@@ -282,13 +282,12 @@ export default function ContraparteForm({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <Select
-          id={`signer-${type}`}
-          value={signerValue}
-          onValueChange={handleSignerChange}
-          disabled={!selectedCounterpartId || signers.length === 0 || loadingSigners}
-        >
-          <SelectTrigger>
+         <Select
+           value={signerValue}
+           onValueChange={handleSignerChange}
+           disabled={!selectedCounterpartId || signers.length === 0 || loadingSigners}
+         >
+           <SelectTrigger id={`signer-${type}`}>
             <SelectValue placeholder="Select authorized signer" />
           </SelectTrigger>
           <SelectContent>
@@ -346,7 +345,7 @@ export default function ContraparteForm({
            </div>
            <div className="space-y-2">
              <Label htmlFor="type">Contract Type *</Label>
-             <Select value={type} onValueChange={(v) => handleTypeChange(v as ContractType)} required>
+              <Select value={contractType} onValueChange={(v) => handleTypeChange(v as ContractType)} required>
                <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
                <SelectContent>
                  {Object.entries(CONTRACT_TYPE_LABELS).map(([value, label]) => (

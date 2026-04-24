@@ -1,3 +1,5 @@
+import { AuthorizedSigner } from '@/types';
+
 const BASE = '/api/signers';
 
 async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -35,11 +37,11 @@ export interface UpdateSignerRequest {
 }
 
 export const signersAPI = {
-  list: (signal?: AbortSignal) =>
-    fetchJSON(BASE, { signal }),
+  list: (signal?: AbortSignal): Promise<AuthorizedSigner[]> =>
+    fetchJSON<AuthorizedSigner[]>(BASE, { signal }),
 
-  listByCompany: (companyId: number, companyType: 'client' | 'supplier', signal?: AbortSignal) =>
-    fetchJSON(`${BASE}?company_id=${companyId}&company_type=${companyType}`, { signal }),
+  listByCompany: (companyId: number, companyType: 'client' | 'supplier', signal?: AbortSignal): Promise<AuthorizedSigner[]> =>
+    fetchJSON<AuthorizedSigner[]>(`${BASE}?company_id=${companyId}&company_type=${companyType}`, { signal }),
 
   getById: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, { signal }),

@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Contract, Company, Client, Supplier, AuthorizedSigner, ContractSubmitData } from '@/types';
+import { Contract, Company, Client, Supplier, AuthorizedSigner } from '@/types';
+import type { ContractSubmitData } from '@/types/contract';
 import { toast } from 'sonner';
 import { useOwnCompanies } from '@/hooks/useOwnCompanies';
 import { useCompanyFilter } from '@/hooks/useCompanyFilter';
@@ -88,17 +89,13 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
         if (ourRole === 'client') {
           setLoadingClients(true);
           setLoadingSuppliers(false);
-          const data = await suppliersAPI.listByCompany(selectedOwnCompany.id, {
-            signal: loadAbortRef.current?.signal,
-          });
+          const data = await suppliersAPI.listByCompany(selectedOwnCompany.id, loadAbortRef.current?.signal);
           setSuppliers(data);
           setClients([]); // Clear opposite side
         } else {
           setLoadingSuppliers(true);
           setLoadingClients(false);
-          const data = await clientsAPI.listByCompany(selectedOwnCompany.id, {
-            signal: loadAbortRef.current?.signal,
-          });
+          const data = await clientsAPI.listByCompany(selectedOwnCompany.id, loadAbortRef.current?.signal);
           setClients(data);
           setSuppliers([]); // Clear opposite side
         }
@@ -141,9 +138,7 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
       setLoadingSigners(true);
       try {
         // Use optimized endpoint that filters by company_id AND company_type
-        const data = await signersAPI.listByCompany(parseInt(counterpartId), ourRole, {
-          signal: loadAbortRef.current?.signal,
-        });
+        const data = await signersAPI.listByCompany(counterpartId, ourRole, loadAbortRef.current?.signal);
         setSigners(data);
       } catch (err: any) {
         if (err.name !== 'AbortError') {
@@ -187,26 +182,26 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
   };
 
   const handleClientIdChange = (clientId: string) => {
-    formDataRef.current.client_id = clientId;
+    formDataRef.current.client_id = clientId ? Number(clientId) : undefined;
     formDataRef.current.supplier_id = undefined;
     // Reload signers for this client
     setSigners([]); // Will be repopulated by effect
   };
 
     const handleSupplierIdChange = (supplierId: string) => {
-      formDataRef.current.supplier_id = supplierId;
+      formDataRef.current.supplier_id = supplierId ? Number(supplierId) : undefined;
       formDataRef.current.client_id = undefined;
       // Reload signers for this supplier
       setSigners([]); // Will be repopulated by effect
     };
 
     const handleClientSignerIdChange = (clientSignerId: string) => {
-      formDataRef.current.client_signer_id = clientSignerId;
+      formDataRef.current.client_signer_id = clientSignerId ? Number(clientSignerId) : undefined;
       formDataRef.current.supplier_signer_id = undefined;
     };
 
     const handleSupplierSignerIdChange = (supplierSignerId: string) => {
-      formDataRef.current.supplier_signer_id = supplierSignerId;
+      formDataRef.current.supplier_signer_id = supplierSignerId ? Number(supplierSignerId) : undefined;
       formDataRef.current.client_signer_id = undefined;
     };
 
@@ -498,10 +493,10 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
                 ? formDataRef.current.supplier_id
                 : formDataRef.current.client_id;
 
-              if (counterpartId) {
-                try {
-                  const data = await signersAPI.listByCompany(parseInt(counterpartId), ourRole);
-                  setSigners(data);
+                if (counterpartId) {
+                  try {
+                    const data = await signersAPI.listByCompany(counterpartId, ourRole);
+                    setSigners(data);
                 } catch (err) {
                   toast.error('Error al cargar responsables');
                 }

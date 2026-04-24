@@ -166,7 +166,7 @@ describe('ContractFormWrapper', () => {
 
   it('disables submit button while submitting', async () => {
     const user = userEvent.setup();
-    let resolveSubmit: () => void;
+    let resolveSubmit!: () => void;
     const slowPromise = new Promise<void>((resolve) => { resolveSubmit = resolve; });
     const slowOnSubmit = vi.fn().mockImplementation(() => slowPromise);
     

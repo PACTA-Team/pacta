@@ -1,3 +1,5 @@
+import { Client } from '@/types';
+
 const BASE = '/api/clients';
 
 async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -31,11 +33,11 @@ export interface UpdateClientRequest {
 }
 
 export const clientsAPI = {
-  list: (signal?: AbortSignal) =>
-    fetchJSON(BASE, { signal }),
+  list: (signal?: AbortSignal): Promise<Client[]> =>
+    fetchJSON<Client[]>(BASE, { signal }),
 
-  listByCompany: (companyId: number, signal?: AbortSignal) =>
-    fetchJSON(`${BASE}?company_id=${companyId}`, { signal }),
+  listByCompany: (companyId: number, signal?: AbortSignal): Promise<Client[]> =>
+    fetchJSON<Client[]>(`${BASE}?company_id=${companyId}`, { signal }),
 
   getById: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, { signal }),
