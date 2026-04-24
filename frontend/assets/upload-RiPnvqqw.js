@@ -1,1 +1,0 @@
-var e={uploadWithPresignedUrl:async(e,t)=>{if(e.size>t.maxSize)throw Error(`File size exceeds limit`);let n=`.`+e.name.split(`.`).pop()?.toLowerCase();if(!t.allowedExtensions.includes(n))throw Error(`Invalid file extension`);let r=new FormData;return r.append(`file`,e),(await fetch(`/api/upload`,{method:`POST`,body:r})).json()}};export{e as t};
