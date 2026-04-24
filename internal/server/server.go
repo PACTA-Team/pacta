@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
@@ -42,8 +42,8 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 	r := chi.NewRouter()
 	r.Use(middleware.NewCORS())
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
 	// Apply CSRF protection globally with auth endpoints exempt
 	r.Use(middleware.CSRFProtection([]string{
 		"/api/auth/login",
