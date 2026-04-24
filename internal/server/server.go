@@ -20,7 +20,7 @@ import (
 	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/handlers"
-	"github.com/PACTA-Team/pacta/internal/middleware"
+	"github.com/PACTA-Team/pacta/internal/server/middleware"
 	"github.com/PACTA-Team/pacta/internal/worker"
 )
 
