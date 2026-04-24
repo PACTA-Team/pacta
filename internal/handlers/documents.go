@@ -282,7 +282,7 @@ func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int)
 // uploadTempDocument uploads a file without associating it with a contract.
 // Returns a temporary URL (presigned-like) and storage key for later cleanup.
 // Used by ContractForm for draft document uploads before contract creation.
-func (h *Handler) uploadTempDocument(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleUploadTempDocument(w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		if strings.Contains(err.Error(), "request body too large") {
@@ -356,7 +356,7 @@ func (h *Handler) uploadTempDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 // verifyTempDocument HEAD handler — checks if temp file exists
-func (h *Handler) verifyTempDocument(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleVerifyTempDocument(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
 	if key == "" {
 		h.Error(w, http.StatusBadRequest, "missing document key")
@@ -385,7 +385,7 @@ func (h *Handler) verifyTempDocument(w http.ResponseWriter, r *http.Request) {
 // Since temp files are not DB-tracked, we validate by ensuring the file belongs to this user's company
 // by checking that it's in the temp directory and was uploaded during this session.
 // For security, we don't delete files uploaded by other users (file key is a secret UUID).
-func (h *Handler) cleanupTempDocument(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleCleanupTempDocument(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
 	if key == "" {
 		h.Error(w, http.StatusBadRequest, "missing document key")
@@ -410,7 +410,7 @@ func (h *Handler) cleanupTempDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveTempDocument serves the temporary uploaded file (GET /api/documents/temp/{key})
-func (h *Handler) serveTempDocument(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleServeTempDocument(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
 	if key == "" {
 		h.Error(w, http.StatusBadRequest, "missing document key")
