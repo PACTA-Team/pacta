@@ -20,6 +20,7 @@ import (
 	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/handlers"
+	"github.com/PACTA-Team/pacta/internal/middleware"
 	"github.com/PACTA-Team/pacta/internal/worker"
 )
 
@@ -40,6 +41,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	svc := &config.Service{Config: cfg, DB: database}
 
 	r := chi.NewRouter()
+	r.Use(middleware.NewCORS())
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
