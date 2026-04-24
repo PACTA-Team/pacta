@@ -2,8 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Contract Form — New', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/contracts/new');
-    // TODO: Add auth state if available: await page.goto('/contracts/new', { waitUntil: 'networkidle' });
+    await page.goto('/contracts/new', { waitUntil: 'networkidle' });
+    // If redirected to login, skip test (requires valid auth state)
+    if (page.url().includes('/login') || page.url().includes('/auth')) {
+      test.skip();
+    }
   });
 
   test('shows loading indicator in counterpart select while fetching', async ({ page }) => {
