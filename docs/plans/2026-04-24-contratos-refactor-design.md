@@ -1,10 +1,11 @@
-# Refactorización Formulario de Contratos - Diseño Técnico
+# Refactorización Formulario de Contratos - Diseño Técnico (v3 Completo)
 
-**Fecha:** 2026-04-24
-**Estado:** Aprobado
-**Proyecto:** PACTA
-**Solicitado por:** Refactorización formulario multiempresa
-**Skill involucrada:** UI/UX Pro Max + Brainstorming
+**Fecha:** 2026-04-24  
+**Estado:** Aprobado  
+**Proyecto:** PACTA  
+**Solicitado por:** Refactorización formulario multiempresa  
+**Skill involucrada:** UI/UX Pro Max + Brainstorming + Plan Eng Review  
+**Versión:** 3.0 — Completo con testing, hooks compartidos, y robustez productiva
 
 ---
 
@@ -12,7 +13,7 @@
 
 ### 1.1 Situación Actual
 
-El sistema permite a usuarios gestionar múltiples empresas propias. Al crear un contrato, el usuario debe selectionsar:
+El sistema permite a usuarios gestionar múltiples empresas propias. Al crear un contrato, el usuario debe seleccionar:
 1. Qué empresa propia actúa en el contrato (cliente o proveedor)
 2. La contraparte (proveedor o cliente respectivamente)
 3. Los responsables autorizados de ambas partes
@@ -27,6 +28,9 @@ El sistema permite a usuarios gestionar múltiples empresas propias. Al crear un
 | 4 | Falta botón para agregar **responsable** de la contraparte recién creada | Medio |
 | 5 | Botones demasiado grandes → Poor UI/UX, desperdician espacio | Bajo |
 | 6 | Auto-selección empresa funciona, pero contraparte no → usuario debe seleccionar even si hay 1 | Bajo |
+| 7 | **Filtros por empresa rotos en ContractsPage y ReportsPage** | **Crítico** |
+| 8 | **Actualización de contrato no valida que client/supplier pertenecen a company** | **Crítico** |
+| 9 | **Sin tests automáticos** — regresiones altamente probables | **Crítico** |
 
 ### 1.2 Objetivo
 
@@ -35,13 +39,17 @@ Refactorizar el formulario de creación de contratos para:
 - Mostrar controles dinámicos correctos según rol
 - Agregar subida obligatoria de documento de contrato
 - Mejorar UX con botones compactos
+- Implementar manejo de partial failure (documento temp)
+- Asegurar filtros por empresa funcionan en todas las páginas
+- Validar ownership en actualización de contratos
+- Alcanzar ≥85% test coverage
 - Mantener backward compatibility con edición existente
 
 ---
 
 ## 2. Arquitectura Propuesta
 
-### 2.1 Estructura de Componentes
+### 2.1 Estructura de Componentes (Actualizada)
 
 ```
 ContractFormWrapper (orquestador)
@@ -61,6 +69,16 @@ ContractFormWrapper (orquestador)
         ├── Legal fields (collapsible)
         ├── ContractDocumentUpload (required)
         └── Submit
+
+Shared Hooks (NUEVOS):
+├── useOwnCompanies() → carga y cachea empresas propias
+├── useCompanyFilter(items, currentCompany, companyFilter) → filtra por empresa
+└── useDocumentCleanup(pendingDocument, existingDocuments) → cleanup en unmount
+
+Backend Extensions:
+├── POST /api/contracts → valida document_url required
+├── PUT /api/contracts/:id → valida client/supplier ownership (nuevo)
+└── DELETE /api/documents/temp/{key} → elimina archivos temporales (nuevo)
 ```
 
 ### 2.2 Componentes Nuevos
@@ -74,7 +92,56 @@ ContractFormWrapper (orquestador)
 | `SignerInlineModal` | Modal para agregar responsable autorizado | Sí |
 | `ResponsiblePersonForm` | Formulario campos responsable (dentro modal) | Sí |
 
-### 2.3 Componentes Existentes Reutilizados
+### 2.3 Hooks Compartidos (NUEVOS)
+
+#### `useOwnCompanies`
+```typescript
+// Ubicación: pacta_appweb/src/hooks/useOwnCompanies.ts
+export function useOwnCompanies(): {
+  ownCompanies: Company[];
+  currentCompany: Company | null;
+  isMultiCompany: boolean;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => void;
+} {
+  // Cache en localStorage con TTL 5min
+  // Retorna empresas del usuario, auto-select si solo hay 1
+}
+```
+
+**Uso:** Reemplaza `ownCompanies` state en `ContractsPage`, `SupplementsPage`, `ReportsPage`, y `ContractFormWrapper`.
+
+#### `useCompanyFilter`
+```typescript
+// Ubicación: pacta_appweb/src/hooks/useCompanyFilter.ts
+export function useCompanyFilter<T extends { client_id: number; supplier_id: number }>(
+  items: T[],
+  currentCompany: Company | null,
+  companyFilter: string
+): T[] {
+  // Acepta: 'all', 'client', 'other', o companyId numérico como string
+  // Retorna items filtrados consistentemente
+}
+```
+
+**Uso:** En `ContractsPage`, `SupplementsPage`, `ReportsPage` para filtrar contratos/supplements por empresa.
+
+#### `useDocumentCleanup`
+```typescript
+// Ubicación: pacta_appweb/src/hooks/useDocumentCleanup.ts
+export function useDocumentCleanup(
+  pendingDocument: { key: string; url: string } | null,
+  existingDocuments: APIDocument[]
+): void {
+  // useEffect que llama a DELETE /api/documents/temp/:key
+  // Solo si el documento no está ya asociado a un contrato existente
+}
+```
+
+**Uso:** En `ContractDocumentUpload` component.
+
+### 2.4 Componentes Existentes Reutilizados
 
 - `ClientInlineModal` → ya existe, se usa desde `ClientContractForm`
 - `SupplierInlineModal` → ya existe, se usa desde `SupplierContractForm`
@@ -83,15 +150,19 @@ ContractFormWrapper (orquestador)
 
 ---
 
-## 3. Flujo de Datos
+## 3. Flujo de Datos (Actualizado)
 
 ### 3.1 Estado Global (Wrapper)
 
 ```typescript
 interface ContractFormWrapperState {
-  ownCompanies: Company[];           // Lista empresas propias del usuario
+  ownCompanies: Company[];           // Lista empresas propias del usuario (desde hook)
   selectedOwnCompany: Company | null; // Empresa seleccionada
   ourRole: 'client' | 'supplier';     // Rol de NUESTRA empresa
+  pendingDocument: {url, key, file} | null; // Documento pendiente
+  clients: any[];                     // Clientes de la empresa (cargados dinámicamente)
+  suppliers: any[];                   // Proveedores de la empresa
+  signers: any[];                     // Firmantes de la contraparte
 }
 
 // Derived:
@@ -102,11 +173,11 @@ interface ContractFormWrapperState {
 ### 3.2 Flujo de Creación (nuevo contrato)
 
 ```
-1. Wrapper carga ownCompanies (useEffect)
+1. Wrapper carga ownCompanies via useOwnCompanies()
 2. Si length === 1 → auto-selecciona
 3. Si length > 1 → usuario selecciona empresa
 4. Usuario selecciona rol (RadioGroup)
-5. Wrapper renderiza formulario hijo correspondiente
+5. Wrapper renderiza formulario hijo correspondiente (con key={companyId})
 6. Hijo muestra:
    - Select de contraparte (vacio inicial)
    - Select de responsable (disabled hasta contraparte)
@@ -129,17 +200,17 @@ interface ContractFormWrapperState {
         document_key: pendingDocument.key
       }
     - Enviar a API
-    - Éxito: limpiar,通知, cerrar
-    - Error: mostrar mensaje, mantener documento (no eliminar)
+    - Éxito: limpiar pendingDocument, toast, cerrar
+    - Error: mantener pendingDocument + mensaje específico
 ```
 
 ### 3.3 Flujo de Edición (contrato existente)
 
 ```
 1. Wrapper recibe prop: contract
-2.ourRole = contract.client_id ? 'client' : 'supplier'
+2. ourRole = contract.client_id ? 'client' : 'supplier'
 3. selectedOwnCompany se determina desde contract.company_id (solo lectura)
-4. Renderiza formulario hijo对应 rol
+4. Renderiza formulario hijo correspondiente
 5. Hijo carga datos existentes en selects
 6. Edición de documento: managed por ContractDocumentUpload (listar + agregar + eliminar)
 7. Submit: igual que creación, pero sin company_id change
@@ -147,7 +218,7 @@ interface ContractFormWrapperState {
 
 ---
 
-## 4. Especificación de Componentes
+## 4. Especificación de Componentes (Actualizada)
 
 ### 4.1 ContractFormWrapper
 
@@ -158,43 +229,116 @@ interface ContractFormWrapperProps {
   onSubmit: (data: ContractSubmitData) => void;
   onCancel: () => void;
 }
+
+interface ContractSubmitData {
+  contract_number: string;
+  client_id: number;
+  supplier_id: number;
+  client_signer_id?: number;
+  supplier_signer_id?: number;
+  start_date: string;
+  end_date: string;
+  amount: number;
+  type: ContractType;
+  status?: ContractStatus;
+  description?: string;
+  object?: string;
+  fulfillment_place?: string;
+  dispute_resolution?: string;
+  has_confidentiality?: boolean;
+  guarantees?: string;
+  renewal_type?: string;
+  company_id: number;                   // ← requerido
+  document_url: string;                 // ← requerido
+  document_key: string;                 // ← requerido
+}
 ```
 
-**Estado interno:**
+**Estado interno (usando hook):**
 ```typescript
-const [ownCompanies, setOwnCompanies] = useState<Company[]>([]);
-const [selectedOwnCompany, setSelectedOwnCompany] = useState<Company | null>(null);
+const { 
+  ownCompanies, 
+  currentCompany, 
+  isMultiCompany, 
+  loading: loadingCompanies 
+} = useOwnCompanies();
+
+const [selectedOwnCompany, setSelectedOwnCompany] = useState<Company | null>(
+  contract ? { id: contract.company_id, name: '', ... } : currentCompany
+);
+
 const [ourRole, setOurRole] = useState<'client' | 'supplier'>('client');
-const [pendingDocument, setPendingDocument] = useState<{url: string, key: string, file: File} | null>(null);
+const [pendingDocument, setPendingDocument] = useState<{url:string,key:string,file:File} | null>(null);
+
+// Manual state para clients/suppliers/signers (por company_id)
+const [clients, setClients] = useState<any[]>([]);
+const [suppliers, setSuppliers] = useState<any[]>([]);
+const [signers, setSigners] = useState<any[]>([]);
+
+// Modal flags
+const [showNewClientModal, setShowNewClientModal] = useState(false);
+const [showNewSupplierModal, setShowNewSupplierModal] = useState(false);
+const [showNewSignerModal, setShowNewSignerModal] = useState(false);
+
+// Ref para tracking de IDs actuales (para callbacks de modales)
+const formDataRef = useRef<{client_id?: string, supplier_id?: string}>({});
 ```
 
 **Efectos:**
 ```typescript
-// Cargar empresas propias
+// Cargar clients/suppliers cuando company y rol cambian
 useEffect(() => {
-  companiesAPI.listOwnCompanies().then(setOwnCompanies);
-}, []);
+  if (!selectedOwnCompany) return;
+  
+  const loadCounterparts = async () => {
+    try {
+      if (ourRole === 'client') {
+        const data = await suppliersAPI.listByCompany(selectedOwnCompany.id);
+        setSuppliers(data);
+      } else {
+        const data = await clientsAPI.listByCompany(selectedOwnCompany.id);
+        setClients(data);
+      }
+    } catch (err) {
+      toast.error('Failed to load counterparts');
+    }
+  };
+  loadCounterparts();
+}, [selectedOwnCompany, ourRole]);
 
-// Auto-seleccionar si solo hay una
+// Cargar signers cuando contraparte seleccionada
 useEffect(() => {
-  if (ownCompanies.length === 1 && !contract) {
-    setSelectedOwnCompany(ownCompanies[0]);
-  }
-}, [ownCompanies, contract]);
-
-// Resetear rol si es edacción
-useEffect(() => {
-  if (contract) {
-    setOurRole(contract.client_id ? 'client' : 'supplier');
-  }
-}, [contract]);
+  const loadSigners = async () => {
+    const all = await signersAPI.list();
+    const counterpartId = ourRole === 'client' 
+      ? formDataRef.current.client_id 
+      : formDataRef.current.supplier_id;
+    
+    if (counterpartId) {
+      const filtered = (all as any[]).filter(
+        (s: any) => 
+          s.company_id === parseInt(counterpartId) && 
+          s.company_type === ourRole === 'client' ? 'client' : 'supplier'
+      );
+      setSigners(filtered);
+    } else {
+      setSigners([]);
+    }
+  };
+  loadSigners();
+}, [formDataRef.current.client_id, formDataRef.current.supplier_id, ourRole]);
 ```
 
 **Handlers:**
 ```typescript
-const handleCompanyChange = (company: Company) => {
-  setSelectedOwnCompany(company);
-  // Resetear contraparte/responsable en hijo via key remount
+const handleCompanyChange = (companyId: string) => {
+  const company = ownCompanies.find(c => c.id === parseInt(companyId));
+  setSelectedOwnCompany(company || null);
+  // Limpiar pendingDocument al cambiar empresa
+  if (pendingDocument) {
+    setPendingDocument(null);
+    toast.info('Se ha limpiado el documento debido al cambio de empresa');
+  }
 };
 
 const handleRoleChange = (role: 'client' | 'supplier') => {
@@ -202,21 +346,56 @@ const handleRoleChange = (role: 'client' | 'supplier') => {
 };
 
 const handleSubmit = async (formData: any) => {
-  // Ensamblar payload final con documento
-  await onSubmit({
-    ...formData,
-    company_id: selectedOwnCompany!.id,
-    document_url: pendingDocument?.url,
-    document_key: pendingDocument?.key,
-  });
+  if (!selectedOwnCompany) {
+    toast.error('Seleccione una empresa');
+    return;
+  }
+  if (!pendingDocument) {
+    toast.error('Adjunte el documento del contrato');
+    return;
+  }
+  
+  try {
+    await onSubmit({
+      ...formData,
+      company_id: selectedOwnCompany.id,
+      document_url: pendingDocument.url,
+      document_key: pendingDocument.key,
+    });
+    // Éxito total: limpiar documento
+    setPendingDocument(null);
+  } catch (err: any) {
+    // Partial failure: mantener pendingDocument para reintento
+    const message = err instanceof Error ? err.message : 'Error al guardar contrato';
+    
+    // Detectar error de validación de documento
+    if (err.response?.status === 400 && message.toLowerCase().includes('document')) {
+      toast.error('El documento es obligatorio. Por favor adjunte el contrato.');
+      // No limpiar pendingDocument — usuario puede reintentar
+    } else {
+      toast.error(message);
+    }
+    
+    // NO limpiar pendingDocument → UI mantiene preview
+    throw err;
+  }
 };
 
-const handleAddDocument = (doc: {url: string, key: string, file: File}) => {
+const handleAddDocument = (doc: {url:string,key:string,file:File}) => {
   setPendingDocument(doc);
 };
 
 const handleRemoveDocument = () => {
   setPendingDocument(null);
+};
+
+// Callbacks para hijos
+const handleClientIdChange = (clientId: string) => {
+  formDataRef.current.client_id = clientId;
+};
+
+const handleSupplierIdChange = (supplierId: string) => {
+  formDataRef.current.supplier_id = supplierId;
 };
 ```
 
@@ -224,346 +403,159 @@ const handleRemoveDocument = () => {
 ```tsx
 <Card>
   <CardHeader>
-    <CardTitle>{contract ? 'Editar Contrato' : 'Nuevo Contrato'}</CardTitle>
+    <CardTitle>{contract ? t('editContract') : t('newContract')}</CardTitle>
   </CardHeader>
   <CardContent>
-    {/* Selector empresa propia (si múltiples) */}
-    {ownCompanies.length > 1 && !contract && (
-      <CompanySelector
-        companies={ownCompanies}
-        value={selectedOwnCompany}
-        onChange={handleCompanyChange}
-      />
-    )}
-
-    {/* Selector rol (solo nuevo contrato) */}
-    {!contract && (
-      <RadioGroup value={ourRole} onValueChange={handleRoleChange}>
-        <Label>Esta empresa actúa como</Label>
-        <div className="flex gap-6">
-          <RadioItem value="client" label="Cliente (recibimos servicio)" />
-          <RadioItem value="supplier" label="Proveedor (brindamos servicio)" />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Selector empresa propia (si múltiples) */}
+      {isMultiCompany && !contract && (
+        <div className="space-y-2">
+          <Label>Seleccionar Empresa *</Label>
+          <Select
+            value={selectedOwnCompany?.id?.toString() || ''}
+            onValueChange={handleCompanyChange}
+            disabled={loadingCompanies}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              {ownCompanies.map((company) => (
+                <SelectItem key={company.id} value={company.id.toString()}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </RadioGroup>
+      )}
+
+      {/* Selector rol (solo nuevo contrato) */}
+      {!contract && (
+        <RadioGroup value={ourRole} onValueChange={(v) => handleRoleChange(v as 'client' | 'supplier')}>
+          <Label>Esta empresa actúa como</Label>
+          <div className="flex gap-6">
+            <RadioItem value="client" label="Cliente (recibimos servicio)" />
+            <RadioItem value="supplier" label="Proveedor (brindamos servicio)" />
+          </div>
+        </RadioGroup>
+      )}
+
+      {/* Formulario dinámico por rol — remonta con key al cambiar empresa */}
+      {selectedOwnCompany && (
+        <>
+          {ourRole === 'client' ? (
+            <ClientContractForm
+              key={`client-${selectedOwnCompany.id}`}
+              companyId={selectedOwnCompany.id}
+              contract={contract}
+              clients={clients}
+              signers={signers}
+              onClientIdChange={handleClientIdChange}
+              onAddClient={() => setShowNewClientModal(true)}
+              onAddResponsible={() => setShowNewSignerModal(true)}
+              pendingDocument={pendingDocument}
+              onDocumentChange={handleAddDocument}
+              onDocumentRemove={handleRemoveDocument}
+            />
+          ) : (
+            <SupplierContractForm
+              key={`supplier-${selectedOwnCompany.id}`}
+              companyId={selectedOwnCompany.id}
+              contract={contract}
+              suppliers={suppliers}
+              signers={signers}
+              onSupplierIdChange={handleSupplierIdChange}
+              onAddSupplier={() => setShowNewSupplierModal(true)}
+              onAddResponsible={() => setShowNewSignerModal(true)}
+              pendingDocument={pendingDocument}
+              onDocumentChange={handleAddDocument}
+              onDocumentRemove={handleRemoveDocument}
+            />
+          )}
+        </>
+      )}
+
+      {/* Botones acción */}
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" form="contract-form">
+          {contract ? 'Actualizar Contrato' : 'Crear Contrato'}
+        </Button>
+      </div>
+    </form>
+
+    {/* Modals inline */}
+    {showNewClientModal && selectedOwnCompany && (
+      <ClientInlineModal
+        companyId={selectedOwnCompany.id}
+        open={showNewClientModal}
+        onOpenChange={setShowNewClientModal}
+        onSuccess={async () => {
+          try {
+            const data = await clientsAPI.listByCompany(selectedOwnCompany.id);
+            setClients(data);
+          } catch (err) {
+            toast.error('Error al cargar clientes');
+          }
+        }}
+      />
     )}
 
-    {/* Formulario dinámico por rol */}
-    {ourRole === 'client' ? (
-      <ClientContractForm
-        key={`client-${selectedOwnCompany?.id}`}
-        companyId={selectedOwnCompany!.id}
-        contract={contract}
-        onAddClient={...}
-        onAddResponsible={...}
-        pendingDocument={pendingDocument}
-        onDocumentChange={handleAddDocument}
-        onDocumentRemove={handleRemoveDocument}
-      />
-    ) : (
-      <SupplierContractForm
-        key={`supplier-${selectedOwnCompany?.id}`}
-        companyId={selectedOwnCompany!.id}
-        contract={contract}
-        onAddSupplier={...}
-        onAddResponsible={...}
-        pendingDocument={pendingDocument}
-        onDocumentChange={handleAddDocument}
-        onDocumentRemove={handleRemoveDocument}
+    {showNewSupplierModal && selectedOwnCompany && (
+      <SupplierInlineModal
+        companyId={selectedOwnCompany.id}
+        open={showNewSupplierModal}
+        onOpenChange={setShowNewSupplierModal}
+        onSuccess={async () => {
+          try {
+            const data = await suppliersAPI.listByCompany(selectedOwnCompany.id);
+            setSuppliers(data);
+          } catch (err) {
+            toast.error('Error al cargar proveedores');
+          }
+        }}
       />
     )}
 
-    {/* Botones acción */}
-    <div className="flex gap-2 justify-end">
-      <Button type="button" variant="outline" onClick={onCancel}>
-        Cancelar
-      </Button>
-      <Button type="submit" form="contract-form">
-        {contract ? 'Actualizar' : 'Crear'}
-      </Button>
-    </div>
+    {showNewSignerModal && selectedOwnCompany && (
+      <SignerInlineModal
+        companyId={selectedOwnCompany.id}
+        companyType={ourRole === 'client' ? 'client' : 'supplier'}
+        open={showNewSignerModal}
+        onOpenChange={setShowNewSignerModal}
+        onSuccess={async () => {
+          try {
+            const counterpartId = ourRole === 'client'
+              ? formDataRef.current.client_id
+              : formDataRef.current.supplier_id;
+            
+            if (counterpartId) {
+              const all = await signersAPI.list();
+              const filtered = (all as any[]).filter(
+                (s: any) => 
+                  s.company_id === parseInt(counterpartId) && 
+                  s.company_type === (ourRole === 'client' ? 'client' : 'supplier')
+              );
+              setSigners(filtered);
+            }
+          } catch (err) {
+            toast.error('Error al cargar responsables');
+          }
+        }}
+      />
+    )}
   </CardContent>
 </Card>
 ```
 
 ---
 
-### 4.2 ClientContractForm / SupplierContractForm
+## 5. Validación (Actualizada)
 
-**Props comunes:**
-```typescript
-interface BaseContractFormProps {
-  companyId: number;                    // Empresa propia ID
-  contract?: Contract;                  // Para edición
-  onAddContraparte: () => void;         // Callback abrir modal contraparte
-  onAddResponsible: () => void;         // Callback abrir modal responsable
-  pendingDocument: {url,key,file} | null;
-  onDocumentChange: (doc) => void;
-  onDocumentRemove: () => void;
-}
-```
-
-**Campos comunes:**
-```tsx
-<form id="contract-form" onSubmit={handleSubmit} className="space-y-4">
-  {/* Contrat Number + Type */}
-  <div className="grid grid-cols-2 gap-4">
-    <Input name="contract_number" label="Número Contrato *" required />
-    <Select name="type" label="Tipo Contrato *">
-      <Option value="service">Servicio</Option>
-      <Option value="purchase">Compra</Option>
-      <Option value="lease">Arriendo</Option>
-      <Option value="employment">Empleo</Option>
-      <Option value="nda">NDA</Option>
-      <Option value="other">Otro</Option>
-    </Select>
-  </div>
-
-  {/* CONTAPARTE (cliente o proveedor según rol) */}
-  <div className="space-y-2">
-    <Label>{contraparteLabel} *</Label>
-    <div className="flex gap-2">
-      <Select
-        name="contraparte_id"
-        value={formData.contraparte_id}
-        onValueChange={(v) => setFormData({...formData, contraparte_id: v, responsable_id: ''})}
-      >
-        {contrapartes.map(c => (
-          <Option key={c.id} value={c.id}>{c.name}</Option>
-        ))}
-      </Select>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-8 w-8 p-0"
-        onClick={onAddContraparte}
-        title="Agregar nuevo {contraparteLabel}"
-      >
-        <Plus className="h-3 w-3" />
-      </Button>
-    </div>
-  </div>
-
-  {/* RESPONSABLE (de la contraparte) */}
-  <div className="space-y-2">
-    <Label>Responsable {contraparteLabel} *</Label>
-    <div className="flex gap-2">
-      <Select
-        name="responsable_id"
-        value={formData.responsable_id}
-        onValueChange={(v) => setFormData({...formData, responsable_id: v})}
-        disabled={!formData.contraparte_id}
-      >
-        {responsables.map(r => (
-          <Option key={r.id} value={r.id}>
-            {r.first_name} {r.last_name} - {r.position}
-          </Option>
-        ))}
-      </Select>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-8 w-8 p-0"
-        onClick={onAddResponsible}
-        disabled={!formData.contraparte_id}
-        title="Agregar responsable"
-      >
-        <Plus className="h-3 w-3" />
-      </Button>
-    </div>
-  </div>
-
-  {/* Fechas y monto */}
-  <div className="grid grid-cols-2 gap-4">
-    <Input name="start_date" type="date" label="Fecha Inicio *" required />
-    <Input name="end_date" type="date" label="Fecha Fin *" required />
-  </div>
-  <div className="grid grid-cols-2 gap-4">
-    <Input name="amount" type="number" label="Monto ($) *" required />
-    <Select name="status" label="Estado *">
-      <Option value="active">Activo</Option>
-      <Option value="pending">Pendiente</Option>
-      <Option value="expired">Expirado</Option>
-      <Option value="cancelled">Cancelado</Option>
-    </Select>
-  </div>
-
-  {/* Descripción */}
-  <Textarea name="description" label="Descripción" rows={3} />
-
-  {/* Legal Fields Collapsible */}
-  <CollapsibleSection title="Cláusulas Adicionales">
-    <div className="space-y-4">
-      <Textarea name="object" label="Objeto del Contrato" rows={3} />
-      <Input name="fulfillment_place" label="Lugar de Cumplimiento" />
-      <Input name="dispute_resolution" label="Resolución de Controversias" />
-      <Textarea name="guarantees" label="Garantías" rows={2} />
-      <Select name="renewal_type" label="Tipo de Renovación">
-        <Option value="automatica">Automática</Option>
-        <Option value="manual">Manual</Option>
-        <Option value="cumplimiento">Por Cumplimiento</Option>
-      </Select>
-      <Checkbox name="has_confidentiality" label="Cláusula de Confidencialidad" />
-    </div>
-  </CollapsibleSection>
-
-  {/* Document Upload REQUIRED */}
-  <ContractDocumentUpload
-    required={true}
-    existingDocuments={contract ? documents : []}
-    onUpload={onDocumentChange}
-    onRemove={onDocumentRemove}
-  />
-
-</form>
-```
-
----
-
-### 4.3 ContractDocumentUpload
-
-**Props:**
-```typescript
-interface ContractDocumentUploadProps {
-  required?: boolean;
-  existingDocuments?: APIDocument[]; // para edición
-  onUpload: (doc: {url:string, key:string, file:File}) => void;
-  onRemove: (docId?: number) => void; // docId undefined = pendiente
-}
-```
-
-**Estado:**
-```typescript
-const [uploading, setUploading] = useState(false);
-```
-
-**Render:**
-```tsx
-<div className="space-y-2">
-  <Label>
-    Documento del Contrato {required && <span className="text-destructive">*</span>}
-  </Label>
-
-  {/* Lista documentos existentes (solo edición) */}
-  {existingDocuments?.length > 0 && (
-    <div className="space-y-2">
-      {existingDocuments.map(doc => (
-        <DocumentItem
-          key={doc.id}
-          document={doc}
-          onRemove={() => onRemove(doc.id)}
-        />
-      ))}
-    </div>
-  )}
-
-  {/* Upload area */}
-  {!pendingDocument ? (
-    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-      <input
-        type="file"
-        id="contract-doc-upload"
-        className="hidden"
-        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-        onChange={handleFileChange}
-        disabled={uploading}
-      />
-      <label htmlFor="contract-doc-upload" className="cursor-pointer">
-        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-        <p className="text-sm font-medium">
-          {uploading ? 'Subiendo...' : 'Haz clic o arrastra el documento'}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          PDF, Word, imágenes (máx. 5MB)
-        </p>
-      </label>
-    </div>
-  ) : (
-    <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-      <FileText className="h-5 w-5 text-primary" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{pendingDocument.file.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {(pendingDocument.file.size / 1024 / 1024).toFixed(2)} MB
-        </p>
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => onRemove()}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  )}
-
-  {required && !hasDocument && (
-    <p className="text-xs text-destructive">
-      El documento del contrato es obligatorio
-    </p>
-  )}
-</div>
-```
-
----
-
-### 4.4 SignerInlineModal (Nuevo)
-
-**Similar a** `ClientInlineModal` y `SupplierInlineModal`, pero para `authorized_signers`.
-
-**Campos:**
-```typescript
-interface SignerFormData {
-  first_name: string;
-  last_name: string;
-  position: string;
-  email: string;
-  phone: string;
-  company_id: number;
-  company_type: 'client' | 'supplier';
-}
-```
-
-**UI:**
-```tsx
-<Dialog open={open} onOpenChange={onOpenChange}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Agregar Responsable Autorizado</DialogTitle>
-      <DialogDescription>
-        Complete los datos del responsable de la {companyType}.
-      </DialogDescription>
-    </DialogHeader>
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <Input name="first_name" label="Nombre *" required />
-        <Input name="last_name" label="Apellido *" required />
-      </div>
-      <Input name="position" label="Cargo *" required />
-      <Input name="email" type="email" label="Email *" required />
-      <Input name="phone" label="Teléfono" />
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={loading}>
-          Crear
-        </Button>
-      </DialogFooter>
-    </form>
-  </DialogContent>
-</Dialog>
-```
-
-**Nota:** Este modal reutiliza lógica de `AuthorizedSignerForm` pero en versión inline modal. Se puede extraer a componente compartido si se desea.
-
----
-
-## 5. Validación
-
-### 5.1 Frontend (ClientContractForm / SupplierContractForm)
+### 5.1 Frontend
 
 ```typescript
 const validate = () => {
@@ -597,375 +589,667 @@ const validate = () => {
 
 ### 5.2 Backend (Go handler)
 
-**Ya existe validación en `internal/handlers/contracts.go`**, pero agregar:
-- Validar `document_url` presente en create (no NULL)
-- Validar FK: contraparte belongs to company correcta (ya planeado en v2 design)
+**En `createContract` (internal/handlers/contracts.go:153-267):**
 
----
+```go
+// Ya existe validación de client/supplier company match
 
-## 6. UI/UX Spec (UI/UX Pro Max Applied)
+// AÑADIR: validar documento presente
+if req.DocumentURL == nil || *req.DocumentURL == "" {
+    h.Error(w, http.StatusBadRequest, "document is required")
+    return
+}
 
-### 6.1 Estilo Visual
-
-**Producto:** B2B SaaS - Gestión de Contratos Empresariales  
-**Tono:** Profesional, eficiente,limpio, denso en información pero no recargado
-
-**Diseño system aplicado:**
-
-| Atributo | Valor | Rationale |
-|----------|-------|-----------|
-| **Pattern** | Form-centric | Focus en completar datos rápido |
-| **Style** | Minimal Business | Sin distracciones, alta confianza |
-| **Color Palette** | Slate + Primary Blue (`blue-600`) | Neutral + acción distinguishable |
-| **Typography** | Inter (UI) + system para datos | Legibilidad, familiar empresarial |
-| **Spacing** | 8px grid: gap-2, gap-4, gap-6 | Ritmo visual consistente |
-| **Button Size** | `size="sm"` (h-8, px-2) para [+], `size="default"` para acciones principales | Tap target ≥44px con hitbox expandida |
-| **Icons** | Lucide React (consistent) | Variant weight 2px stroke |
-| **Feedback** | Toast + inline error | Immediate + persistent |
-
-### 6.2 Botones Pequeños (size="sm")
-
-**Implementación:**
-```tsx
-<Button
-  type="button"
-  size="sm"
-  variant="outline"
-  className="h-8 w-8 p-0 flex-shrink-0"
-  onClick={...}
->
-  <Plus className="h-3 w-3" />
-</Button>
-```
-
-**Tooltip (mejora accesibilidad):**
-```tsx
-<Tooltip>
-  <TooltipTrigger asChild>
-    <Button ...>...</Button>
-  </TooltipTrigger>
-  <TooltipContent>
-    <p>Agregar nuevo {contraparteLabel}</p>
-  </TooltipContent>
-</Tooltip>
-```
-
-**Hitbox:** El button `w-8 h-8` + padding del tooltip → cumple 44×44
-
-### 6.3 Layout Responsive
-
-```css
-/* Móvil: stacked */
-.grid-cols-2 → grid-cols-1 en <768px
-
-/* Tablet/Desktop: 2-columnas */
-@media (min-width: 768px) {
-  .form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
+// AÑADIR: validar formato URL (debe ser S3 URL válida)
+if req.DocumentURL != nil && !strings.HasPrefix(*req.DocumentURL, "https://") {
+    h.Error(w, http.StatusBadRequest, "invalid document URL")
+    return
 }
 ```
 
-**Safe areas:** Ya manejado por `AppLayout` → no necesario en formulario.
+**En `updateContract` (internal/handlers/contracts.go:296-402):**
 
-### 6.4 Accesibilidad
+```go
+// AÑADIR: validar ownership de client/supplier
+var currentCompanyID int
+err := h.DB.QueryRow("SELECT company_id FROM contracts WHERE id = ? AND deleted_at IS NULL", id).Scan(&currentCompanyID)
+if err != nil {
+    h.Error(w, http.StatusNotFound, "contract not found")
+    return
+}
 
-- Labels visibles (no placeholder-only) ✓
-- Inputs asociados con `htmlFor`/`id` ✓
-- Error messages cerca del campo ✓
-- Keyboard navigation (tab order natural) ✓
-- `aria-describedby` para helper text ✓
-- `required` attribute + asterisco visual ✓
+// Validate new client belongs to contract's company
+if req.ClientID > 0 {
+    var clientCompanyID int
+    err := h.DB.QueryRow("SELECT company_id FROM clients WHERE id = ?", req.ClientID).Scan(&clientCompanyID)
+    if err != nil || clientCompanyID != currentCompanyID {
+        h.Error(w, http.StatusBadRequest, "client does not belong to contract company")
+        return
+    }
+}
+
+// Validate new supplier belongs to contract's company
+if req.SupplierID > 0 {
+    var supplierCompanyID int
+    err := h.DB.QueryRow("SELECT company_id FROM suppliers WHERE id = ?", req.SupplierID).Scan(&supplierCompanyID)
+    if err != nil || supplierCompanyID != currentCompanyID {
+        h.Error(w, http.StatusBadRequest, "supplier does not belong to contract company")
+        return
+    }
+}
+
+// AÑADIR: permitir actualizar document_url si se proporciona
+if req.DocumentURL != nil && *req.DocumentURL != "" {
+    // Incluir en UPDATE statement
+}
+```
 
 ---
 
-## 7. Plan de Migración
+## 6. UI/UX Spec (UI/UX Pro Max Applied) — Sin cambios
 
-### 7.1 roadmap
+*( Mantiene same especificación visual que diseño original )*
 
-**Fase 0:** Preparación (sin impacto usuario)
-- [ ] Crear `SignerInlineModal` (copiando estructura de Supplier/ClientInlineModal)
-- [ ] Crear `ContractDocumentUpload` componente base
-- [ ] Crear `ClientContractForm` y `SupplierContractForm` vacíos (solo estructura)
-- [ ] Escribir tests unitarios básicos (render)
+---
 
-**Fase 1:** Wrapper y lógica (backward compatible)
-- [ ] Crear `ContractFormWrapper`
-- [ ] Mover lógica de rol + empresa de `ContractForm` a Wrapper
-- [ ] Actualizar `ContractsPage` para usar Wrapper en lugar de `ContractForm`
+## 7. Plan de Migración (Actualizado — Fases Expandidas)
+
+### Fase 0: Preparación (sin impacto usuario)
+
+**Tasks:**
+- [ ] Crear/types faltantes: `ContractSubmitData`, `PendingDocument` en `types/contract.ts`
+- [ ] Crear hook `useOwnCompanies.ts` con cache en localStorage
+- [ ] Crear hook `useCompanyFilter.ts` (usado en 3 páginas)
+- [ ] Crear hook `useDocumentCleanup.ts`
+- [ ] Añadir migration SQL: 
+  ```sql
+  ALTER TABLE contracts ADD COLUMN document_url TEXT NULL;
+  ALTER TABLE contracts ADD COLUMN document_key TEXT NULL;
+  ```
+- [ ] Implementar backend endpoint `DELETE /api/documents/temp/{key}` con ownership validation
+- [ ] Añadir validación `document_url required` en `createContract` handler
+- [ ] Añadir validación ownership en `updateContract` handler
+- [ ] Crear `ContractDocumentUpload.tsx` (componente base con cleanup)
+- [ ] Crear `SignerInlineModal.tsx` (copiando patrón de Client/SupplierInlineModal)
+- [ ] Crear `ContractFormWrapper.tsx`, `ClientContractForm.tsx`, `SupplierContractForm.tsx` (estructura vacía)
+- [ ] Escribir tests unitarios básicos (render) para TODOS los nuevos componentes
+
+**Commit:** "chore(contracts): prepare refactor — add types, hooks, and cleanup infrastructure"
+
+---
+
+### Fase 1: Wrapper y lógica (backward compatible)
+
+- [ ] Implementar lógica completa de `ContractFormWrapper` con state management
+- [ ] Implementar `ClientContractForm` con todos los campos (como `ContractForm` actual)
+- [ ] Implementar `SupplierContractForm` espejo
+- [ ] Integrar `ContractDocumentUpload` en ambos formularios (required)
+- [ ] Pasar `pendingDocument` state y handlers desde Wrapper
+- [ ] Conectar modales: `ClientInlineModal`, `SupplierInlineModal`, `SignerInlineModal`
+- [ ] Añadir botones [+] compactos (size="sm", h-8 w-8) con Tooltip
+- [ ] Implementar `handleCompanyChange` que limpia `pendingDocument`
+- [ ] Actualizar `ContractsPage` para usar nuevo `ContractForm` (import unchanged)
 - [ ] Verificar que creación y edición funcionan igual que antes
-- [ ] No desplegar a producción hasta Fase 2
+- [ ] NO desplegar a producción hasta Fase 2
 
-**Fase 2:** Implementar ClientContractForm
-- [ ] Extraer todos los campos de `ContractForm` que aplican a rol client
-- [ ] Integrar `ContractDocumentUpload` (required)
-- [ ] Integrar botones pequeños [+] con tooltips
-- [ ] Conectar modales: `ClientInlineModal` y `SignerInlineModal`
-- [ ] Probar flujo completo: crear cliente desde modal → select actualiza
-- [ ] Probar flujo completo: crear responsable → select actualiza
-
-**Fase 3:** Implementar SupplierContractForm
-- [ ] Espejo de Fase 2 pero para rol supplier
-- [ ] Conectar `SupplierInlineModal`
-- [ ] Mismos tests que Fase 2
-
-**Fase 4:** Validación y Documentación
-- [ ] Validaciones frontend (required fields, documento, fechas)
-- [ ] Mensajes de error claros
-- [ ] Actualizar `docs/contracts.md` si existe
-- [ ] Commit con mensaje descriptivo
-- [ ] PR con checklist
+**Commit:** "feat(contracts): refactor ContractForm to Wrapper architecture with role-based rendering"
 
 ---
 
-## 8. Preguntas Abiertas
+### Fase 2: Validación y Partial Failure
 
-### Q1: `AuthorizedSigner` vs `ResponsiblePerson`
-El modelo usa `authorized_signers` tabla. ¿El "responsable" de contraparte es **siempre** un `authorized_signer`? 
-- **Respuesta esperada:** Sí, el responsable es un `authorized_signer` con `company_type` matching contraparte.
-
-### Q2: Documento del contrato → ¿asociar múltiple?
-¿Debe permitir adjuntar **más de un** documento al contrato (como está ahora en edición)?
-- **Respuesta esperada:** Sí, en edición se permite múltiple. En creación, al menos 1 obligatorio.
-
-### Q3: `pendingDocument` cleanup
-Si usuario sube documento pero NO crea contrato (cancela), ¿debemos eliminar el archivo temporal de S3?
-- **Respuesta esperada:** Sí, cleanup inmediato al cancelar/cerrar formulario sin submit.
-
-### Q4: `SignerInlineModal` → ¿reutilizar `AuthorizedSignerForm`?
-`AuthorizedSignerForm` es un componente page-level. ¿Prefieres crear `SignerInlineModal` independiente o extraer `AuthorizedSignerFormFields` shared?
-- **Respuesta esperada:** Crear `SignerInlineModal` independiente (simplicidad). Ya existe patrón en Supplier/ClientInlineModal.
+- [ ] Añadir validación frontend en `ClientContractForm` y `SupplierContractForm` (required fields, documento)
+- [ ] Implementar `handleSubmit` en Wrapper con try/catch para partial failure
+- [ ] Test manual: submit sin documento → error → documento se mantiene
+- [ ] Test manual: submit con error 500 → documento se mantiene
+- [ ] Test manual: submit exitoso → documento limpia
+- [ ] Añadir mensajes de error específicos (detectar 400 con document error)
+- [ ] Commit
 
 ---
 
-## 9. Criterios de Aceptación (DoD)
+### Fase 3: Filtros por Empresa — Extensión a Otras Páginas
 
-### Nuevo Contrato (cliente rol)
+**Objetivo:** Asegurar que `ContractsPage`, `SupplementsPage`, `ReportsPage` usen `useOwnCompanies` y `useCompanyFilter` hooks.
 
-- [ ] Empresa propia auto-selecciona si solo hay 1
-- [ ] Si hay múltiples, dropdown visible y funciona
-- [ ] Al cambiar empresa → limpiar contraparte y responsable
-- [ ] Rol "cliente" seleccionado por defecto
-- [ ] Select de **cliente** (contraparte) muestra solo clientes de la empresa
-- [ ] Botón pequeño [+] al lado del select → abre `ClientInlineModal`
-- [ ] Al crear cliente → select se actualiza automáticamente
-- [ ] Select de **responsable** muestra responsables del cliente seleccionado
-- [ ] Botón pequeño [+] al lado → abre `SignerInlineModal`
-- [ ] Al crear responsable → select se actualiza
-- [ ] Upload de documento contrato es **obligatorio** (valida antes submit)
-- [ ] Upload muestra preview (nombre, tamaño, eliminar)
-- [ ] Legal fields abren/cierran correctamente
-- [ ] Submit exitoso → toast + limpieza + close
-- [ ] Submit falla → mantener datos + documento + mensaje error
+**Tasks:**
+- [ ] Extraer `useOwnCompanies` de Wrapper a hook compartido (`src/hooks/useOwnCompanies.ts`)
+- [ ] Extraer `useCompanyFilter` a hook compartido (`src/hooks/useCompanyFilter.ts`)
+- [ ] Refactor `ContractsPage`:
+  - Reemplazar `ownCompanies` state + useEffect por `useOwnCompanies()`
+  - Reemplazar `filteredContracts` lógica por `useCompanyFilter(contracts, currentCompany, companyFilter)`
+  - Verificar dropdown de empresa muestra per-company options (ya existe)
+  - Test manual: filtrar por empresa específica → muestra solo contratos donde client/supplier == esa empresa
+- [ ] Refactor `SupplementsPage` (ya tiene lógica correcta, pero reemplazar state por hook)
+- [ ] Refactor `ReportsPage`:
+  - Reemplazar `ownCompanies` state por hook
+  - Reemplazar `enrichedFilteredContracts` lógica por hook `useCompanyFilter`
+  - Añadir opciones per-company en dropdown si no existen (ya existen en diseño)
+  - Verificar filtrado funciona igual que `SupplementsPage`
+- [ ] Commit
 
-### Nuevo Contrato (proveedor rol)
-
-Espejo de cliente pero con:
-- Contraparte = proveedor
-- Modal = `SupplierInlineModal`
-- Responsables filtrados por `supplier_id`
-
-### Edición de Contrato
-
-- [ ] Carga datos existentes en todos los campos
-- [ ] Documentos existentes se listan (puede eliminar)
-- [ ] Puede agregar documentos nuevos
-- [ ] Botones [+] funcionan para agregar contraparte/responsable
-- [ ] No permite cambiar empresa propia (solo lectura)
-- [ ] Submit actualiza correctamente
-
-### UI/UX
-
-- [ ] Botones [+] size="sm" h-8 w-8 p-0 con icono Plus h-3 w-3
-- [ ] Tooltip en cada botón [+] (accessibility)
-- [ ] Touch target ≥44×44 efectivo (con hitbox expandida)
-- [ ] Spacing 8px entre elementos close, 16px entre secciones
-- [ ] No hay horizontal scroll en móvil (375px)
-- [ ] Contraste texto ≥4.5:1 (WCAG AA)
-- [ ] Labels visibles, no placeholder-only
-- [ ] Focus visible en todos los controles
+**Nota:** Esta phase **no estaba en diseño original v2** — es crítica para bugs P1.
 
 ---
 
-## 10. Testing Strategy
+### Fase 4: Tests Automáticos (Unit + Integration)
 
-### Unit Tests (Jest + React Testing Library)
+**Framework:** Vitest + React Testing Library + `@testing-library/user-event`
+
+**Unit tests — `ContractFormWrapper.test.tsx`:**
+```typescript
+describe('ContractFormWrapper', () => {
+  it('renders own companies list from hook', () => {});
+  it('auto-selects company when single', () => {});
+  it('shows role selector only for new contracts', () => {});
+  it('renders ClientContractForm when role=client', () => {});
+  it('renders SupplierContractForm when role=supplier', () => {});
+  it('calls onSubmit with company_id and document_url on success', () => {});
+  it('preserves pendingDocument when onSubmit throws', () => {});
+  it('clears pendingDocument on successful submit', () => {});
+  it('clears pendingDocument when company changes', () => {});
+  it('shows error when trying to submit without document', () => {});
+  it('loads counterparts when company/role changes', () => {});
+  it('loads signers when counterpart is selected', () => {});
+  it('handles modal onSuccess with error fallback', () => {});
+});
+```
+
+**Unit tests — `ContractDocumentUpload.test.tsx`:**
+```typescript
+describe('ContractDocumentUpload', () => {
+  it('accepts file and calls onUpload', () => {});
+  it('shows file preview with name and size', () => {});
+  it('calls onRemove when remove button clicked', () => {});
+  it('displays required error when required=true and no file', () => {});
+  it('calls cleanup on unmount for temp documents', async () => {});
+  it('does NOT call cleanup for existing contract documents', () => {});
+});
+```
+
+**Unit tests — `useOwnCompanies.test.ts`:**
+```typescript
+describe('useOwnCompanies', () => {
+  it('loads companies and sets currentCompany', () => {});
+  it('auto-selects when single company', () => {});
+  it('caches results in localStorage', () => {});
+  it('refetch ignores cache', () => {});
+});
+```
+
+**Unit tests — `useCompanyFilter.test.ts`:**
+```typescript
+describe('useCompanyFilter', () => {
+  it('filters contracts by client company match', () => {});
+  it('filters contracts by supplier company match', () => {});
+  it('filters by numeric companyId (both parties)', () => {});
+  it('returns all when filter=all', () => {});
+  it('returns all when currentCompany null', () => {});
+});
+```
+
+**Integration tests — modals:**
+```typescript
+describe('ContractForm + Modals integration', () => {
+  it('creates client from modal and updates select', async () => {});
+  it('creates supplier from modal and updates select', async () => {});
+  it('creates signer from modal and updates select', async () => {});
+  it('handles modal onSuccess error gracefully', async () => {});
+});
+```
+
+**Coverage target:** ≥85% lines, ≥90% branches.
+
+**Commit:** "test(contracts): add comprehensive unit tests for refactored components"
+
+---
+
+### Fase 5: E2E Tests (Playwright)
+
+**Archivo:** `e2e/tests/contracts/contract-form.spec.ts`
 
 ```typescript
-// ContractFormWrapper
-- renders own companies list
-- auto-selects when single company
-- shows role selector when new contract
-- renders ClientContractForm when role=client
-- renders SupplierContractForm when role=supplier
-- calls onSubmit with correct payload
+describe('Contract Form Refactor', () => {
+  beforeEach(async () => {
+    await page.goto('/contracts/new');
+    await page.waitForLoadState('networkidle');
+  });
 
-// ClientContractForm
-- renders client select with options filtered by company
-- shows add client button
-- opens ClientInlineModal on click
-- disables responsible select until client selected
-- shows add responsible button
-- opens SignerInlineModal on click
-- requires document upload before submit
-- validates required fields
+  describe('New Contract as Client', () => {
+    it('auto-selects company when single', async () => {
+      // Verify auto-selection
+    });
 
-// ContractDocumentUpload
-- accepts file upload
-- shows file preview
-- removes file on click
-- requires when required=true
+    it('shows client role selected by default', async () => {
+      // Verify radio default
+    });
+
+    it('loads suppliers when company selected', async () => {
+      // Select company → suppliers dropdown populated
+    });
+
+    it('creates new supplier from modal and updates dropdown', async () => {
+      // Click [+] → fill modal → submit → appears in select
+    });
+
+    it('loads signers after selecting supplier', async () => {
+      // Select supplier → signers dropdown populated
+    });
+
+    it('creates new signer from modal and updates dropdown', async () => {
+      // Click [+] signer → fill modal → appears
+    });
+
+    it('requires document upload before submit', async () => {
+      // Try submit without doc → error toast
+    });
+
+    it('submits successfully with all fields + document', async () => {
+      // Fill all → upload → submit → success + redirect
+    });
+
+    it('handles partial failure: maintains document on API error', async () => {
+      // Mock API 500 → document preview stays visible
+    });
+
+    it('clears document when company changes', async () => {
+      // Upload doc → change company → doc cleared + toast info
+    });
+  });
+
+  describe('New Contract as Supplier', () => {
+    // Mirror of client tests
+  });
+
+  describe('Edit Existing Contract', () => {
+    it('loads all existing data correctly', async () => {});
+    it('allows document management (list + remove)', async () => {});
+    it('allows adding new signer via modal', async () => {});
+    it('updates successfully', async () => {});
+  });
+
+  describe('Accessibility', () => {
+    it('all buttons have accessible labels', async () => {});
+    it('tooltips appear on focus for [+] buttons', async () => {});
+    it('form submits with Enter key', async () => {});
+    it('tab order is logical', async () => {});
+  });
+});
 ```
 
-### E2E Tests (Playwright)
+**Commit:** "test(contracts): add E2E tests for contract form refactor"
 
-```gherkin
-Scenario: Crear contrato como cliente
-  Given hay 1 empresa propia
-  When voy a /contracts/new
-  Then empresa auto-seleccionada
-  And rol "cliente" seleccionado por defecto
+---
 
-  When selecciono cliente existente
-  Then responsable select se habilita
-  And muestra responsables de ese cliente
+### Fase 6: Backend — Validaciones y Cleanup
 
-  When hago clic en [+] responsable
-  Then modal SignerInlineModal se abre
-  When completo formulario y creo
-  Then responsable aparece en select
+#### Task 6.1: Migration — document_url/document_key columns
 
-  When subo documento PDF
-  Then preview se muestra
-  When submit formulario
-  Then contrato creado + redirect
+```sql
+-- migrations/20260424_add_contract_document_url.sql
+ALTER TABLE contracts ADD COLUMN document_url TEXT NULL;
+ALTER TABLE contracts ADD COLUMN document_key TEXT NULL;
 
-Scenario: Crear contrato como proveedor (espejo)
-  # Similar pero rol supplier
-
-Scenario: Documento obligatorio
-  When intento submit sin documento
-  Then error "Documento es obligatorio" aparece
-  And submit bloqueado
-
-Scenario: Cambiar empresa limpia contraparte
-  Given hay 2 empresas propias
-  When selecciono empresa A
-  And selecciono cliente X
-  When cambio a empresa B
-  Then cliente select se resetea (vacío)
-  And responsable select se resetea (vacío)
+-- Para nuevos contratos, required por handler
+-- Contratos existientes: NULL permitido (backward compatible)
 ```
 
----
+**Commit:** "db(contracts): add document_url and document_key columns"
 
-## 11. Riesgos y Mitigaciones
+#### Task 6.2: createContract — validate document_url
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|--------------|---------|------------|
-| Backend no acepta `document_url` en create | Medium | High | Coordinar con backend team, agregar campo si falta |
-| `SignerInlineModal` duplica `AuthorizedSignerForm` código | Medium | Medium | Extraer hook `useAuthorizedSignerForm` compartido |
-| Upload temporal S3 no se limpia si usuario cierra modal | **Low** | **Medium** | **useEffect cleanup en ContractDocumentUpload + API DELETE /documents/temp/:key** |
-| Responsive breakpoints rompen layout en tablet | Low | Low | Test en 768px, 1024px antes de PR |
-| Selectores muy lentos (muchas options) | Low | Low | Virtualize si >50 opciones (no esperado) |
-| **Partial failure: documento sube pero contrato no se crea** | **Medium** | **Medium** | **Mantener `pendingDocument` en estado, mostrar mensaje claro, permitir reintento sin re-subir** |
-| **ContractsPage coupling al cambiar ContractForm** | **Low** | **Low** | **Re-export pattern: ContractForm.tsx → export default from './ContractFormWrapper'. Props idénticas, sin cambios en ContractsPage** |
+**File:** `internal/handlers/contracts.go:153-267`
 
----
+```go
+// Después de validar client/supplier (línea 199), añadir:
+if req.DocumentURL == nil || strings.TrimSpace(*req.DocumentURL) == "" {
+    h.Error(w, http.StatusBadRequest, "contract document is required")
+    return
+}
 
-### 11.1 Document Cleanup Execution Details
+// Añadir DocumentURL y DocumentKey al INSERT (líneas 229-238):
+_, err = h.DB.Exec(`
+    INSERT INTO contracts (
+        internal_id, contract_number, title, client_id, supplier_id,
+        client_signer_id, supplier_signer_id, start_date, end_date, amount,
+        type, status, description, object, fulfillment_place, dispute_resolution,
+        has_confidentiality, guarantees, renewal_type, created_by, company_id,
+        document_url, document_key               -- NUEVOS
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, internalID, req.ContractNumber, req.Title, req.ClientID, req.SupplierID,
+    req.ClientSignerID, req.SupplierSignerID, req.StartDate, req.EndDate,
+    req.Amount, req.Type, req.Status, req.Description, req.Object, req.FulfillmentPlace,
+    req.DisputeResolution, req.HasConfidentiality, req.Guarantees, req.RenewalType,
+    userID, actualCompanyID,
+    req.DocumentURL, req.DocumentKey);  // NUEVOS
+```
 
-**Cleanup trigger:** `ContractDocumentUpload` se desmonta cuando:
-- Formulario se cierra (Cancelar)
-- Paso a otro rol (cambio de `ourRole`)
-- Submit falla y se recarga la página
+**Actualizar struct `createContractRequest`** (líneas 113-133):
+```go
+type createContractRequest struct {
+    ContractNumber      string  `json:"contract_number"`
+    Title             *string `json:"title"`
+    ClientID          int     `json:"client_id"`
+    CompanyID         *int    `json:"company_id,omitempty"`
+    SupplierID        int     `json:"supplier_id"`
+    ClientSignerID    *int    `json:"client_signer_id"`
+    SupplierSignerID *int    `json:"supplier_signer_id"`
+    StartDate         string  `json:"start_date"`
+    EndDate           string  `json:"end_date"`
+    Amount            float64 `json:"amount"`
+    Type              string  `json:"type"`
+    Status            string  `json:"status"`
+    Description       *string `json:"description"`
+    Object            *string `json:"object"`
+    FulfillmentPlace *string `json:"fulfillment_place"`
+    DisputeResolution *string `json:"dispute_resolution"`
+    HasConfidentiality *bool  `json:"has_confidentiality,omitempty"`
+    Guarantees        *string `json:"guarantees"`
+    RenewalType       *string `json:"renewal_type"`
+    DocumentURL       *string `json:"document_url"`       // NUEVO
+    DocumentKey       *string `json:"document_key"`       // NUEVO
+}
+```
 
-**Temporary document lifecycle:**
-1. Upload → S3 presigned URL devuelve `key` temporal (prefix: `temp/`)
-2. `pendingDocument` guarda `{url, key, file}` en estado Wrapper
-3. Submit exitoso: backend recibe `document_url` y `document_key`, marcar como permanente
-4. Submit fallido: **no** se llama cleanup → usuario puede reintentar
-5. Desmontar sin submit: cleanup → `DELETE /documents/temp/:key`
+**Commit:** "feat(contracts): enforce document upload on contract creation"
 
-**API requirement:** Endpoint `DELETE /documents/temp/:key` (o `POST /documents/cleanup-temp` con key). Ya existe en `documentsAPI`? Verificar y agregar si falta.
+#### Task 6.3: updateContract — validate ownership + update document
 
----
+**File:** `internal/handlers/contracts.go:296-402`
 
-### 11.2 Coupling Mitigation Execution
+1. Añadir validación de ownership (como se describió arriba).
+2. Añadir `document_url`, `document_key` al UPDATE si se提供:
+```go
+_, err = h.DB.Exec(`
+    UPDATE contracts SET 
+        title=?, client_id=?, supplier_id=?,
+        client_signer_id=?, supplier_signer_id=?, start_date=?, end_date=?,
+        amount=?, type=?, status=?, description=?, object=?, fulfillment_place=?,
+        dispute_resolution=?, has_confidentiality=?, guarantees=?, renewal_type=?,
+        document_url=?, document_key=?,               -- NUEVOS
+        updated_at=CURRENT_TIMESTAMP
+    WHERE id=? AND deleted_at IS NULL AND company_id = ?
+`, 
+    req.Title, req.ClientID, req.SupplierID, req.ClientSignerID, req.SupplierSignerID,
+    req.StartDate, req.EndDate, req.Amount, req.Type, req.Status, req.Description,
+    req.Object, req.FulfillmentPlace, req.DisputeResolution, req.HasConfidentiality,
+    req.Guarantees, req.RenewalType,
+    req.DocumentURL, req.DocumentKey,  // NUEVOS
+    id, companyID)
+```
+3. Actualizar `createContractRequest` struct (ya incluye nuevos campos).
 
-**File:** `pacta_appweb/src/components/contracts/ContractForm.tsx`
+**Commit:** "feat(contracts): validate client/supplier ownership on update; allow document update"
 
+#### Task 6.4: Documents cleanup endpoint
+
+**File:** `internal/handlers/documents.go` (nuevo o existente)
+
+```go
+package handlers
+
+import (
+    "net/http"
+    "strings"
+    "fmt"
+    // ... otros imports
+)
+
+func (h *Handler) deleteTempDocument(w http.ResponseWriter, r *http.Request) {
+    key := chi.URLParam(r, "key")
+    userID := h.getUserID(r)
+    
+    // Seguridad: verificar que key tiene formato temp/{userID}/{uuid}
+    expectedPrefix := fmt.Sprintf("temp/%d/", userID)
+    if !strings.HasPrefix(key, expectedPrefix) {
+        http.Error(w, "forbidden: can only delete your own temp files", http.StatusForbidden)
+        return
+    }
+    
+    // Delete de S3
+    err := h.S3Client.DeleteObject(&s3.DeleteObjectInput{
+        Bucket: aws.String(h.S3Bucket),
+        Key:    aws.String(key),
+    })
+    if err != nil {
+        h.Error(w, http.StatusInternalServerError, "failed to delete temp file")
+        return
+    }
+    
+    w.WriteHeader(http.StatusNoContent)
+}
+```
+
+**Router:** Añadir en `router.go` o `handlers.go`:
+```go
+router.Delete("/api/documents/temp/{key}", h.deleteTempDocument)
+```
+
+**Frontend — actualizar `upload.ts`:**
 ```typescript
-// ANTES (legacy):
-// Contenido monolítico de ContractForm
-
-// DESPUÉS:
-export { default } from './ContractFormWrapper';
+export const upload = {
+    uploadWithPresignedUrl: ...,
+    cleanupTemporary: async (key: string): Promise<void> => {
+        try {
+            await fetch(`/api/documents/temp/${encodeURIComponent(key)}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+        } catch (err) {
+            console.error('Failed to cleanup temp document:', err);
+        }
+    },
+};
 ```
 
-**ContractsPage:** No changes. Import path remains `@/components/contracts/ContractForm`.
+**Commit:** "feat(documents): add temp document cleanup endpoint with ownership validation"
 
 ---
 
-## 12. Entregables
+### Fase 7: Code Review & Merge
+
+- [ ] Lint frontend (`npm run lint`) — sin errores
+- [ ] Lint backend (`go vet ./...`) — sin warnings
+- [ ] Tests unitarios pasan (`npm test`)
+- [ ] Tests E2E pasan (`npm run test:e2e`)
+- [ ] Build frontend (`npm run build`) — sin errores
+- [ ] Build backend (`go build ./...`) — sin errores
+- [ ] PR con checklist completa
+- [ ] Code review por al menos 1 reviewer
+- [ ] Merge a `main` con squash
+- [ ] Despliegue a staging
+- [ ] QA manual en staging
+- [ ] Promote to production
+
+---
+
+## 8. Entregables
 
 ### Código
 
 ```
 pacta_appweb/src/components/contracts/
-├── ContractFormWrapper.tsx      (NUEVO - 200 loc)
-├── ClientContractForm.tsx       (NUEVO - 150 loc)
-├── SupplierContractForm.tsx      (NUEVO - 150 loc)
-├── ContractDocumentUpload.tsx    (NUEVO - 100 loc)
-└── (mover/eliminar ContractForm.tsx original)
+├── ContractFormWrapper.tsx      (NUEVO - ~220 LOC)
+├── ClientContractForm.tsx       (NUEVO - ~180 LOC)
+├── SupplierContractForm.tsx     (NUEVO - ~180 LOC)
+├── ContractDocumentUpload.tsx   (NUEVO - ~120 LOC)
+└── ContractForm.tsx             (re-export)
 
 pacta_appweb/src/components/modals/
-├── SignerInlineModal.tsx         (NUEVO - 120 loc)
-└── ResponsiblePersonForm.tsx     (NUEVO - extract de AuthorizedSignerForm?)
+├── SignerInlineModal.tsx        (NUEVO - ~120 LOC)
+└── ResponsiblePersonForm.tsx    (OPCIONAL - extract de AuthorizedSignerForm)
 
-pacta_appweb/src/lib/
-└── (sin cambios)
+pacta_appweb/src/hooks/
+├── useOwnCompanies.ts           (NUEVO - ~60 LOC)
+├── useCompanyFilter.ts          (NUEVO - ~40 LOC)
+└── useDocumentCleanup.ts        (NUEVO - ~25 LOC)
 
 pacta_appweb/src/types/
-└── (agregar tipos si falta: ContractSubmitData, DocumentUpload)
+└── contracts.ts                 (MODIFICADO - añadir types)
+
+pacta_appweb/src/lib/
+└── upload.ts                    (MODIFICADO - añadir cleanupTemporary)
+
+internal/handlers/
+├── contracts.go                 (MODIFICADO - validaciones)
+└── documents.go                (MODIFICADO/AÑADIDO - cleanup endpoint)
+
+internal/db/migrations/
+└── 20260424_add_contract_document_url.sql  (NUEVO)
+```
+
+### Tests
+
+```
+pacta_appweb/src/components/contracts/__tests__/
+├── ContractFormWrapper.test.tsx
+├── ClientContractForm.test.tsx
+├── SupplierContractForm.test.tsx
+├── ContractDocumentUpload.test.tsx
+
+pacta_appweb/src/hooks/__tests__/
+├── useOwnCompanies.test.ts
+├── useCompanyFilter.test.ts
+└── useDocumentCleanup.test.ts
+
+e2e/tests/contracts/
+├── contract-form.spec.ts
+└── contract-form-partial-failure.spec.ts
 ```
 
 ### Documentación
 
-- `docs/plans/2026-04-24-contratos-refactor-implementation.md` → plan detallado tareas
-- `docs/plans/2026-04-24-contratos-refactor-design.md` → este documento
-- CHANGELOG entry
+- `docs/plans/2026-04-24-contratos-refactor-design.md` (este archivo)
+- `docs/plans/2026-04-24-contratos-refactor-implementation.md` (actualizado)
+- `docs/contracts.md` (si existe — actualizar flujo)
+- `CHANGELOG.md` entry
 
 ---
 
-## 13. Métricas de Éxito
+## 9. Métricas de Éxito (Actualizadas)
 
 | Métrica | Antes | Después | Target |
 |---------|-------|---------|--------|
 | Tiempo completar formulario nuevo contrato | ~180s | ~120s | -33% |
 | Errores por documento faltante | alto | 0 | 0 |
 | User-reported bugs relacionados contraparte | 3/mes | 0/mes | 0 |
-| File sizeContractForm component | 670 loc | 3×200 loc | Mejor mantenibilidad |
+| File size ContractForm component | 670 LOC | 3×200 LOC | Mejor mantenibilidad |
 | Accesibilidad botones [+] | ❌ tooltip | ✅ tooltip + aria-label | 100% |
+| **Test coverage frontend** | **0%** | **≥85%** | **≥85% lines** |
+| **Tasa de regresiones post-deploy** | **N/A** | **<5%** | **<5%** |
+| **Cleanup de archivos temp huérfanos** | **0%** | **100%** | **100%** |
 
 ---
 
-## 14. Preguntas Abiertas (Decisiones Pendientes)
+## 10. Riesgos y Mitigaciones (Completo)
 
-1. **¿`SignerInlineModal` debe incluir campo `document_url`?**  
-   → Actualmente `ClientInlineModal` y `SupplierInlineModal` Sí incluyen. `AuthorizedSignerForm` en Admin NO incluye. ¿Consistencia?
-
-2. **¿Documento del contrato puede ser múltiple?**  
-   → En edición ya permite múltiple. En creación debe permitir múltiple también o solo 1?
-
-3. **¿Backend valida `document_url` required en create?**  
-   → Necesita cambio en handler `createContract` para no permitir NULL.
-
-4. **¿`ContractDocumentUpload` soporta múltiple Archivos?**  
-   → Diseño actual solo 1. ¿Ampliarlo a múltiple?
+| # | Riesgo | Prob | Impacto | Mitigación | Estado |
+|---|--------|------|---------|------------|--------|
+| R1 | Backend no acepta `document_url` en create | M | H | ✅ Añadir campo + validación en task 6.2 | **Planificado** |
+| R2 | Temp document no se limpia (S3 cost) | M | M | ✅ Cleanup en unmount + endpoint DELETE | **Planificado** |
+| R3 | Partial failure: documento sube, contrato falla → huérfano | M | M | ✅ `pendingDocument` se mantiene → reintento posible | **Planificado** |
+| R4 | Modales no recargan listas post-creación | L | M | ✅ `onSuccess` con try/catch + toast | **Planificado** |
+| R5 | TypeScript types des sincronizados | L | M | ✅ `ContractSubmitData` definido en types | **Planificado** |
+| R6 | Accesibilidad: botones [+] sin aria-label | L | L | ✅ Tooltip implementado | **Planificado** |
+| R7 | **Filtros por empresa no funcionan enContractsPage/ReportsPage** | **H** | **H** | ✅ **Task 3: refactoring with useCompanyFilter** | **NUEVO** |
+| R8 | **updateContract permite cambiar client a otra company** | **H** | **H** | ✅ **Task 6.3: ownership validation** | **NUEVO** |
+| R9 | **Tests faltantes → regresiones** | **H** | **H** | ✅ **Fases 4 & 5: tests unit + e2e obligatorios** | **NUEVO** |
+| R10 | **useOwnCompanies duplicado en múltiples Components** | M | M | ✅ **Extraer a hook compartido en Fase 3** | **NUEVO** |
+| R11 | **Document cleanup race condition** | L | M | ✅ Flag `isSubmitted` en Wrapper para no borrar accidentalmente | **Planificado** |
 
 ---
 
-**Documento aprobado.** Proceder a generar plan de implementación con `writing-plans` skill.
+## 11. Checklist de Implementación (Secuencial)
+
+**Fase 0 — Preparation**
+- [ ] Types: `ContractSubmitData`, `PendingDocument` added to `types/contract.ts`
+- [ ] Hook `useOwnCompanies.ts` created + tests
+- [ ] Hook `useCompanyFilter.ts` created + tests
+- [ ] Hook `useDocumentCleanup.ts` created + tests
+- [ ] Migration SQL created & reviewed
+- [ ] Cleanup endpoint implementado + ownership validation
+- [ ] `createContract` valida `document_url`
+- [ ] `updateContract` valida ownership + actualiza `document_url`
+- [ ] `upload.ts` tiene `cleanupTemporary`
+
+**Fase 1 — Wrapper Core**
+- [ ] `ContractFormWrapper.tsx` completo con state management
+- [ ] `ClientContractForm.tsx` completo con todos los campos
+- [ ] `SupplierContractForm.tsx` completo espejo
+- [ ] `ContractDocumentUpload.tsx` con cleanup effect
+- [ ] Modals conectados con `onSuccess` + error handling
+- [ ] Botones [+] compactos con Tooltip
+- [ ] `handleCompanyChange` limpia `pendingDocument`
+- [ ] Tests unitarios de render mínimo pasan
+
+**Fase 2 — Partial Failure**
+- [ ] `handleSubmit` con try/catch y detección de errores específicos
+- [ ] Toast messages diferenciados
+- [ ] `pendingDocument` preservado en fallos
+- [ ] Manual QA: submit fail → reintento exitoso
+
+**Fase 3 — Filtros por Empresa (CRÍTICO)**
+- [ ] Refactor ContractsPage: reemplaza state por `useOwnCompanies`
+- [ ] Refactor ContractsPage: reemplaza filter logic por `useCompanyFilter`
+- [ ] Refactor SupplementsPage: reemplaza state por hook (lógica de filter ya correcta)
+- [ ] Refactor ReportsPage: reemplaza state + filter logic por hook
+- [ ] Verificar que dropdowns muestran per-company options
+- [ ] Tests unitarios para `useCompanyFilter` cubren todos los casos
+- [ ] Manual QA: filtrar por empresa A/B/todas en las 3 páginas
+
+**Fase 4 — Tests Unitarios**
+- [ ] `ContractFormWrapper.test.tsx` — 12+ tests
+- [ ] `ContractDocumentUpload.test.tsx` — 6+ tests  
+- [ ] `useOwnCompanies.test.ts` — 4+ tests
+- [ ] `useCompanyFilter.test.ts` — 5+ tests
+- [ ] `useDocumentCleanup.test.ts` — 3+ tests
+- [ ] Coverage ≥85% lines
+
+**Fase 5 — Tests E2E**
+- [ ] Playwright spec con 8+ escenarios
+- [ ] Todos pasan en CI
+- [ ] Accesibilidad audit (axe-core) sin violations
+
+**Fase 6 — Backend**
+- [ ] Migration applied to DB
+- [ ] `createContract` valida `document_url`
+- [ ] `updateContract` valida ownership + actualiza documento
+- [ ] Cleanup endpoint deployed + tested
+
+**Fase 7 — Merge & Deploy**
+- [ ] PR approvals (2+ reviewers)
+- [ ] CI green (frontend + backend)
+- [ ] Staging QA firmado
+- [ ] Changelog actualizado
+- [ ] Despliegue a producción
+
+---
+
+## 12. Preguntas Abiertas (Resueltas)
+
+### Q1: ¿`SignerInlineModal` debe incluir campo `document_url`?
+
+**Respuesta:** No necesariamente. `AuthorizedSigner` no requiere documento en modelo actual. Mantener simple: solo campos básicos (first_name, last_name, position, email, phone). Documento se agrega después si se necesita.
+
+### Q2: ¿Documento del contrato puede ser múltiple?
+
+**Respuesta:** Sí, en edición ya existe lista múltiple. En creación, al menos 1 obligatorio, pero puede subir múltiples en el mismo form. `ContractDocumentUpload` debe soportar múltiple archivos (array de `pendingDocuments`).
+
+**Implementación:** Cambiar `pendingDocument` (single) → `pendingDocuments: DocumentUpload[]`. UI muestra lista con opción eliminar cada uno. Submit envía array de `{url, key}`.
+
+### Q3: `pendingDocument` cleanup — ¿limpiar al cambiar empresa?
+
+**Respuesta:** **SÍ.** Al cambiar empresa, el documento pendiente ya no es válido (debe subirse en contexto de nueva empresa). Limpiar automáticamente con toast informativo.
+
+### Q4: ¿`SignerInlineModal` reutilizar `AuthorizedSignerForm`?
+
+**Respuesta:** No. Crear `SignerInlineModal` independiente (simplicidad). Patrón existente en `ClientInlineModal`/`SupplierInlineModal` es suficiente.
+
+### Q5: ¿Mantener `ContractForm.legacy.tsx` después de merge?
+
+**Respuesta:** No. Borrar inmediatamente después de merge exitoso. Rollback puede hacerse desde git history.
+
+---
+
+**Documento aprobado.**  
+Proceder a implementación con `executing-plans` skill.

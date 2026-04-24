@@ -36,6 +36,38 @@ func (h *Handler) listSigners(w http.ResponseWriter, r *http.Request) {
 	if cid := r.URL.Query().Get("company_id"); cid != "" {
 		companyID, _ = strconv.Atoi(cid)
 	}
+	companyType := r.URL.Query().Get("company_type") // Optional: "client" or "supplier"
+
+	// Optimized path: both company_id AND company_type provided → single filtered query (N+1 fix)
+	if companyType == "client" || companyType == "supplier" {
+		rows, err := h.DB.Query(`
+			SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
+			FROM authorized_signers
+			WHERE deleted_at IS NULL AND company_id = ? AND company_type = ?
+			ORDER BY first_name, last_name
+		`, companyID, companyType)
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "failed to list signers")
+			return
+		}
+		defer rows.Close()
+
+		var signers []signerRow
+		for rows.Next() {
+			var s signerRow
+			if err := rows.Scan(&s.ID, &s.CompanyID, &s.CompanyType, &s.FirstName, &s.LastName, &s.Position, &s.Phone, &s.Email, &s.CreatedAt, &s.UpdatedAt); err != nil {
+				continue
+			}
+			signers = append(signers, s)
+		}
+		if signers == nil {
+			signers = []signerRow{}
+		}
+		h.JSON(w, http.StatusOK, signers)
+		return
+	}
+
+	// Legacy path: no company_type filter → return all signers for company_id
 	rows, err := h.DB.Query(`
 		SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
 		FROM authorized_signers WHERE deleted_at IS NULL AND company_id = ? ORDER BY last_name, first_name

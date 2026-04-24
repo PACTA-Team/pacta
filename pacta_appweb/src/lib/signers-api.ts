@@ -38,6 +38,9 @@ export const signersAPI = {
   list: (signal?: AbortSignal) =>
     fetchJSON(BASE, { signal }),
 
+  listByCompany: (companyId: number, companyType: 'client' | 'supplier', signal?: AbortSignal) =>
+    fetchJSON(`${BASE}?company_id=${companyId}&company_type=${companyType}`, { signal }),
+
   getById: (id: number, signal?: AbortSignal) =>
     fetchJSON(`${BASE}/${id}`, { signal }),
 
