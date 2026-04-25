@@ -7,8 +7,8 @@ import (
 )
 
 // NewCORS returns a CORS middleware handler
-func NewCORS() func(http.Handler) http.Handler {
-	c := cors.New(cors.Options{
+func NewCORS() http.Handler {
+	return cors.Handler(cors.Options{
 		AllowedOrigins: []string{
 			"http://127.0.0.1:3000",
 			"https://app.pacta.local",
@@ -25,5 +25,4 @@ func NewCORS() func(http.Handler) http.Handler {
 		MaxAge:           3600,
 		ExposedHeaders:   []string{"X-Total-Count", "X-Request-ID"},
 	})
-	return c.Handler()
 }
