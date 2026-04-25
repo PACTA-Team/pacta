@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '@/types';
 import { checkSetupStatus } from '@/lib/setup-api';
+import { CSRFManager } from '@/lib/csrf';
 
 export interface SetupData {
   company_id?: number;
@@ -86,8 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (error) {
       console.warn('Logout API failed:', error);
+    } finally {
+      CSRFManager.clear();
+      setUser(null);
     }
-    setUser(null);
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<{ user: User | null; error?: string }> => {

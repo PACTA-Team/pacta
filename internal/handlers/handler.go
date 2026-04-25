@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
@@ -28,6 +30,11 @@ func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 func (h *Handler) Error(w http.ResponseWriter, status int, message string) {
+	// Map tenant isolation violations to 403 Forbidden instead of 500
+	if status == http.StatusInternalServerError && strings.Contains(message, "Tenant isolation violation") {
+		status = http.StatusForbidden
+		message = "access denied"
+	}
 	h.JSON(w, status, map[string]string{"error": message})
 }
 
@@ -43,6 +50,11 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			h.Error(w, http.StatusUnauthorized, "session expired")
 			return
 		}
+
+		// Update last_access asynchronously (non-blocking)
+		go func() {
+			h.DB.Exec("UPDATE users SET last_access = ? WHERE id = ?", time.Now(), userID)
+		}()
 
 		var role string
 		if err := h.DB.QueryRow("SELECT role FROM users WHERE id = ? AND deleted_at IS NULL AND status = 'active'", userID).Scan(&role); err != nil {

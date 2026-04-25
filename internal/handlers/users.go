@@ -138,9 +138,9 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
 			return
 		}
-		h.Error(w, http.StatusInternalServerError, "failed to create user")
+		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
-	}
+}
 
 	id64, _ := result.LastInsertId()
 	id := int(id64)
@@ -205,7 +205,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
 			return
 		}
-		h.Error(w, http.StatusInternalServerError, "failed to update user")
+		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -238,7 +238,7 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 
 	_, err = h.DB.Exec("UPDATE users SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to delete user")
+		h.Error(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

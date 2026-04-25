@@ -73,6 +73,44 @@ Regla concreta para evitar este error en el futuro.
 
 <!-- Las lecciones se registran a continuación en orden cronológico inverso -->
 
+## [004] Pérdida de Archivos Locales por git clean -fd sin Verificación
+
+**Fecha**: 2026-04-24
+**Tags**: git, workflow, documentation, process
+**Severity**: high
+
+### Contexto
+Durante una sesión de trabajo, se ejecutó `git restore . && git clean -fd` para descartar cambios locales no deseados. Sin embargo, el usuario tenía-planeado hacer commit y push de esos archivos (planes de security y documentación) para mantener trazabilidad del trabajo en progreso.
+
+### Síntomas
+- Archivos documentos de `docs/plans/` y `docs/security/` fueron eliminados permanentemente
+- No había sido realizados commits previos, por lo que no había puntos de restauración en el historial
+- El directorio de trabajo quedó limpio pero sin los archivos planificados
+
+### Causa Raíz
+1. **Confusión de workflow**: El usuario pidió "omitir los cambios localmente sin guardar" - interpreté incorrectamente como descartar
+2. **Falta de verificación**: No pregunté si esos archivos hatten sido parte de un workflow planeado (commit+push)
+3. **git clean irreversible**: A diferencia de `git restore`, `git clean -fd` elimina archivos sin opción de recuperación si no están en el índice
+
+### Solución
+NO HAY SOLUCIÓN - Los archivos fueron eliminados irreversiblemente porque no existían en ningún commit anterior.
+
+### Regla de Prevención
+> **Confirmar antes de git clean**: Antes de ejecutar `git clean -fd` o `git restore .`, PREGUNTAR si hay archivos que el usuario quiere preservar o hacer commit.
+>
+> - `git restore .` solo revierte cambios en archivostracked
+> - `git clean -fd` elimina archivos sin rastrear PERMANENTEMENTE
+> - Si el usuario quiere "descartar locally sin guardar", siempre confirmar qué archivos involucra
+> - Preguntar explícitamente: "¿Quieres que делаем commit de estos archivos primero o descartarlos?"
+
+### Referencias
+- Archivos perdidos:
+  - `docs/plans/2026-04-24-fix-ci-typescript-errors.md`
+  - `docs/plans/security-hardening-cors-rls-headers.md`
+  - `docs/security/` (directorio completo)
+
+---
+
 ## [003] SVG como Componente React: Falta de Plugin SVGR en Vite Causa Página en Blanco
 
 **Fecha**: 2026-04-22

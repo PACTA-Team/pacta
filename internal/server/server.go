@@ -13,13 +13,14 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/handlers"
+	"github.com/PACTA-Team/pacta/internal/server/middleware"
 	"github.com/PACTA-Team/pacta/internal/worker"
 )
 
@@ -29,6 +30,13 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		return err
 	}
 	defer database.Close()
+
+	// Configure connection pool for production workloads
+	// NOTE: SQLite connection pool size is managed by GORM/sqlx defaults
+	// For RLS via session_tenant_context table, we rely on each request
+	// setting its own tenant context within its transaction scope.
+	// database.SetMaxOpenConns(100)  // Optional: tune based on load
+	// database.SetMaxIdleConns(10)
 
 	if err := db.Migrate(database); err != nil {
 		return err
@@ -40,10 +48,24 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	svc := &config.Service{Config: cfg, DB: database}
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(middleware.NewCORS())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
+	// Apply CSRF protection globally with auth endpoints exempt
+	r.Use(middleware.CSRFProtection([]string{
+		"/api/auth/login",
+		"/api/auth/register",
+		"/api/auth/logout",
+		"/api/auth/verify-code",
+		"/api/setup/status",
+		"/api/setup",
+	}))
+	r.Use(middleware.RateLimit())
+	// Tenant isolation: sets session_tenant_context for RLS triggers
+	r.Use(h.TenantContextMiddleware)
 
-	// Auth routes (no auth required)
+	// Auth routes (no auth required, exempt from CSRF via global config)
 	r.Post("/api/auth/login", h.HandleLogin)
 	r.Post("/api/auth/register", h.HandleRegister)
 	r.Post("/api/auth/logout", h.HandleLogout)
@@ -52,7 +74,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// Public companies list (for registration form)
 	r.Get("/api/public/companies", h.HandlePublicCompanies)
 
-	// Setup routes (no auth required, gated by first-run check)
+	// Setup routes (no auth required, gated by first-run check, exempt from CSRF via global config)
 	r.Get("/api/setup/status", h.HandleSetupStatus)
 	r.Post("/api/setup", h.HandleSetup)
 
