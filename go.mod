@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/go-chi/cors v1.0.0
-	github.com/gorilla/csrf v0.0.0-20250425092827-5a1c5b03cce0
+	github.com/gorilla/csrf v1.7.3
 	github.com/go-chi/httprate v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/pressly/goose/v3 v3.26.0
