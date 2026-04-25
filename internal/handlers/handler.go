@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
@@ -28,6 +29,11 @@ func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 func (h *Handler) Error(w http.ResponseWriter, status int, message string) {
+	// Map tenant isolation violations to 403 Forbidden instead of 500
+	if status == http.StatusInternalServerError && strings.Contains(message, "Tenant isolation violation") {
+		status = http.StatusForbidden
+		message = "access denied"
+	}
 	h.JSON(w, status, map[string]string{"error": message})
 }
 

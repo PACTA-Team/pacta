@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"database/sql"
+
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
@@ -30,6 +32,13 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		return err
 	}
 	defer database.Close()
+
+	// Configure connection pool for production workloads
+	// NOTE: SQLite connection pool size is managed by GORM/sqlx defaults
+	// For RLS via session_tenant_context table, we rely on each request
+	// setting its own tenant context within its transaction scope.
+	// database.SetMaxOpenConns(100)  // Optional: tune based on load
+	// database.SetMaxIdleConns(10)
 
 	if err := db.Migrate(database); err != nil {
 		return err
@@ -55,6 +64,8 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		"/api/setup",
 	}))
 	r.Use(middleware.RateLimit())
+	// Tenant isolation: sets session_tenant_context for RLS triggers
+	r.Use(h.TenantContextMiddleware)
 
 	// Auth routes (no auth required, exempt from CSRF via global config)
 	r.Post("/api/auth/login", h.HandleLogin)
