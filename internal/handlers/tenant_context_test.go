@@ -1,7 +1,7 @@
 package handlers
 
-
-	"encoding/json"
+import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
