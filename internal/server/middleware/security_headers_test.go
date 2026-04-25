@@ -12,10 +12,10 @@ func TestSecurityHeaders_Development(t *testing.T) {
 	os.Setenv("ENVIRONMENT", "development")
 	defer os.Unsetenv("ENVIRONMENT")
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
-	}
+	})
 
 	securityHandler := SecurityHeaders()
 	rec := httptest.NewRecorder()
@@ -107,10 +107,10 @@ func TestSecurityHeaders_Production(t *testing.T) {
 	os.Setenv("ENVIRONMENT", "production")
 	defer os.Unsetenv("ENVIRONMENT")
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
-	}
+	})
 
 	securityHandler := SecurityHeaders()
 	rec := httptest.NewRecorder()
@@ -172,9 +172,9 @@ func TestSecurityHeaders_CSP_BlocksUnsafeInline(t *testing.T) {
 	os.Setenv("ENVIRONMENT", "development")
 	defer os.Unsetenv("ENVIRONMENT")
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	securityHandler := SecurityHeaders()
 	rec := httptest.NewRecorder()
@@ -210,9 +210,9 @@ func TestSecurityHeaders_Staging(t *testing.T) {
 	os.Setenv("ENVIRONMENT", "staging")
 	defer os.Unsetenv("ENVIRONMENT")
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	securityHandler := SecurityHeaders()
 	rec := httptest.NewRecorder()
@@ -232,9 +232,9 @@ func TestSecurityHeaders_CustomEnvironment(t *testing.T) {
 	os.Setenv("ENVIRONMENT", "custom")
 	defer os.Unsetenv("ENVIRONMENT")
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	securityHandler := SecurityHeaders()
 	rec := httptest.NewRecorder()

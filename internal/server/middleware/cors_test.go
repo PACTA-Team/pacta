@@ -8,10 +8,10 @@ import (
 )
 
 func TestCORS_Middleware(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
-	}
+	})
 
 	corsHandler := NewCORS()
 	rec := httptest.NewRecorder()
@@ -38,9 +38,9 @@ func TestCORS_Middleware(t *testing.T) {
 }
 
 func TestCORS_PreflightRequest(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	corsHandler := NewCORS()
 
@@ -102,9 +102,9 @@ func TestCORS_AllowedOrigins(t *testing.T) {
 		},
 	}
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	corsHandler := NewCORS()
 
@@ -134,9 +134,9 @@ func TestCORS_AllowedOrigins(t *testing.T) {
 
 func TestCORS_AllowedMethods(t *testing.T) {
 	corsHandler := NewCORS()
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Origin", "http://127.0.0.1:3000")
@@ -158,9 +158,9 @@ func TestCORS_AllowedMethods(t *testing.T) {
 
 func TestCORS_AllowedHeaders(t *testing.T) {
 	corsHandler := NewCORS()
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Origin", "http://127.0.0.1:3000")
@@ -177,10 +177,10 @@ func TestCORS_AllowedHeaders(t *testing.T) {
 
 func TestCORS_ExposedHeaders(t *testing.T) {
 	corsHandler := NewCORS()
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Total-Count", "42")
 		w.WriteHeader(http.StatusOK)
-	}
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Origin", "http://127.0.0.1:3000")
