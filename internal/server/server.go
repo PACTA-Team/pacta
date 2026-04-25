@@ -12,8 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"database/sql"
-
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
