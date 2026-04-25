@@ -10,7 +10,6 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/stretchr/testify v1.10.0
-	github.com/secure-io/sio-go v0.0.0-20221025062637-732eda2b1c55
 	github.com/wneessen/go-mail v0.7.2
 	github.com/getbrevo/brevo-go v1.0.0
 	golang.org/x/crypto v0.49.0
