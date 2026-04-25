@@ -7,7 +7,7 @@ import (
     "time"
 
     "github.com/stretchr/testify/assert"
-    "pacta/internal/server/middleware"
+    "github.com/PACTA-Team/pacta/internal/server/middleware"
 )
 
 func TestRateLimit_Global(t *testing.T) {
