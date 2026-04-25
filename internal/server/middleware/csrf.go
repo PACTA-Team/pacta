@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"os"
 
@@ -22,7 +23,7 @@ func CSRFProtection(exemptPaths []string) func(http.Handler) http.Handler {
 		csrf.Path("/"),
 		csrf.MaxAge(86400*30), // 30 days
 		csrf.HttpOnly(true),
-		csrf.SameSite(http.SameSiteStrictMode),
+		csrf.SameSite(csrf.SameSiteStrictMode),
 		csrf.CookieName("_csrf_token"),
 		csrf.RequestHeader("X-CSRF-Token"),
 		csrf.ErrorHandler(http.HandlerFunc(csrfErrorHandler)),
@@ -62,7 +63,8 @@ func generateRandomString(n int) string {
 	if _, err := rand.Read(b); err != nil {
 		// Fallback to less secure but still random enough for dev
 		for i := range b {
-			b[i] = byte(65 + rand.Intn(26))
+			r, _ := rand.Int(rand.Reader, big.NewInt(26))
+			b[i] = byte(65) + byte(r.Int64())
 		}
 		return base64.StdEncoding.EncodeToString(b)
 	}

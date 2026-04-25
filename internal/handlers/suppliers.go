@@ -123,9 +123,7 @@ func (h *Handler) getSupplier(w http.ResponseWriter, r *http.Request, id int) {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
-	h.auditLog(r, h.getUserID(r), companyID, "READ", "supplier", &id, nil, nil, map[string]interface{}{
-		"supplier_id": id,
-	})
+	h.auditLog(r, h.getUserID(r), companyID, "READ", "supplier", &id, nil, nil)
 	h.JSON(w, http.StatusOK, s)
 }
 
