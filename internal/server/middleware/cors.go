@@ -6,14 +6,6 @@ import (
 	"github.com/go-chi/cors"
 )
 
-package middleware
-
-import (
-	"net/http"
-
-	"github.com/go-chi/cors"
-)
-
 func NewCORS() func(http.Handler) http.Handler {
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{
