@@ -81,6 +81,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TypeScript any[] errors** — Replaced remaining `any[]` types with proper interfaces in audit and contract modules
 - **Missing ErrorBoundary** — Added global error boundary to App.tsx for better error handling
 - **Sidebar mobile drawer** — Fixed missing `sidebarOpen` state declaration causing blank pages
+- **Go test compilation** — Fixed unused imports and missing dependencies across test files; CI now passes consistently
+- **HTTP handler interface** — Wrapped test handlers with `http.HandlerFunc` to satisfy `http.Handler` interface requirements
+- **CORS middleware** — Corrected go-chi/cors API usage (use `.Handler()` method, proper value semantics) for chi router compatibility
+- **Rate limiting** — Fixed `httprate` import path and middleware integration for accurate request throttling
+- **CSRF protection** — Stabilized gorilla/csrf dependency (v1.7.3) and fixed cookie SameSite/Secure configuration
+- **Security headers** — Resolved middleware registration conflicts and import aliasing for proper security header injection
+- **Dependency management** — Cleaned up go.mod: removed unused `sio-go`, restored stable versions, regenerated go.sum for reproducible builds
 
 ### Documentation
 - **Audit History design doc** — `docs/plans/2026-04-23-audit-history-design.md` (full-history UI, API design, data model)

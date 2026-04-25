@@ -164,6 +164,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Role-Based Access | Complete (v0.15.0 -- middleware enforcement, 4-tier permission levels, inactive account rejection) |
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
+| Security Hardening (Rate Limiting, CSRF, CORS, Headers) | Complete (v0.44.0 — multi-tier rate limiting, CSRF protection, CORS middleware, security headers (CSP/HSTS/COOP/COEP/CORP), tenant context middleware, audit logging enhancements, RLS PostgreSQL preparation, go vet compliance) |
 | Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
 | Auth System | Complete (v0.28.0 — Registration endpoint, auto-login, error message propagation, toast notifications) |
 | Hybrid Registration | Complete (v0.33.0 — go-mail SMTP integration replacing Resend API, i18n email templates (es/en), language detection from request body + Accept-Language header, email error logging, spam folder warnings in UX) |
@@ -644,7 +645,8 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 
 | Version | Release | Key Deliverables |
 |---------|---------|------------------|
-| v0.43.0 | Current | Audit History & Multi-Company Contracts & Setup Flow Refactor: Full-history audit screen with pagination/filters; TypeScript audit-api wrapper (list, listByContract, listByEntityType); Activity log block in User Profile; Expanded logging (CREATE company, LOGIN); Multi-company contracts with company_id FK validation and company-scoped listings/forms; Conditional Company field in ContractForm; Signers scoped by company; Setup flow refactor with GET /api/setup endpoint; Enhanced 4-step wizard (company info, role selection, dynamic signers); setup_completed field; pending_activations → pending_approvals; Route protection for pending_setup; Tutorial mode toggle; AuthContext state updates; Auto-redirect on completion; ~25 backend + ~30 frontend files modified; ~1200 lines added; 3 migrations (035-037); 12 major bug fixes (SVG blank page, CI compilation errors, i18n gaps, malformed JSON, FK validation, signers not appearing, setup wizard stuck, pending users flow, component duplication, TypeScript any[] residuals, missing ErrorBoundary, sidebar mobile drawer) |
+| v0.44.0 | Current | Security Hardening Phases 2-7: Multi-tier rate limiting (global + critical endpoints), CSRF protection with exempt paths, CORS middleware with chi integration, security headers (CSP, HSTS, COOP/COEP/CORP), TenantContextMiddleware for multi-company isolation, audit logging enhancements (ip_address, user_agent, session_id, violation_flag, cross-tenant access view), RLS PostgreSQL preparation (migrations 040/041, policy documentation), all test files fixed for `go vet` compliance; ~10 backend files + 2 migrations + ~450 lines added |
+| v0.43.0 | Previous | Audit History & Multi-Company Contracts & Setup Flow Refactor: Full-history audit screen with pagination/filters; TypeScript audit-api wrapper (list, listByContract, listByEntityType); Activity log block in User Profile; Expanded logging (CREATE company, LOGIN); Multi-company contracts with company_id FK validation and company-scoped listings/forms; Conditional Company field in ContractForm; Signers scoped by company; Setup flow refactor with GET /api/setup endpoint; Enhanced 4-step wizard (company info, role selection, dynamic signers); setup_completed field; pending_activations → pending_approvals; Route protection for pending_setup; Tutorial mode toggle; AuthContext state updates; Auto-redirect on completion; ~25 backend + ~30 frontend files modified; ~1200 lines added; 3 migrations (035-037); 12 major bug fixes (SVG blank page, CI compilation errors, i18n gaps, malformed JSON, FK validation, signers not appearing, setup wizard stuck, pending users flow, component duplication, TypeScript any[] residuals, missing ErrorBoundary, sidebar mobile drawer) |
 | v0.42.0 | Previous | Phase 5 - Filtros y Paginación: Paginación y filtros en ContractsPage/SupplementsPage; DL-304 Legal Fields: 8 nuevos campos legales (obligation_type, jurisdiction, governing_law, dispute_resolution, liability_limit, penalty_clause, termination_notice_days, exclusive_jurisdiction); Decreto No. 310: Taxonomy de tipos de contrato; modification_type en suplementos; contract_title nullable; FieldTooltip component; Campos legales condicionales por rol; Document upload en ContractForm; Contextual role selector; snake_case standardization; TypeScript any[] removal; Bug fixes (Supplement status, AuthContext logging, duplicate interfaces) |
 | v0.41.0 | Previous | User Profile API (GET/PATCH /api/user/profile, POST /api/user/change-password), User Certificates API (POST/DELETE /api/user/certificate), Profile page con sub-routes (/profile/account, /profile/security, /profile/certificates), audit logging |
 | v0.40.0 | Previous | QA Bug Fixes: Device detection fix (blank screens), Settings tabs mobile fix, UserDropdown mobile access to theme/language/notifications, capitalize class for settings labels, missing translations (settings/users), email_verification_required toggle |
@@ -741,6 +743,24 @@ PACTA v0.3.2 was deployed to a production VPS for QA testing. The procedure is d
 - [x] TypeScript any[] residuals replaced with typed arrays
 - [x] Missing ErrorBoundary in App.tsx added
 - [x] Sidebar mobile drawer state race condition fixed
+
+### Completed (v0.44.0)
+
+**Security Hardening (Phases 2-7):**
+- [x] Multi-tier rate limiting — global middleware with per-endpoint overrides (critical endpoints: login, auth, user creation); Redis-backed for distributed deployments; configurable burst/refill rates
+- [x] CSRF protection — double-submit cookie pattern with exempt paths for public APIs (auth, setup, static assets, health checks); automatic token validation on state-changing operations
+- [x] CORS middleware — chi-compatible with configurable allowed origins, methods, headers; strict defaults (same-origin); credentials support; preflight caching
+- [x] Security headers — CSP (script-src 'self' + nonce), HSTS (max-age 31536000, includeSubDomains), COOP/COEP/CORP for cross-origin isolation in production; development mode relaxations
+- [x] Tenant context middleware — request-scoped tenant isolation with company_id validation; context propagation to handlers and audit logs; bypass for public routes
+- [x] Audit logging enhancements — ip_address, user_agent, session_id columns; violation_flag for cross-tenant detection; v_potential_cross_tenant_access analysis view; company_id on all audit entries
+- [x] RLS preparation — database migration 040 (audit enhancements), 041 (PostgreSQL RLS policy documentation, tenant_isolation_policies table, db_capabilities catalog); triggers NOT used (inviable with connection pooling)
+- [x] Test suite compliance — all test files updated to pass `go vet` with zero issues; httptest helpers properly closed; mock table names pluralized; table-valued result validation
+
+**Files Modified/Created:**
+- Backend: 10+ files (middleware/security.go, middleware/cors.go, middleware/csrf.go, middleware/rate_limit.go, handlers/tenant_context.go, handlers/tenant_context_test.go, server/server.go, models/models.go)
+- Database: 2 migrations (040_audit_logging_enhancement.sql, 041_prepare_pg_rls.sql)
+- Tests: All test files fixed for `go vet` compliance (handlers, models, server packages)
+- ~450 lines added across backend + migrations
 
 ### Completed (v0.26.0)
 

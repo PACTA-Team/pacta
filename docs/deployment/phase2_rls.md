@@ -1,10 +1,11 @@
-# Fase 2: Data Layer Security - Implementación Real
+# Fase 2: Data Layer Security — Implementación Real
 
-## Estado: ✅ COMPLETADO (enfoque revisado)
+## Estado: ✅ COMPLETADO e INTEGRADO en v0.44.0
 
 **Fecha:** 24 Abril 2026  
-**Fase:** 2 de 4  
-**Enfoque:** Auditoría + Contexto + Preparación PostgreSQL
+**Fase:** 2 de 4 (seguridad)  
+**Enfoque:** Auditoría + Contexto + Preparación PostgreSQL  
+**Lanzamiento:** Merged a `main` en rama `security-hardening-impl`; forma parte de la versión v0.44.0 (Security Hardening Phases 2-7).
 
 ---
 
@@ -326,6 +327,12 @@ Antes de considerar Fase 2 COMPLETA:
 
 ---
 
+## 📌 Referencia en Documentación Principal
+
+- Ver entrada `v0.44.0 — Security Hardening (Phases 2-7)` en [`docs/PROJECT_SUMMARY.md`](../PROJECT_SUMMARY.md) para contexto completo de todas las fases de seguridad implementadas (2-7).
+
+---
+
 **Aprobado por:** Security Team  
 **Revisado por:** Engineering Lead  
-**Estado:** ✅ Phase 2 - COMPLETE (revised approach)
+**Estado:** ✅ Phase 2 — COMPLETE e integrado en release v0.44.0
