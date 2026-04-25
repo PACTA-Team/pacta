@@ -59,7 +59,7 @@ func RateLimit() func(http.Handler) http.Handler {
                 }
                 limiter = userLimiter
             } else {
-                limiter = globalLimiter
+                limiter = unauthLimiter
             }
 
             if !limiter.Allow() {
@@ -79,11 +79,10 @@ func RateLimit() func(http.Handler) http.Handler {
 
 func isCriticalEndpoint(path string) bool {
     criticalPaths := []string{
-        "/api/v1/auth/login",
-        "/api/v1/auth/register",
-        "/api/v1/auth/forgot-password",
-        "/api/v1/auth/reset-password",
-        "/api/v1/auth/refresh",
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/logout",
+        "/api/auth/verify-code",
     }
     for _, cp := range criticalPaths {
         if strings.HasPrefix(path, cp) {

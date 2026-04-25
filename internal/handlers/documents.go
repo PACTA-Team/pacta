@@ -279,6 +279,52 @@ func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int)
 
 // ==================== Temporary Document Handlers ====================
 
+// allowedMIMETypes defines whitelist of permitted content types
+var allowedMIMETypes = map[string]bool{
+	"application/pdf":                                                  true,
+	"application/msword":                                              true,
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true,
+	"application/vnd.ms-excel":                                         true,
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":    true,
+	"image/png":                                                       true,
+	"image/jpeg":                                                      true,
+}
+
+// validateFileUpload performs content-based MIME detection
+func validateFileUpload(file io.ReadSeeker, header *multipart.FileHeader) error {
+	// First, validate extension as preliminary filter
+	ext := "." + strings.ToLower(filepath.Ext(header.Filename))
+	allowedExts := map[string]bool{
+		".pdf": true, ".doc": true, ".docx": true,
+		".xls": true, ".xlsx": true, ".png": true, ".jpg": true, ".jpeg": true,
+	}
+	if !allowedExts[ext] {
+		return fmt.Errorf("invalid file extension: %s", ext)
+	}
+
+	// Read first 512 bytes for content detection
+	buf := make([]byte, 512)
+	n, err := file.Read(buf)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("failed to read file header: %w", err)
+	}
+	buf = buf[:n]
+
+	// Detect actual content type from bytes
+	contentType := http.DetectContentType(buf)
+	if !allowedMIMETypes[contentType] {
+		return fmt.Errorf("invalid file content type: %s", contentType)
+	}
+
+	// Reset file pointer to beginning for subsequent operations
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return fmt.Errorf("failed to reset file pointer: %w", err)
+	}
+
+	return nil
+}
+
 // uploadTempDocument uploads a file without associating it with a contract.
 // Returns a temporary URL (presigned-like) and storage key for later cleanup.
 // Used by ContractForm for draft document uploads before contract creation.
@@ -300,16 +346,9 @@ func (h *Handler) HandleUploadTempDocument(w http.ResponseWriter, r *http.Reques
 	}
 	defer file.Close()
 
-	// Validate file type
-	ext := "." + strings.ToLower(strings.TrimSpace(
-		strings.Split(header.Filename, ".")[len(strings.Split(header.Filename, "."))-1],
-	))
-	allowed := map[string]bool{
-		".pdf": true, ".doc": true, ".docx": true,
-		".xls": true, ".xlsx": true, ".png": true, ".jpg": true, ".jpeg": true,
-	}
-	if !allowed[ext] {
-		h.Error(w, http.StatusBadRequest, "invalid file extension")
+	// Validate file type (content-based MIME detection)
+	if err := validateFileUpload(file, header); err != nil {
+		h.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -192,9 +193,6 @@ func TestCSRF_ExemptPaths(t *testing.T) {
 					t.Errorf("Expected status 403, got %d. Body: %s", rec.Code, rec.Body.String())
 				}
 			}
-		})
-	}
+})
+ 	}
 }
-
-// Helper to ensure strings package is available for test
-import "strings"

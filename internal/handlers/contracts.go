@@ -316,6 +316,9 @@ func (h *Handler) getContract(w http.ResponseWriter, r *http.Request, id int) {
 		h.Error(w, http.StatusNotFound, "contract not found")
 		return
 	}
+	h.auditLog(r, h.getUserID(r), companyID, "READ", "contract", &id, nil, nil, map[string]interface{}{
+		"contract_id": id,
+	})
 	h.JSON(w, http.StatusOK, c)
 }
 

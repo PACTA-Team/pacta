@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
@@ -49,6 +50,11 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			h.Error(w, http.StatusUnauthorized, "session expired")
 			return
 		}
+
+		// Update last_access asynchronously (non-blocking)
+		go func() {
+			h.DB.Exec("UPDATE users SET last_access = ? WHERE id = ?", time.Now(), userID)
+		}()
 
 		var role string
 		if err := h.DB.QueryRow("SELECT role FROM users WHERE id = ? AND deleted_at IS NULL AND status = 'active'", userID).Scan(&role); err != nil {
