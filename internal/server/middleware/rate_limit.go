@@ -1,12 +1,14 @@
 package middleware
 
 import (
-    "net/http"
-    "net/http/httprate"
-    "strconv"
-    "strings"
-    "sync"
-    "time"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/go-chi/httprate"
 )
 
 type RateLimitConfig struct {
