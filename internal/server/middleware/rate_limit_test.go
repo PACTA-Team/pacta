@@ -4,7 +4,6 @@ import (
     "net/http"
     "net/http/httptest"
     "testing"
-    "time"
 
     "github.com/stretchr/testify/assert"
     "github.com/PACTA-Team/pacta/internal/server/middleware"
