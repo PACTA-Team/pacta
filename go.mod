@@ -3,14 +3,14 @@ module github.com/PACTA-Team/pacta
 go 1.25.0
 
 require (
+	filippo.io/csrf v0.2.1
 	github.com/getbrevo/brevo-go v1.0.0
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/go-chi/cors v1.0.0
 	github.com/go-chi/httprate v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5
-	filippo.io/csrf v0.2.1
 	github.com/pressly/goose/v3 v3.26.0
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/wneessen/go-mail v0.7.2
 	golang.org/x/crypto v0.49.0
 	modernc.org/sqlite v1.38.2
@@ -24,7 +24,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
