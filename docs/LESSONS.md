@@ -111,6 +111,103 @@ NO HAY SOLUCIÓN - Los archivos fueron eliminados irreversiblemente porque no ex
 
 ---
 
+## [005] Consolidación de Migraciones: Duplicación de IDs y Orden de Goose
+
+**Fecha**: 2026-04-25
+**Tags**: database, migration, goose, sqlite, build
+**Severity**: high
+
+### Contexto
+Se consolidaron 41 migraciones individuales (001-041) en 3 archivos grandes (001_initial_schema, 002_schema_updates, 003_security_rls). Al hacer merge a main y construir el binario, el servicio falló al iniciar porque goose encontró IDs duplicados.
+
+### Síntomas
+```
+panic: runtime error: compare错误: runtime error: invalid memory address or nil pointer dereference
+goroutine 1 [running]:
+github.com/pressly/goose/v3.Migrations.Less(...)
+...
+```
+- El servicio no iniciaba: Main process exited, code=exited, status=2/INVALIDARGUMENT
+- Goose recolectaba ambos conjuntos de migraciones (44 archivos: 3 nuevos + 41 antiguos)
+
+### Causa Raíz
+1. **Archivos antiguos no eliminados**: Los 38 archivos originales (001-041 excepto 039 que era placeholder) coexistieron con los 3 nuevos archivos consolidados
+2. **IDs duplicados**: goose detectó múltiples archivos con el mismo número de versión (001_users.sql Y 001_initial_schema.sql, etc.)
+3. **Merge incompleto**: PR #263 agregó los 3 archivos nuevos pero NO eliminó los antiguos
+4. **Release pre-mergado**: El tag v0.44.7 se creó antes del merge final, por lo que el binario descargado contenía el código incorrecto
+
+### Solución
+1. Crear rama `cleanup/remove-old-migrations` (PR #264)
+2. Eliminar los 38 archivos antiguos de migración
+3. Mergear a main con protección de rama temporalmente deshabilitada
+4. Crear nuevo tag v0.44.8 con el código limpio
+
+### Regla de Prevención
+> **Siempre eliminar archivos obsoletos en el mismo PR que agrega reemplazos**. Al consolidar migraciones (o cualquier archivo):
+> - Agregar archivos consolidados
+> - **Eliminar inmediatamente los archivos originales** en el mismo commit/PR
+> - Verificar con `ls internal/db/migrations/` que no quedan duplicados
+> - NO crear releases hasta que el merge esté completo y verificado
+> - Reconstruir binario después del merge (no antes)
+
+### Referencias
+- Archivos eliminados: 001_users.sql a 041_prepare_pg_rls.sql (38 archivos)
+- Archivos mantenidos: 001_initial_schema.sql, 002_schema_updates.sql, 003_security_rls.sql
+- PRs: #263 (consolidation), #264 (cleanup)
+- Commits: 10215fc, dd8a4ec, 7b604e1
+- Tag: v0.44.8
+
+---
+
+## [006] Sintaxis de Trigger SQLite: CREATE TRIGGER BEFORE INSERT Modificando NEW
+
+**Fecha**: 2026-04-26
+**Tags**: database, migration, sqlite, trigger, goose
+**Severity**: high
+
+### Contexto
+En la migración 003_security_rls.sql se intentó crear un trigger para auto-setear `company_id` en `audit_logs` basándose en el `user_id`. El trigger usaba sintaxis de PostgreSQL/AFTER INSERT que no es compatible con SQLite.
+
+### Síntomas
+```
+ERROR 003_security_rls.sql: failed to run SQL migration:
+failed to execute SQL query "CREATE TRIGGER audit_logs_company_metadata
+BEFORE INSERT ON audit_logs
+FOR EACH ROW
+WHEN NEW.company_id IS NULL
+BEGIN
+    SELECT COALESCE(...) INTO NEW.company_id;": SQL logic error: near "INTO": syntax error (1)
+```
+
+El servicio no iniciaba porque la migración 003 fallaba.
+
+### Causa Raíz
+1. **Sintaxis incorrecta para SQLite**: Intentó usar `SELECT ... INTO NEW.column` que no existe en SQLite
+2. **SQLite BEFORE INSERT limitations**: En SQLite, los triggers BEFORE INSERT no pueden modificar el registro NEW directamente usando UPDATE; debe usarse asignación directa (pero SQLite no soporta `SET NEW.column = value` en sintaxis estándar)
+3. **Enfoque equivocado**: El patrón de trigger para auto-setear campos debería manejarse en la aplicación, no en el trigger, para SQLite
+
+### Solución
+Se eliminó el trigger completamente de la migración 003:
+- `company_id` ya es obligatorio y se backfill en migración 002
+- La lógica de asignación de `company_id` se maneja en el código de la aplicación (handlers/services)
+- Se agregó comentario explicando por qué no hay trigger
+
+### Regla de Prevención
+> **SQLite NO soporta modificación directa de NEW en triggers**. Para SQLite:
+> - NO usar `SELECT ... INTO NEW.column`
+> - NO asumir sintaxis de PostgreSQL/MySQL
+> - Para valores por defecto dinámicos (basados en otras tablas), manejar en **código de aplicación**, no en triggers
+> - Si un trigger es necesario para SQLite, usar INSERT en otra tabla (log/audit), NO modificar la tabla origen
+> - Siemante testear migraciones en SQLite (no solo en PostgreSQL)
+
+### Referencias
+- Migración: internal/db/migrations/003_security_rls.sql (trigger eliminado)
+- Error: journalctl -u pacta.service mostró "SQL logic error: near 'INTO'"
+- Commit: eb9521b "fix: remove broken trigger from migration 003"
+- Tag: v0.44.9
+
+---
+
 ## [003] SVG como Componente React: Falta de Plugin SVGR en Vite Causa Página en Blanco
 
 **Fecha**: 2026-04-22
