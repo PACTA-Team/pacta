@@ -1,64 +1,43 @@
+-- +goose Up
 -- Migration: 041_prepare_pg_rls
--- Description: Preparatory schema changes for PostgreSQL RLS migration
+-- Description: Preparatory schema for multi-tenant security (SQLite-only)
 -- Date: 2026-04-24
--- Reason: SQLite lacks native Row Level Security. This migration adds
---          database objects needed when migrating to PostgreSQL, where
---          native RLS provides stronger multi-tenant guarantees.
+-- Reason: This migration creates tracking tables for RLS planning.
+--         PostgreSQL native RLS is NOT used - we use application-level filtering.
+--         This migration is compatible with SQLite only.
 --
--- THIS MIGRATION IS SAFE TO RUN ON SQLITE (no-ops) but is intended
--- for PostgreSQL. It creates objects that SQLite ignores/accepts as no-ops.
-
--- 1. Create a custom database role for application connections
--- (PostgreSQL only - SQLite ignores)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pacta_app') THEN
-        RAISE NOTICE 'Role pacta_app already exists';
-    ELSE
-        CREATE ROLE pacta_app NOINHERIT LOGIN PASSWORD 'placeholder';
-    END IF;
-END $$;
-
--- 2. Create a custom configuration parameter namespace for tenant context
--- (PostgreSQL: SET app.current_tenant_id = '1')
--- SQLite: this is a no-op but documents the intent
+-- +goose StatementBegin
+-- 1. Create configuration table for tenant context documentation
 CREATE TABLE IF NOT EXISTS app_config (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
 
 -- Insert documentation about RLS variables
-INSERT OR IGNORE INTO app_config (key, value) VALUES 
-    ('rlss_variable_tenant_id', 'app.current_tenant_id'),
-    ('rlss_variable_user_id', 'app.current_user_id'),
-    ('rlss_note', 'These session variables are set per-connection in PostgreSQL; ignored in SQLite');
+INSERT OR IGNORE INTO app_config (key, value) VALUES
+    ('rls_variable_tenant_id', 'app.current_tenant_id'),
+    ('rls_variable_user_id', 'app.current_user_id'),
+    ('rls_note', 'SQLite: use application-level WHERE filters. Not PostgreSQL RLS.');
 
--- 3. Grant minimal privileges (PostgreSQL only, safe no-op in SQLite)
--- REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
--- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO pacta_app;
-
--- 4. Create function to validate tenant isolation (PostgreSQL implementation)
--- This would be the enforcement mechanism when running on PostgreSQL
--- For SQLite, we keep application-level filters
+-- 2. Create tenant isolation policies tracking table
 CREATE TABLE IF NOT EXISTS tenant_isolation_policies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     table_name TEXT NOT NULL UNIQUE,
     tenant_column TEXT NOT NULL DEFAULT 'company_id',
     policy_type TEXT NOT NULL CHECK(policy_type IN ('RLS', 'TRIGGER', 'APPLICATION')),
-    enabled BOOLEAN DEFAULT FALSE,
+    enabled BOOLEAN DEFAULT TRUE,
     notes TEXT
 );
 
 INSERT OR IGNORE INTO tenant_isolation_policies (table_name, tenant_column, policy_type, enabled, notes) VALUES
-    ('contracts', 'company_id', 'APPLICATION', TRUE, 'Current: application WHERE filter; Future: RLS'),
-    ('clients', 'company_id', 'APPLICATION', TRUE, 'Current: application WHERE filter; Future: RLS'),
-    ('suppliers', 'company_id', 'APPLICATION', TRUE, 'Current: application WHERE filter; Future: RLS'),
-    ('documents', 'company_id', 'APPLICATION', TRUE, 'Current: application WHERE filter; Future: RLS'),
-    ('notifications', 'company_id', 'APPLICATION', TRUE, 'Current: application WHERE filter; Future: RLS'),
-    ('users', 'company_id', 'APPLICATION', TRUE, 'Users can read all in company, update self only');
+    ('contracts', 'company_id', 'APPLICATION', TRUE, 'Application WHERE filter'),
+    ('clients', 'company_id', 'APPLICATION', TRUE, 'Application WHERE filter'),
+    ('suppliers', 'company_id', 'APPLICATION', TRUE, 'Application WHERE filter'),
+    ('documents', 'company_id', 'APPLICATION', TRUE, 'Application WHERE filter'),
+    ('notifications', 'company_id', 'APPLICATION', TRUE, 'Application WHERE filter'),
+    ('users', 'company_id', 'APPLICATION', TRUE, 'Users: read all in company, update self only');
 
--- 5. Create function to check if we are running on PostgreSQL
--- This allows code to branch based on database capabilities
+-- 3. Create database capabilities tracking
 CREATE TABLE IF NOT EXISTS db_capabilities (
     capability TEXT PRIMARY KEY,
     supported BOOLEAN NOT NULL,
@@ -66,23 +45,15 @@ CREATE TABLE IF NOT EXISTS db_capabilities (
 );
 
 INSERT OR IGNORE INTO db_capabilities (capability, supported, notes) VALUES
-    ('row_level_security', FALSE, 'Not supported in SQLite; plan PostgreSQL migration'),
-    ('session_variables', FALSE, 'SQLite PRAGMA limited; use per-request context'),
+    ('row_level_security', FALSE, 'SQLite: not supported. Use application filters.'),
+    ('session_variables', FALSE, 'SQLite: use per-request context in Go code'),
     ('check_constraints', TRUE, 'Supported via FOREIGN KEY and CHECK'),
-    ('triggers', TRUE, 'Supported but not used for RLS due to pooling issues');
+    ('triggers', TRUE, 'Supported but avoid for RLS due to connection pooling');
+-- +goose StatementEnd
 
--- 6. Migration readiness check query
--- This can be run by ops to verify all tenant-scoped tables have company_id
--- SELECT 
---     t.name as table_name,
---     CASE 
---         WHEN EXISTS (
---             SELECT 1 FROM pragma_table_info(t.name) 
---             WHERE name = 'company_id'
---         ) THEN 'HAS company_id'
---         ELSE 'MISSING company_id'
---     END as status
--- FROM sqlite_master t
--- WHERE t.type='table' 
---   AND t.name IN ('contracts','clients','suppliers','documents','notifications','audit_logs','users')
--- ORDER BY t.name;
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE IF EXISTS db_capabilities;
+DROP TABLE IF EXISTS tenant_isolation_policies;
+DROP TABLE IF EXISTS app_config;
+-- +goose StatementEnd
