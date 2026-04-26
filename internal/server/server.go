@@ -24,6 +24,11 @@ import (
 	"github.com/PACTA-Team/pacta/internal/worker"
 )
 
+var authLimit = middleware.RateLimitConfig{
+	Requests: 5,
+	Window:   time.Minute,
+}
+
 func Start(cfg *config.Config, staticFS fs.FS) error {
 	database, err := db.Open(cfg.DataDir)
 	if err != nil {
@@ -61,15 +66,21 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		"/api/setup/status",
 		"/api/setup",
 	}))
+
+	// Auth endpoints with stricter rate limit (5 req/min)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RateLimitByEndpoint(authLimit.Requests, authLimit.Window))
+		r.Post("/api/auth/login", h.HandleLogin)
+		r.Post("/api/auth/register", h.HandleRegister)
+		r.Post("/api/auth/logout", h.HandleLogout)
+		r.Post("/api/auth/verify-code", h.HandleVerifyCode)
+	})
+
+	// Global rate limit for all other endpoints (100 req/min)
 	r.Use(middleware.RateLimit())
+
 	// Tenant isolation: sets session_tenant_context for RLS triggers
 	r.Use(h.TenantContextMiddleware)
-
-	// Auth routes (no auth required, exempt from CSRF via global config)
-	r.Post("/api/auth/login", h.HandleLogin)
-	r.Post("/api/auth/register", h.HandleRegister)
-	r.Post("/api/auth/logout", h.HandleLogout)
-	r.Post("/api/auth/verify-code", h.HandleVerifyCode)
 
 	// Public companies list (for registration form)
 	r.Get("/api/public/companies", h.HandlePublicCompanies)
