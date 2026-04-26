@@ -245,6 +245,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 }
 
 // spaHandler serves static files, falling back to index.html for SPA routing.
+// For index.html, it injects the CSP nonce into the script tag.
 func spaHandler(fsys fs.FS) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
@@ -266,15 +267,22 @@ func spaHandler(fsys fs.FS) http.Handler {
 				return
 			}
 
-			// Read file into bytes since fs.File doesn't implement io.ReadSeeker
+			// Read file into bytes
 			data, err := io.ReadAll(indexFile)
 			if err != nil {
 				http.Error(w, "index.html read failed", http.StatusInternalServerError)
 				return
 			}
 
+			// Inject CSP nonce if available
+			html := string(data)
+			if nonce := middleware.GetCSPNonce(r); nonce != "" {
+				html = strings.ReplaceAll(html, "<!-- CSP_NONCE -->", `nonce="`+nonce+`"`)
+			}
+
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.ServeContent(w, r, "index.html", stat.ModTime(), bytes.NewReader(data))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(html))
 			return
 		}
 		defer f.Close()
