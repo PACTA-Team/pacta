@@ -21,18 +21,18 @@ export function StepClient({ data, onChange, onNext, onPrev }: StepClientProps) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tutorialMode, setTutorialMode] = useState(false);
 
-   const handleNext = () => {
-     const result = partySchema.safeParse(data);
-     if (!result.success) {
-       const fieldErrors: Record<string, string> = {};
-       result.error.issues.forEach(e => { fieldErrors[e.path[0]] = e.message; });
-       setErrors(fieldErrors);
-       toast.error('Please fix the errors below');
-       return;
-     }
-     setErrors({});
-     onNext();
-   };
+  const handleNext = () => {
+    const result = partySchema.safeParse(data);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.issues.forEach(e => { fieldErrors[String(e.path[0])] = e.message; });
+      setErrors(fieldErrors);
+      toast.error('Please fix the errors below');
+      return;
+    }
+    setErrors({});
+    onNext();
+  };
 
   const updateField = (field: keyof PartyFormData, value: string) => {
     onChange({ ...data, [field]: value });

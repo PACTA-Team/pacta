@@ -18,18 +18,18 @@ export function StepAdmin({ data, onChange, onNext, onPrev }: StepAdminProps) {
   const { t } = useTranslation('setup');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-   const handleNext = () => {
-     const result = adminSchema.safeParse(data);
-     if (!result.success) {
-       const fieldErrors: Record<string, string> = {};
-       result.error.issues.forEach(e => { fieldErrors[e.path[0]] = e.message; });
-       setErrors(fieldErrors);
-       toast.error('Please fix the errors below');
-       return;
-     }
-     setErrors({});
-     onNext();
-   };
+  const handleNext = () => {
+    const result = adminSchema.safeParse(data);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.issues.forEach(e => { fieldErrors[String(e.path[0])] = e.message; });
+      setErrors(fieldErrors);
+      toast.error('Please fix the errors below');
+      return;
+    }
+    setErrors({});
+    onNext();
+  };
 
   const updateField = (field: keyof AdminFormData, value: string) => {
     onChange({ ...data, [field]: value });
