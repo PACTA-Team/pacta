@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"io"
 	"io/fs"
 	"log"
@@ -280,7 +279,7 @@ func spaHandler(fsys fs.FS) http.Handler {
 			}
 			defer indexFile.Close()
 
-			stat, err := indexFile.Stat()
+			_, err := indexFile.Stat()
 			if err != nil {
 				http.Error(w, "index.html stat failed", http.StatusInternalServerError)
 				return
