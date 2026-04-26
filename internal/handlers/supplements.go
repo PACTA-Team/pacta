@@ -144,7 +144,8 @@ func (h *Handler) createSupplement(w http.ResponseWriter, r *http.Request) {
 
 	// Validate status if provided
 	if err := validateSupplementStatus(req.Status); err != nil {
-		h.Error(w, http.StatusBadRequest, err.Error())
+		log.Printf("[handlers/supplements] ERROR: %v", err)
+		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
@@ -269,7 +270,8 @@ func (h *Handler) updateSupplement(w http.ResponseWriter, r *http.Request, id in
 
 	// Validate status if provided
 	if err := validateSupplementStatus(req.Status); err != nil {
-		h.Error(w, http.StatusBadRequest, err.Error())
+		log.Printf("[handlers/supplements] ERROR: %v", err)
+		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 

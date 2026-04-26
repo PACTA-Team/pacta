@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -62,7 +63,12 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 		FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC
 	`)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to list users")
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
+			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
+			return
+		}
+		log.Printf("[handlers/users] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	defer rows.Close()
@@ -138,9 +144,10 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
 			return
 		}
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/users] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
-}
+	}
 
 	id64, _ := result.LastInsertId()
 	id := int(id64)
@@ -205,7 +212,8 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
 			return
 		}
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/users] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -238,7 +246,8 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 
 	_, err = h.DB.Exec("UPDATE users SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/users] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 

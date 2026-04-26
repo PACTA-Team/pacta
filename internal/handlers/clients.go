@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -38,7 +39,8 @@ func (h *Handler) listClients(w http.ResponseWriter, r *http.Request) {
 		FROM clients WHERE deleted_at IS NULL AND company_id = ? ORDER BY name
 	`, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/clients] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	defer rows.Close()
@@ -77,7 +79,8 @@ func (h *Handler) createClient(w http.ResponseWriter, r *http.Request) {
 		"INSERT INTO clients (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
 		req.Name, req.Address, req.REUCode, req.Contacts, userID, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/clients] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	id64, _ := result.LastInsertId()
@@ -96,7 +99,8 @@ func (h *Handler) HandleClientByID(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/clients/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.Error(w, http.StatusBadRequest, "invalid id")
+		log.Printf("[handlers/clients] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -146,7 +150,8 @@ func (h *Handler) updateClient(w http.ResponseWriter, r *http.Request, id int) {
 		WHERE id=? AND deleted_at IS NULL AND company_id = ?
 	`, req.Name, req.Address, req.REUCode, req.Contacts, id, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to update client")
+		log.Printf("[handlers/clients] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	rows, _ := result.RowsAffected()
@@ -182,7 +187,8 @@ func (h *Handler) deleteClient(w http.ResponseWriter, r *http.Request, id int) {
 		"UPDATE clients SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL AND company_id = ?",
 		id, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to delete client")
+		log.Printf("[handlers/clients] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	rows, _ := result.RowsAffected()
