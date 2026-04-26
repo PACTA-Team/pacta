@@ -93,6 +93,12 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// User setup route (authenticated, for completing user company config)
 	r.Patch("/api/setup", h.HandleUserSetup)
 
+	// Security.txt route (public)
+	r.Get("/.well-known/security.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Contact: mailto:security@pacta.local\nPolicy: https://github.com/PACTA-Team/pacta/security\n"))
+	})
+
 	// Authenticated API routes
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
