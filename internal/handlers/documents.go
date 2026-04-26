@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -18,6 +19,18 @@ const maxUploadSize = 50 << 20 // 50MB
 
 // Temp documents are stored without DB record, identified by storage key
 const tempDir = "temp"
+
+// validateStorageKey ensures a document storage key is safe (no path traversal)
+func validateStorageKey(key string) error {
+	if key == "" {
+		return errors.New("storage key required")
+	}
+	// Must not contain path separators or parent directory references
+	if strings.Contains(key, "..") || strings.ContainsAny(key, "/\\") {
+		return errors.New("invalid storage key")
+	}
+	return nil
+}
 
 type Document struct {
 	ID         int       `json:"id"`
@@ -398,8 +411,8 @@ func (h *Handler) HandleUploadTempDocument(w http.ResponseWriter, r *http.Reques
 // verifyTempDocument HEAD handler — checks if temp file exists
 func (h *Handler) HandleVerifyTempDocument(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
-	if key == "" {
-		h.Error(w, http.StatusBadRequest, "missing document key")
+	if err := validateStorageKey(key); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid document key")
 		return
 	}
 
@@ -427,8 +440,8 @@ func (h *Handler) HandleVerifyTempDocument(w http.ResponseWriter, r *http.Reques
 // For security, we don't delete files uploaded by other users (file key is a secret UUID).
 func (h *Handler) HandleCleanupTempDocument(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
-	if key == "" {
-		h.Error(w, http.StatusBadRequest, "missing document key")
+	if err := validateStorageKey(key); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid document key")
 		return
 	}
 
@@ -452,18 +465,12 @@ func (h *Handler) HandleCleanupTempDocument(w http.ResponseWriter, r *http.Reque
 // serveTempDocument serves the temporary uploaded file (GET /api/documents/temp/{key})
 func (h *Handler) HandleServeTempDocument(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/api/documents/temp/")
-	if key == "" {
-		h.Error(w, http.StatusBadRequest, "missing document key")
+	if err := validateStorageKey(key); err != nil {
+		h.Error(w, http.StatusBadRequest, "invalid document key")
 		return
 	}
 
 	storagePath := filepath.Join(h.DataDir, "documents", tempDir, key)
-
-	// Security: prevent directory traversal
-	if strings.Contains(key, "..") {
-		h.Error(w, http.StatusForbidden, "invalid path")
-		return
-	}
 
 	// Check if file exists
 	info, err := os.Stat(storagePath)
