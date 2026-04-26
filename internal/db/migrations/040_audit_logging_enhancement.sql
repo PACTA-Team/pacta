@@ -8,7 +8,7 @@
 -- SQLite compatibility: Use separate statements without IF NOT EXISTS on ADD COLUMN
 
 -- 1. Add new columns to audit_logs for richer context
-ALTER TABLE audit_logs ADD COLUMN ip_address TEXT;
+-- Note: ip_address already exists from migration 009
 ALTER TABLE audit_logs ADD COLUMN user_agent TEXT;
 ALTER TABLE audit_logs ADD COLUMN session_id TEXT;
 ALTER TABLE audit_logs ADD COLUMN violation_flag BOOLEAN DEFAULT FALSE;
@@ -73,4 +73,4 @@ DROP INDEX IF EXISTS idx_audit_logs_company_created;
 ALTER TABLE audit_logs DROP COLUMN IF EXISTS violation_flag;
 ALTER TABLE audit_logs DROP COLUMN IF EXISTS session_id;
 ALTER TABLE audit_logs DROP COLUMN IF EXISTS user_agent;
-ALTER TABLE audit_logs DROP COLUMN IF EXISTS ip_address;
+-- Note: ip_address kept as it existed from migration 009
