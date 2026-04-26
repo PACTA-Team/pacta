@@ -71,14 +71,19 @@ func SecurityHeadersWithNonce() func(http.Handler) http.Handler {
 				w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 			}
 
-			// Cross-Origin policies for additional isolation
-			w.Header().Set("Cross-Origin-Embedder-Policy", "require-corp")
-			w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
-			w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
+		// Cross-Origin policies for additional isolation
+		w.Header().Set("Cross-Origin-Embedder-Policy", "require-corp")
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
+		w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
 
-			// Remove fingerprinting headers
-			w.Header().Del("Server")
-			w.Header().Del("X-Powered-By")
+		// Additional security headers
+		w.Header().Set("Expect-CT", "max-age=86400")
+		w.Header().Set("X-Download-Options", "noopen")
+		w.Header().Set("X-Permitted-Cross-Domain-Policies", "none")
+
+		// Remove fingerprinting headers
+		w.Header().Del("Server")
+		w.Header().Del("X-Powered-By")
 
 			next.ServeHTTP(w, r)
 		})
