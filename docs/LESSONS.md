@@ -330,3 +330,205 @@ Se configuró el proceso para que todo build ocurra en GitHub Actions, no localm
 ### Referencias
 - AGENTS.md - Reglas del proyecto
 - .github/workflows/build.yml
+
+---
+
+## [007] SQLite Sintaxis Incompatible: DEFAULT (expresión) en ALTER TABLE ADD COLUMN
+
+**Fecha**: 2026-04-26  
+**Tags**: database, migration, sqlite, goose  
+**Severity**: critical
+
+### Contexto
+El servicio PACTA falla al iniciar con error en migración 004 (`004_add_session_last_activity.sql`). El binario se construye desde el branch main y se despliega en `/opt/pacta`. Al ejecutar, goose aplica migraciones sobre la base de datos existente.
+
+### Síntomas
+```
+2026/04/26 16:41:30 Server failed: run migrations: ERROR 004_add_session_last_activity.sql: failed to run SQL migration: failed to execute SQL query "ALTER TABLE sessions ADD COLUMN last_activity DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP);": SQL logic error: Cannot add a column with non-constant default (1)
+```
+- El servicio entra en bucle de auto-restart (`activating (auto-restart)`)
+- El binario existe en `/opt/pacta/pacta` pero falla al iniciar
+- Base de datos en `/opt/pacta/data/pacta.db` (132KB) no se actualiza
+
+### Causa Raíz
+1. **SQLite restricción de sintaxis**: En `ALTER TABLE ADD COLUMN`, SQLite solo acepta `DEFAULT` con valores constantes literales (ej: `DEFAULT 0`, `DEFAULT 'text'`, `DEFAULT CURRENT_TIMESTAMP`). **NO acepta expresiones** como `DEFAULT (CURRENT_TIMESTAMP)` (con paréntesis).
+2. **Sintaxis incorrecta**: La migración 004 usó `DEFAULT (CURRENT_TIMESTAMP)` que es una expresión, no una constante.
+3. **La documentación de SQLite** especifica: "The DEFAULT clause specifies a default value for the column. If a constant between parentheses, like `(123)` or `('abc')`, is used as the default value, it is evaluated for each row inserted." Pero la sintaxis de ALTER TABLE ADD COLUMN no permite expresiones evaluadas.
+
+### Solución
+Reescribir migración 004 en dos pasos compatibles con SQLite:
+```sql
+-- Paso 1: Agregar columna sin restricción NOT NULL (DEFAULT implícito es NULL)
+ALTER TABLE sessions ADD COLUMN last_activity DATETIME;
+
+-- Paso 2: Backfill de datos existentes (si los hubiera)
+UPDATE sessions SET last_activity = CURRENT_TIMESTAMP WHERE last_activity IS NULL;
+
+-- Paso 3: La columna ahora contiene valores; futuros INSERTs desde aplicación
+-- proporcionan last_activity explícitamente (CreateSession en internal/auth/session.go)
+```
+**Nota**: No se puede alterar columna a NOT NULL después en SQLite sin recrear tabla. La aplicación (CreateSession) siempre inserta `last_activity` explícitamente, por lo que la columna será poblada en todos los INSERTs futuros. Para datos existentes, el backfill garantiza integridad.
+
+### Regla de Prevención
+> **DEFAULT en SQLite ALTER TABLE**: Solo usar constantes literales (`DEFAULT 0`, `DEFAULT 'text'`, `DEFAULT CURRENT_TIMESTAMP`).  
+> - NO usar `DEFAULT (expression)` con paréntesis  
+> - Para valores dinámicos como `CURRENT_TIMESTAMP`, usar `DEFAULT CURRENT_TIMESTAMP` sin paréntesis  
+> - Si se necesita expresión compleja, agregar columna nullable, luego `UPDATE` masivo, luego (si es crítico) recrear tabla con NOT NULL  
+> - Siempre consultar la [tabla de restricciones de SQLite](https://www.sqlite.org/lang_altertable.html) antes de escribir migraciones
+
+### Referencias
+- Migración corregida: `internal/db/migrations/004_add_session_last_activity.sql`
+- Error observado: ejecución manual de `/opt/pacta/pacta` (binario v0.44.12)
+- Estado servicio: `systemctl status pacta` → `Active: activating (auto-restart)`  
+- Versión SQLite: `modernc.org/sqlite v1.50.0` (bindings Go, motor SQLite 3.45+)
+
+---
+
+## [008] Dependencia Circular en Migración Consolidada 001
+
+**Fecha**: 2026-04-26  
+**Tags**: database, migration, sqlite, goose  
+**Severity**: critical
+
+### Contexto
+La migración consolidada 001_initial_schema.sql combina 13 migraciones originales en un solo archivo. Dentro de este archivo, existe una dependencia circular:
+- `users.company_id` → `companies.id`
+- `companies.created_by` → `users.id`
+
+Ambas tablas se crean en el mismo archivo, y SQLite requiere que la tabla referenciada exista antes de crear la tabla que la referencia.
+
+### Síntomas
+En una base de datos nueva (fresca), goose fallaría al ejecutar migración 001 con error:
+```
+SQL logic error: no such table: companies
+```
+al intentar crear `users` (porque `companies` aún no existe). Si se invierte el orden:
+```
+SQL logic error: no such table: users
+```
+al crear `companies` (porque `users` no existe still).
+
+### Causa Raíz
+1. **Creación simultánea en mismo archivo**: Cuando las migraciones se consolidaron, ambas tablas se definieron en el mismo transaction/script.
+2. **SQLite requiere tabla referenciada exista**: Aunque se use `PRAGMA foreign_keys=off`, la referencia `REFERENCES`仍要求表存在在创建时。
+3. **No se puede crear ambas en cualquier orden**: La circularidad impide cualquier orden de creación sin violar dependencias.
+
+### Solución
+Separar la creación en 3 pasos dentro del mismo archivo (sin transacción goose):
+1. Crear `companies` **sin** columna `created_by`
+2. Crear `users` (que referencia `companies`, ya existente ✓)
+3. `ALTER TABLE companies ADD COLUMN created_by INTEGER REFERENCES users(id)` — se agrega después que `users` existe
+4. Continuar con el resto de tablas (`user_companies`, `clients`, etc.)
+
+Esto resuelve la circularidad porque `ALTER TABLE ADD COLUMN` puede agregar una FK después de que ambas tablas existen.
+
+### Regla de Prevención
+> **Consolidación de migraciones con dependencias circulares**: Al combinar múltiples migraciones en una sola, verificar que no haya dependencias circulares entre tablas.  
+> - Si existe FK mutua (A→B y B→A), crear una de las tablas sin laFK, luego la otra tabla, luego `ALTER TABLE` para agregar la FK faltante  
+> - Para SQLite, el orden debe ser: tabla sin dependencia → tabla con dependencia simple → ALTER TABLE para cerrar ciclo  
+> - Probar migraciones en base de datos nueva (no solo en existente) antes de commit
+
+### Referencias
+- Archivo corregido: `internal/db/migrations/001_initial_schema.sql` (reescrito completo con orden correcto)
+- Historial: commit `10215fc` consolidó 41 migraciones en 3; luego se detectó dependencia circular
+- Tablas involucradas: `users` y `companies`
+- Columnas: `users.company_id` → `companies.id`, `companies.created_by` → `users.id`
+
+---
+
+## [009] Vista con Columna Inexistente: entity_type vs table_name
+
+**Fecha**: 2026-04-26  
+**Tags**: database, migration, sqlite, goose  
+**Severity**: high
+
+### Contexto
+La migración 003_security_rls.sql crea una vista `v_potential_cross_tenant_access` para monitoreo de acceso cross-tenant. La vista SELECT desde `audit_logs` y filtra por `table_name`.
+
+### Síntomas
+Al ejecutar migración 003, goose retorna error:
+```
+ERROR 003_security_rls.sql: failed to run SQL migration:
+failed to execute SQL query "CREATE VIEW ...": SQL logic error: no such column: audit_logs.table_name
+```
+
+### Causa Raíz
+1. **Error de nomenclatura**: La tabla `audit_logs` creada en migración 001 usa la columna `entity_type` (no `table_name`) para registrar el tipo de entidad afectada.
+2. **Inconsistencia entre migraciones**: La vista en 003 fue escrita asumiendo que existía `table_name`, probablemente copiada de un diseño anterior o de otra base de datos.
+3. **Migración 003 agrega columnas a audit_logs** (user_agent, session_id, violation_flag) pero NO agrega `table_name`. La columna correcta es `entity_type`.
+
+### Solución
+Modificar la vista para usar `entity_type`:
+```sql
+CREATE VIEW v_potential_cross_tenant_access AS
+SELECT
+    al.id,
+    al.user_id,
+    al.company_id,
+    al.action,
+    al.entity_type AS table_name,  -- <-- corregir: usar entity_type
+    al.created_at,
+    u.email as user_email,
+    c.name as company_name
+FROM audit_logs al
+...
+WHERE ...
+    AND al.entity_type IN ('contracts', 'clients', 'suppliers', 'documents')  -- <-- corregir
+ORDER BY al.created_at DESC;
+```
+Se renombra `entity_type` como `table_name` en el SELECT para mantener el nombre de la vista sin cambios, o se puede renombrar la vista completa.
+
+### Regla de Prevención
+> **Consistencia de nombres de columnas en vistas**: Al crear vistas que unen múltiples tablas, verificar que todas las columnas referenciadas existan en las tablas base.  
+> - Usar `PRAGMA table_info(tablename)` o revisar la definición de tabla en migración correspondiente  
+> - En migraciones consolidadas, buscar la definición de columna en migración 001 (o la que crea la tabla)  
+> - No asumir nombres de columnas de otros sistemas; verificar en el schema actual  
+> - Probar `CREATE VIEW` en base de datos SQLite antes de commit
+
+### Referencias
+- Tabla audit_logs definida en: `internal/db/migrations/001_initial_schema.sql` línea 222-236
+- Columna correcta: `entity_type TEXT NOT NULL` (línea 227)
+- Vista errónea en: `internal/db/migrations/003_security_rls.sql` líneas 38-54
+- Commit que introduce la vista: `06d231e` (fase 2 de seguridad)
+
+---
+
+## [010] DEFAULT 0 en company_id Viola Restricción Foreign Key
+
+**Fecha**: 2026-04-26  
+**Tags**: database, migration, sqlite, data-integrity  
+**Severity**: high
+
+### Contexto
+La tabla `sessions` en migración 001 definía:
+```sql
+company_id INTEGER NOT NULL DEFAULT 0 REFERENCES companies(id)
+```
+
+### Síntomas
+- Al insertar una sesión sin especificar `company_id`, SQLite intenta insertar 0
+- Como `companies.id` comienza en 1 (AUTOINCREMENT), la FK falla: `FOREIGN KEY constraint failed`
+- La aplicación `CreateSession` en `internal/auth/session.go` sí pasa `companyID` explícitamente, por lo que en producción no ocurría—pero es una trampa de schema peligrosa.
+
+### Causa Raíz
+1. **Valor por defecto incorrecto**: `0` no es un `company_id` válido (IDs empiezan en 1).
+2. **Patrón anti-sqlite**: En SQLite, `DEFAULT 0` en columna con FK puede insertar valor inexistente si no se valida en aplicación.
+3. **Legacy de migraciones previas**: Durante consolidación, se mantuvo DEFAULT 0 quizás de diseño anterior.
+
+### Solución
+Eliminar DEFAULT 0 de la definición:
+```sql
+company_id INTEGER NOT NULL REFERENCES companies(id)
+```
+La aplicación (handler de auth) ya proporciona `companyID` explícitamente, por lo que el DEFAULT nunca se usa. Esto convierte la columna en estrictamente NOT NULL sin valor por defecto, forzando a que siempre se pase explícitamente.
+
+### Regla de Prevención
+> **Nunca usar DEFAULT en columnas FOREIGN KEY**: El DEFAULT debe ser un valor que exista en la tabla referenciada, o la columna debe omitir DEFAULT y exigir que la aplicación provea el valor.  
+> - Verificar que cualquier DEFAULT en columna con REFERENCES apunte a un ID existente real  
+> - Preferir `NOT NULL` sin DEFAULT sobre `DEFAULT` incorrecto  
+> - En SQLite, `DEFAULT 0` en FK casi siempre es incorrecto (IDs empiezan en 1)
+
+### Referencias
+- Tabla sessions: `internal/db/migrations/001_initial_schema.sql` línea 65-71
+- Código que inserta: `internal/auth/session.go` línea 40-43
+- Arreglo aplicado: commit actual (eliminar DEFAULT 0)
