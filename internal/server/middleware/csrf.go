@@ -9,7 +9,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/csrf"
+	// Using filippo.io/csrf/gorilla backport (CVE-2025-47909)
+	"filippo.io/csrf/gorilla"
 )
 
 // CSRFProtection returns a CSRF protection middleware using gorilla/csrf
