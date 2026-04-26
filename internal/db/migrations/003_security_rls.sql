@@ -54,15 +54,16 @@ WHERE al.created_at > datetime('now', '-1 day')
 ORDER BY al.created_at DESC;
 
 -- Create trigger to automatically set company_id from user
+-- SQLite: Use BEFORE INSERT to modify NEW values directly
 CREATE TRIGGER audit_logs_company_metadata
-AFTER INSERT ON audit_logs
+BEFORE INSERT ON audit_logs
 FOR EACH ROW
+WHEN NEW.company_id IS NULL
 BEGIN
-    UPDATE audit_logs
-    SET company_id = (
-        SELECT company_id FROM users WHERE id = NEW.user_id
-    )
-    WHERE id = NEW.id AND NEW.company_id IS NULL;
+    SELECT COALESCE(
+        (SELECT company_id FROM users WHERE id = NEW.user_id),
+        NEW.company_id
+    ) INTO NEW.company_id;
 END;
 
 -- ==================== RLS PREPARATION (041) ====================
