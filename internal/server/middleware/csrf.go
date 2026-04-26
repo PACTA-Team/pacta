@@ -90,6 +90,6 @@ func ExemptFromCSRF(paths []string) func(http.Handler) http.Handler {
 
 // isProduction checks if we're in production mode
 func isProduction() bool {
-	return os.Getenv("ENV") == "production" || os.Getenv("ENV") == "prod"
+	return os.Getenv("ENVIRONMENT") == "production" || os.Getenv("ENVIRONMENT") == "prod"
 }
 
