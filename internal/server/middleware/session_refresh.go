@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 	"time"
-
-	"github.com/PACTA-Team/pacta/internal/auth"
 )
 
 // SessionRefresh extends session expiration on activity (sliding window).
