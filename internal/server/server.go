@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"io"
 	"io/fs"
 	"log"
@@ -23,6 +22,11 @@ import (
 	"github.com/PACTA-Team/pacta/internal/server/middleware"
 	"github.com/PACTA-Team/pacta/internal/worker"
 )
+
+var authLimit = middleware.RateLimitConfig{
+	Requests: 5,
+	Window:   time.Minute,
+}
 
 func Start(cfg *config.Config, staticFS fs.FS) error {
 	database, err := db.Open(cfg.DataDir)
@@ -49,6 +53,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 	r := chi.NewRouter()
 	r.Use(middleware.NewCORS())
+	r.Use(middleware.ClientIP) // extract real client IP behind trusted proxy
 	r.Use(middleware.SecurityHeaders())
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
@@ -61,15 +66,21 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		"/api/setup/status",
 		"/api/setup",
 	}))
+
+	// Auth endpoints with stricter rate limit (5 req/min)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RateLimitByEndpoint(authLimit.Requests, authLimit.Window))
+		r.Post("/api/auth/login", h.HandleLogin)
+		r.Post("/api/auth/register", h.HandleRegister)
+		r.Post("/api/auth/logout", h.HandleLogout)
+		r.Post("/api/auth/verify-code", h.HandleVerifyCode)
+	})
+
+	// Global rate limit for all other endpoints (100 req/min)
 	r.Use(middleware.RateLimit())
+
 	// Tenant isolation: sets session_tenant_context for RLS triggers
 	r.Use(h.TenantContextMiddleware)
-
-	// Auth routes (no auth required, exempt from CSRF via global config)
-	r.Post("/api/auth/login", h.HandleLogin)
-	r.Post("/api/auth/register", h.HandleRegister)
-	r.Post("/api/auth/logout", h.HandleLogout)
-	r.Post("/api/auth/verify-code", h.HandleVerifyCode)
 
 	// Public companies list (for registration form)
 	r.Get("/api/public/companies", h.HandlePublicCompanies)
@@ -81,9 +92,16 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// User setup route (authenticated, for completing user company config)
 	r.Patch("/api/setup", h.HandleUserSetup)
 
+	// Security.txt route (public)
+	r.Get("/.well-known/security.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Contact: mailto:security@pacta.local\nPolicy: https://github.com/PACTA-Team/pacta/security\n"))
+	})
+
 	// Authenticated API routes
 	r.Group(func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
+		r.Use(middleware.SessionRefresh(svc.DB))
 		r.Use(h.CompanyMiddleware)
 
 		// User profile routes
@@ -245,6 +263,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 }
 
 // spaHandler serves static files, falling back to index.html for SPA routing.
+// For index.html, it injects the CSP nonce into the script tag.
 func spaHandler(fsys fs.FS) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
@@ -260,21 +279,28 @@ func spaHandler(fsys fs.FS) http.Handler {
 			}
 			defer indexFile.Close()
 
-			stat, err := indexFile.Stat()
+			_, err = indexFile.Stat()
 			if err != nil {
 				http.Error(w, "index.html stat failed", http.StatusInternalServerError)
 				return
 			}
 
-			// Read file into bytes since fs.File doesn't implement io.ReadSeeker
+			// Read file into bytes
 			data, err := io.ReadAll(indexFile)
 			if err != nil {
 				http.Error(w, "index.html read failed", http.StatusInternalServerError)
 				return
 			}
 
+			// Inject CSP nonce if available
+			html := string(data)
+			if nonce := middleware.GetCSPNonce(r); nonce != "" {
+				html = strings.ReplaceAll(html, "<!-- CSP_NONCE -->", `nonce="`+nonce+`"`)
+			}
+
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.ServeContent(w, r, "index.html", stat.ModTime(), bytes.NewReader(data))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(html))
 			return
 		}
 		defer f.Close()

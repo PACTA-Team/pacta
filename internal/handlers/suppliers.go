@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -38,7 +39,8 @@ func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) {
 		FROM suppliers WHERE deleted_at IS NULL AND company_id = ? ORDER BY name
 	`, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/suppliers] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	defer rows.Close()
@@ -77,7 +79,8 @@ func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
 		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
 		req.Name, req.Address, req.REUCode, req.Contacts, userID, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/suppliers] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	id64, _ := result.LastInsertId()
@@ -96,7 +99,8 @@ func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/suppliers/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		h.Error(w, http.StatusBadRequest, "invalid id")
+		log.Printf("[handlers/suppliers] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 

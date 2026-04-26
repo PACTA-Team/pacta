@@ -85,7 +85,8 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 
 	// Validate admin
 	if err := validateSetupAdmin(req.Admin); err != nil {
-		h.Error(w, http.StatusBadRequest, err.Error())
+		log.Printf("[handlers/setup] ERROR: %v", err)
+		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 

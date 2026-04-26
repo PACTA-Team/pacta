@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.44.11] - 2026-04-26
+
+### Changed
+- **Backend Security Remediation** — Frontend synchronized with backend v0.44.11 security release (CSP, CSRF, CORS, rate limiting, session hardening, enumeration prevention, sanitized errors, React 19.2.4)
+
+### Fixed
+- **CI Compilation** — Fixed missing net/http import in auth enumeration tests
+
 ## [0.42.0] - 2026-04-21
 
 ### Added

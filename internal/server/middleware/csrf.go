@@ -9,7 +9,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/csrf"
+	// Using filippo.io/csrf/gorilla backport (CVE-2025-47909)
+	"filippo.io/csrf/gorilla"
 )
 
 // CSRFProtection returns a CSRF protection middleware using gorilla/csrf
@@ -89,6 +90,6 @@ func ExemptFromCSRF(paths []string) func(http.Handler) http.Handler {
 
 // isProduction checks if we're in production mode
 func isProduction() bool {
-	return os.Getenv("ENV") == "production" || os.Getenv("ENV") == "prod"
+	return os.Getenv("ENVIRONMENT") == "production" || os.Getenv("ENVIRONMENT") == "prod"
 }
 

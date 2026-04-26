@@ -1,4 +1,3 @@
-
 import type {
   User,
   Contract,
@@ -85,23 +84,5 @@ export const setCurrentUser = (user: User | null): void => {
     storage.setOne(STORAGE_KEYS.CURRENT_USER, user);
   } else {
     storage.remove(STORAGE_KEYS.CURRENT_USER);
-  }
-};
-
-// Initialize default admin user if no users exist
-export const initializeDefaultUser = (): void => {
-  const users = getUsers();
-  if (users.length === 0) {
-    const defaultAdmin: User = {
-      id: '1',
-      name: 'Pacta User',
-      email: 'admin@pacta.local',
-      password: 'pacta123',
-      role: 'admin',
-      status: 'active',
-      last_access: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-    };
-    setUsers([defaultAdmin]);
   }
 };

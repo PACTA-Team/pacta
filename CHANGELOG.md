@@ -41,6 +41,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.44.11] - 2026-04-26
+
+### Added
+- **Nonce-based CSP** — Eliminates `unsafe-inline` and `unsafe-eval` by injecting cryptographically secure nonces into script tags
+- **CORS Configuration** — Made CORS allowed origins configurable via `ALLOWED_ORIGINS` environment variable with chi router integration
+- **Rate Limiting** — Applied stricter rate limiting to authentication endpoints (login, register, verify-code)
+- **Session Management** — Reduced session lifetime to 8h with sliding expiration; binding defaults to localhost (`127.0.0.1`) with `BIND_ADDRESS` override
+- **Security Headers** — Added `Expect-CT`, `X-Download-Options`, `X-Permitted-Cross-Domain-Policies` headers for enhanced security
+- **Client IP Logging** — Accurate client IP logging using `X-Forwarded-For` from trusted proxy with configurable trusted header list
+- **Dependency Scanning** — Added automated dependency vulnerability scanning (Dependabot + govulncheck) to CI pipeline
+- **CSRF Migration** — Upgraded CSRF to `filippo.io/csrf/gorilla` (fixes CVE-2025-47909)
+- **React Security Update** — Updated React to 19.2.4 (patches CVE-2025-55183/4/67779)
+- **Threat Model** — Created STRIDE threat model and remediation checklist
+- **CSO Audit** — Added CSO audit report and QA user creation script
+
+### Fixed
+- **SQL Injection Prevention** — Validated table name in `EnforceOwnership` to prevent SQL injection attacks
+- **User Enumeration** — Prevented user enumeration via generic auth error messages across login, registration, and verify-code endpoints
+- **Error Sanitization** — Sanitized error messages to prevent information disclosure in contracts, setup, and documents handlers
+- **Path Traversal** — Centralized storage key validation to prevent path traversal attacks
+- **Hardcoded Credentials** — Removed hardcoded default admin credentials from frontend
+- **Environment Standardization** — Standardized environment variable names across middleware components
+- **Compilation Errors** — Fixed compilation errors in users, supplements, session_refresh handlers, and auth enumeration tests
+- **CI Dependency** — Updated CSRF dependency to valid version v0.2.1 in go.mod
+
+### Technical Details
+- **Files Modified:** ~40 files (backend + frontend + docs)
+- **Lines Added:** ~2,500
+- **Tests Added:** Enumeration tests, error sanitization tests
+- **CI:** ✅ All checks green
+
+---
+
 ## [Unreleased]
 
 ### Added

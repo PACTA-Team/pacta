@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/models"
@@ -57,7 +58,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existing > 0 {
-		h.Error(w, http.StatusConflict, "a user with this email already exists")
+		h.Error(w, http.StatusConflict, "If this email is not yet registered, please proceed with registration.")
 		return
 	}
 
@@ -92,7 +93,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[register] ERROR inserting user: %v", err)
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			h.Error(w, http.StatusConflict, "a user with this email already exists")
+			h.Error(w, http.StatusConflict, "If this email is not yet registered, please proceed with registration.")
 			return
 		}
 		h.Error(w, http.StatusInternalServerError, "failed to create user")
@@ -128,7 +129,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := auth.Authenticate(h.DB, req.Email, req.Password)
 	if err != nil {
-		h.Error(w, http.StatusUnauthorized, err.Error())
+		// Constant-time response to prevent user enumeration
+		time.Sleep(50 * time.Millisecond)
+		h.Error(w, http.StatusUnauthorized, "Invalid credentials or account not yet approved.")
 		return
 	}
 
@@ -164,7 +167,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user.Status != "active" {
-		h.Error(w, http.StatusForbidden, "account is "+user.Status)
+		// Constant-time for non-active status to prevent enumeration via status differences
+		time.Sleep(30 * time.Millisecond)
+		h.Error(w, http.StatusForbidden, "Invalid credentials or account not yet approved.")
 		return
 	}
 

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"net/http"
 	"time"
@@ -30,12 +31,16 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 	var status string
 	err := h.DB.QueryRow("SELECT id, status FROM users WHERE email = ? AND deleted_at IS NULL", req.Email).Scan(&userID, &status)
 	if err != nil {
-		h.Error(w, http.StatusNotFound, "user not found")
+		log.Printf("[handlers/registration] ERROR: user lookup failed for %s: %v", req.Email, err)
+		time.Sleep(30 * time.Millisecond)
+		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
 
 	if status != "pending_email" {
-		h.Error(w, http.StatusBadRequest, "user is not pending email verification")
+		log.Printf("[handlers/registration] ERROR: user %d status not pending: %s", userID, status)
+		time.Sleep(30 * time.Millisecond)
+		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
 
@@ -51,20 +56,26 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if time.Now().After(expiresAt) {
-		h.Error(w, http.StatusGone, "verification code expired. Contact support to activate your account.")
+		log.Printf("[handlers/registration] ERROR: verification code expired for user %d", userID)
+		time.Sleep(30 * time.Millisecond)
+		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
 
 	var attempts int
 	h.DB.QueryRow("SELECT attempts FROM registration_codes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", userID).Scan(&attempts)
 	if attempts >= 5 {
-		h.Error(w, http.StatusTooManyRequests, "too many attempts. Contact support.")
+		log.Printf("[handlers/registration] ERROR: too many attempts for user %d", userID)
+		time.Sleep(30 * time.Millisecond)
+		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
 
 	if !auth.CheckPassword(req.Code, codeHash) {
 		h.DB.Exec("UPDATE registration_codes SET attempts = attempts + 1 WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", userID)
-		h.Error(w, http.StatusUnauthorized, "invalid code")
+		log.Printf("[handlers/registration] ERROR: invalid verification code for user %d", userID)
+		time.Sleep(30 * time.Millisecond)
+		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
 
