@@ -25,8 +25,12 @@ type Config struct {
 
 func Default() *Config {
 	dataDir := defaultDataDir()
+	addr := os.Getenv("BIND_ADDRESS")
+	if addr == "" {
+		addr = fmt.Sprintf("127.0.0.1:%d", DefaultPort)
+	}
 	return &Config{
-		Addr:    fmt.Sprintf(":%d", DefaultPort),
+		Addr:    addr,
 		DataDir: dataDir,
 		Version: AppVersion,
 	}
