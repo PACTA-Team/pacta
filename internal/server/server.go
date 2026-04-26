@@ -98,7 +98,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
  	// Authenticated API routes
  	r.Group(func(r chi.Router) {
  		r.Use(h.AuthMiddleware)
-  	r.Use(h.TenantContextMiddleware)
+		r.Use(h.TenantContextMiddleware)
  		r.Use(middleware.SessionRefresh(svc.DB))
  		r.Use(h.CompanyMiddleware)
 
