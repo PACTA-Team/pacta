@@ -35,13 +35,14 @@ CREATE TABLE tenant_context_sessions (
 CREATE INDEX idx_tenant_context_session ON tenant_context_sessions(session_token, last_seen);
 
 -- Create view to detect potential cross-company access patterns
+-- NOTE: audit_logs uses entity_type (not table_name) to track entity kind
 CREATE VIEW v_potential_cross_tenant_access AS
 SELECT
     al.id,
     al.user_id,
     al.company_id,
     al.action,
-    al.table_name,
+    al.entity_type AS table_name,
     al.created_at,
     u.email as user_email,
     c.name as company_name
@@ -50,7 +51,7 @@ JOIN users u ON al.user_id = u.id
 JOIN companies c ON al.company_id = c.id
 WHERE al.created_at > datetime('now', '-1 day')
     AND al.action IN ('SELECT', 'UPDATE', 'DELETE')
-    AND al.table_name IN ('contracts', 'clients', 'suppliers', 'documents')
+    AND al.entity_type IN ('contracts', 'clients', 'suppliers', 'documents')
 ORDER BY al.created_at DESC;
 
 -- Create trigger to automatically set company_id from user

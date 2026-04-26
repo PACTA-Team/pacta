@@ -7,11 +7,32 @@
 --         authorized_signers, contracts, supplements, documents, notifications,
 --         audit_logs, registration_codes, pending_approvals
 --
+-- CIRCULAR DEPENDENCY RESOLUTION:
+-- companies.created_by → users.id  AND  users.company_id → companies.id
+-- Solution: Create companies WITHOUT created_by first, then users, then ALTER companies.
+--
 -- +goose NO TRANSACTION
 PRAGMA foreign_keys=off;
 BEGIN;
 
+-- ==================== COMPANIES (013) - FIRST, without created_by ====================
+CREATE TABLE IF NOT EXISTS companies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    address TEXT,
+    tax_id TEXT,
+    company_type TEXT NOT NULL DEFAULT 'single'
+        CHECK (company_type IN ('single', 'parent', 'subsidiary')),
+    parent_id INTEGER REFERENCES companies(id),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS idx_companies_type ON companies(company_type);
+CREATE INDEX IF NOT EXISTS idx_companies_parent ON companies(parent_id);
+
 -- ==================== USERS (001 + 025 + 037 status expansion) ====================
+-- users.company_id references companies (which now exists)
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -35,23 +56,11 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_users_company ON users(company_id);
 
--- ==================== COMPANIES (013) ====================
-CREATE TABLE IF NOT EXISTS companies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    address TEXT,
-    tax_id TEXT,
-    company_type TEXT NOT NULL DEFAULT 'single'
-        CHECK (company_type IN ('single', 'parent', 'subsidiary')),
-    parent_id INTEGER REFERENCES companies(id),
-    created_by INTEGER REFERENCES users(id),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    deleted_at DATETIME
-);
-CREATE INDEX IF NOT EXISTS idx_companies_type ON companies(company_type);
-CREATE INDEX IF NOT EXISTS idx_companies_parent ON companies(parent_id);
+-- ==================== RESOLVE CIRCULAR DEPENDENCY ====================
+-- Now that users exists, add created_by to companies
+ALTER TABLE companies ADD COLUMN created_by INTEGER REFERENCES users(id);
 
+-- ==================== USER_COMPANIES (many-to-many) ====================
 CREATE TABLE IF NOT EXISTS user_companies (
     user_id INTEGER NOT NULL REFERENCES users(id),
     company_id INTEGER NOT NULL REFERENCES companies(id),
@@ -62,10 +71,12 @@ CREATE INDEX IF NOT EXISTS idx_user_companies_user ON user_companies(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_companies_company ON user_companies(company_id);
 
 -- ==================== SESSIONS (010) ====================
+-- NOTE: No DEFAULT on company_id - application always provides explicit companyID.
+-- DEFAULT 0 would violate FK (company IDs start at 1) and cause insert failures.
 CREATE TABLE IF NOT EXISTS sessions (
     token TEXT PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
-    company_id INTEGER NOT NULL DEFAULT 0 REFERENCES companies(id),
+    company_id INTEGER NOT NULL REFERENCES companies(id),
     expires_at DATETIME NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -338,7 +349,6 @@ COMMIT;
 PRAGMA foreign_keys=on;
 
 -- ==================== SEED DATA ====================
--- System settings (026 + 029)
 INSERT INTO system_settings (key, value, category) VALUES
     ('smtp_host', '', 'smtp'),
     ('smtp_user', '', 'smtp'),
@@ -357,7 +367,6 @@ INSERT INTO system_settings (key, value, category) VALUES
     ('brevo_enabled', 'false', 'email'),
     ('brevo_api_key', '', 'email');
 
--- Contract expiry notification singleton (027)
 INSERT OR IGNORE INTO contract_expiry_notification_settings (id) VALUES (1);
 
 -- +goose Down
@@ -383,6 +392,7 @@ DROP TABLE IF EXISTS suppliers;
 DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS user_companies;
+-- Note: companies created first, must be dropped last among user tables
 DROP TABLE IF EXISTS companies;
 DROP TABLE IF EXISTS users;
 
