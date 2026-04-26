@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
@@ -21,14 +20,6 @@ import (
 	// in queries remain the primary enforcement mechanism.
 func (h *Handler) TenantContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Bypass for auth and setup routes
-		if strings.HasPrefix(r.URL.Path, "/api/auth/") ||
-			strings.HasPrefix(r.URL.Path, "/api/setup") ||
-			strings.HasPrefix(r.URL.Path, "/api/public/") {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		// Extract session cookie
 		cookie, err := r.Cookie("session")
 		if err != nil {

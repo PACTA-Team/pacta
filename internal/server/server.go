@@ -70,9 +70,6 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// Global rate limit for all endpoints (100 req/min)
 	r.Use(middleware.RateLimit())
 
-	// Tenant isolation: sets session_tenant_context for RLS triggers
-	r.Use(h.TenantContextMiddleware)
-
 	// Auth endpoints with stricter rate limit (5 req/min)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RateLimitByEndpoint(authLimit.Requests, authLimit.Window))
@@ -98,11 +95,12 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		w.Write([]byte("Contact: mailto:security@pacta.local\nPolicy: https://github.com/PACTA-Team/pacta/security\n"))
 	})
 
-	// Authenticated API routes
-	r.Group(func(r chi.Router) {
-		r.Use(h.AuthMiddleware)
-		r.Use(middleware.SessionRefresh(svc.DB))
-		r.Use(h.CompanyMiddleware)
+ 	// Authenticated API routes
+ 	r.Group(func(r chi.Router) {
+ 		r.Use(h.AuthMiddleware)
++		r.Use(h.TenantContextMiddleware)
+ 		r.Use(middleware.SessionRefresh(svc.DB))
+ 		r.Use(h.CompanyMiddleware)
 
 		// User profile routes
 		r.Get("/api/user/profile", h.HandleUserProfile)
