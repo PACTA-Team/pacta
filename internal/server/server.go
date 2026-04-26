@@ -67,6 +67,12 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		"/api/setup",
 	}))
 
+	// Global rate limit for all endpoints (100 req/min)
+	r.Use(middleware.RateLimit())
+
+	// Tenant isolation: sets session_tenant_context for RLS triggers
+	r.Use(h.TenantContextMiddleware)
+
 	// Auth endpoints with stricter rate limit (5 req/min)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RateLimitByEndpoint(authLimit.Requests, authLimit.Window))
@@ -75,12 +81,6 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Post("/api/auth/logout", h.HandleLogout)
 		r.Post("/api/auth/verify-code", h.HandleVerifyCode)
 	})
-
-	// Global rate limit for all other endpoints (100 req/min)
-	r.Use(middleware.RateLimit())
-
-	// Tenant isolation: sets session_tenant_context for RLS triggers
-	r.Use(h.TenantContextMiddleware)
 
 	// Public companies list (for registration form)
 	r.Get("/api/public/companies", h.HandlePublicCompanies)
