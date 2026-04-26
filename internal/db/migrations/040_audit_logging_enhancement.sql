@@ -5,28 +5,21 @@
 -- Reason: Application-level tenant isolation needs monitoring to detect
 --          potential cross-tenant data access bugs or malicious attempts.
 --
--- +goose StatementBegin
+-- SQLite compatibility: Use separate statements without IF NOT EXISTS on ADD COLUMN
+
 -- 1. Add new columns to audit_logs for richer context
-ALTER TABLE audit_logs
-    ADD COLUMN IF NOT EXISTS ip_address TEXT,
-    ADD COLUMN IF NOT EXISTS user_agent TEXT,
-    ADD COLUMN IF NOT EXISTS session_id TEXT,
-    ADD COLUMN IF NOT EXISTS violation_flag BOOLEAN DEFAULT FALSE;
+ALTER TABLE audit_logs ADD COLUMN ip_address TEXT;
+ALTER TABLE audit_logs ADD COLUMN user_agent TEXT;
+ALTER TABLE audit_logs ADD COLUMN session_id TEXT;
+ALTER TABLE audit_logs ADD COLUMN violation_flag BOOLEAN DEFAULT FALSE;
 
 -- 2. Create indexes for audit queries
-CREATE INDEX IF NOT EXISTS idx_audit_logs_company_created
-    ON audit_logs(company_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_action
-    ON audit_logs(user_id, action, created_at DESC);
--- Note: Partial indexes via WHERE not supported in SQLite
--- Use regular index instead for violation_flag
-CREATE INDEX IF NOT EXISTS idx_audit_logs_violation
-    ON audit_logs(violation_flag);
--- +goose StatementEnd
+CREATE INDEX idx_audit_logs_company_created ON audit_logs(company_id, created_at DESC);
+CREATE INDEX idx_audit_logs_user_action ON audit_logs(user_id, action, created_at DESC);
+CREATE INDEX idx_audit_logs_violation ON audit_logs(violation_flag);
 
--- +goose StatementBegin
 -- 3. Create helper table for tenant context sessions
-CREATE TABLE IF NOT EXISTS tenant_context_sessions (
+CREATE TABLE tenant_context_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_token TEXT NOT NULL UNIQUE,
     user_id INTEGER NOT NULL REFERENCES users(id),
@@ -37,11 +30,10 @@ CREATE TABLE IF NOT EXISTS tenant_context_sessions (
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_tenant_context_session
-    ON tenant_context_sessions(session_token, last_seen);
+CREATE INDEX idx_tenant_context_session ON tenant_context_sessions(session_token, last_seen);
 
 -- 4. Create view to detect potential cross-company access patterns
-CREATE VIEW IF NOT EXISTS v_potential_cross_tenant_access AS
+CREATE VIEW v_potential_cross_tenant_access AS
 SELECT
     al.id,
     al.user_id,
@@ -60,7 +52,7 @@ WHERE al.created_at > datetime('now', '-1 day')
 ORDER BY al.created_at DESC;
 
 -- 5. Create trigger to automatically set company_id from user
-CREATE TRIGGER IF NOT EXISTS audit_logs_company_metadata
+CREATE TRIGGER audit_logs_company_metadata
 AFTER INSERT ON audit_logs
 FOR EACH ROW
 BEGIN
@@ -70,10 +62,8 @@ BEGIN
     )
     WHERE id = NEW.id AND NEW.company_id IS NULL;
 END;
--- +goose StatementEnd
 
 -- +goose Down
--- +goose StatementBegin
 DROP TRIGGER IF EXISTS audit_logs_company_metadata;
 DROP VIEW IF EXISTS v_potential_cross_tenant_access;
 DROP TABLE IF EXISTS tenant_context_sessions;
@@ -84,4 +74,3 @@ ALTER TABLE audit_logs DROP COLUMN IF EXISTS violation_flag;
 ALTER TABLE audit_logs DROP COLUMN IF EXISTS session_id;
 ALTER TABLE audit_logs DROP COLUMN IF EXISTS user_agent;
 ALTER TABLE audit_logs DROP COLUMN IF EXISTS ip_address;
--- +goose StatementEnd
