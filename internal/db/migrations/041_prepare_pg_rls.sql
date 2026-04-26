@@ -5,8 +5,7 @@
 -- Reason: This migration creates tracking tables for RLS planning.
 --         PostgreSQL native RLS is NOT used - we use application-level filtering.
 --         This migration is compatible with SQLite only.
---
--- +goose StatementBegin
+
 -- 1. Create configuration table for tenant context documentation
 CREATE TABLE IF NOT EXISTS app_config (
     key TEXT PRIMARY KEY,
@@ -49,11 +48,8 @@ INSERT OR IGNORE INTO db_capabilities (capability, supported, notes) VALUES
     ('session_variables', FALSE, 'SQLite: use per-request context in Go code'),
     ('check_constraints', TRUE, 'Supported via FOREIGN KEY and CHECK'),
     ('triggers', TRUE, 'Supported but avoid for RLS due to connection pooling');
--- +goose StatementEnd
 
 -- +goose Down
--- +goose StatementBegin
 DROP TABLE IF EXISTS db_capabilities;
 DROP TABLE IF EXISTS tenant_isolation_policies;
 DROP TABLE IF EXISTS app_config;
--- +goose StatementEnd
