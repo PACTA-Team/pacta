@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -362,7 +363,8 @@ func (h *Handler) HandleUploadTempDocument(w http.ResponseWriter, r *http.Reques
 
 	// Validate file type (content-based MIME detection)
 	if err := validateFileUpload(file, header); err != nil {
-		h.Error(w, http.StatusBadRequest, err.Error())
+		log.Printf("[handlers/documents] ERROR: %v", err)
+		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 

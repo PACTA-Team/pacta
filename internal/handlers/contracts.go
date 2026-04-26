@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -86,7 +87,8 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 		ORDER BY c.created_at DESC
 	`, companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/contracts] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	defer rows.Close()
@@ -99,13 +101,15 @@ func (h *Handler) listContracts(w http.ResponseWriter, r *http.Request) {
 			&c.DisputeResolution, &c.HasConfidentiality, &c.Guarantees, &c.RenewalType,
 			&c.DocumentURL, &c.DocumentKey,
 			&c.CreatedAt, &c.UpdatedAt, &c.ClientName, &c.SupplierName); err != nil {
-			h.Error(w, http.StatusInternalServerError, err.Error())
+			log.Printf("[handlers/contracts] ERROR: %v", err)
+			h.Error(w, http.StatusInternalServerError, "internal server error")
 			return
 		}
 		contracts = append(contracts, c)
 	}
 	if err := rows.Err(); err != nil {
-		h.Error(w, http.StatusInternalServerError, err.Error())
+		log.Printf("[handlers/contracts] ERROR: %v", err)
+		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 	if contracts == nil {
