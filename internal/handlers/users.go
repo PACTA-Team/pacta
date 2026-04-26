@@ -63,10 +63,6 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
 		FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC
 	`)
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
-			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
-			return
-		}
 		log.Printf("[handlers/users] ERROR: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
