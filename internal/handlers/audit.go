@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/PACTA-Team/pacta/internal/server/middleware"
 )
 
 // auditLog records an action to the audit trail.
@@ -26,7 +28,7 @@ func (h *Handler) auditLog(r *http.Request, userID int, companyID int, action, e
 		}
 	}
 
-	ip := r.RemoteAddr
+	ip := middleware.GetClientIP(r)
 
 	_, _ = h.DB.Exec(`
 		INSERT INTO audit_logs (user_id, action, entity_type, entity_id, previous_state, new_state, ip_address, company_id)

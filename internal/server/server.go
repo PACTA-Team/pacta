@@ -54,6 +54,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 	r := chi.NewRouter()
 	r.Use(middleware.NewCORS())
+	r.Use(middleware.ClientIP) // extract real client IP behind trusted proxy
 	r.Use(middleware.SecurityHeaders())
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
