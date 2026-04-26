@@ -28,7 +28,8 @@ func CreateSession(db *sql.DB, userID int, companyID int) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	expiresAt := time.Now().Add(24 * time.Hour)
+	expiresAt := time.Now().Add(8 * time.Hour)
+	lastActivity := time.Now()
 
 	// Delete existing sessions for this user before creating new one (prevents session fixation)
 	_, err = db.Exec("DELETE FROM sessions WHERE user_id = ?", userID)
@@ -37,8 +38,8 @@ func CreateSession(db *sql.DB, userID int, companyID int) (*Session, error) {
 	}
 
 	_, err = db.Exec(
-		"INSERT INTO sessions (token, user_id, company_id, expires_at) VALUES (?, ?, ?, ?)",
-		token, userID, companyID, expiresAt,
+		"INSERT INTO sessions (token, user_id, company_id, expires_at, last_activity) VALUES (?, ?, ?, ?, ?)",
+		token, userID, companyID, expiresAt, lastActivity,
 	)
 	if err != nil {
 		return nil, err
