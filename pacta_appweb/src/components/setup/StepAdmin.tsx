@@ -22,7 +22,7 @@ export function StepAdmin({ data, onChange, onNext, onPrev }: StepAdminProps) {
     const result = adminSchema.safeParse(data);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach(e => { fieldErrors[e.path[0]] = e.message; });
+      result.error.issues.forEach(e => { fieldErrors[String(e.path[0])] = e.message; });
       setErrors(fieldErrors);
       toast.error('Please fix the errors below');
       return;
