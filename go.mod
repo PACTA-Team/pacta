@@ -8,7 +8,7 @@ require (
 	github.com/go-chi/cors v1.0.0
 	github.com/go-chi/httprate v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5
-	filippo.io/csrf/gorilla v0.0.0-20250623150454-3b999bd09419
+	filippo.io/csrf v0.2.1
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/stretchr/testify v1.11.0
 	github.com/wneessen/go-mail v0.7.2
