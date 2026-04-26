@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.44.0] - 2026-04-24
+## [Unreleased]
+
+### Fixed
+- **Server startup panic** — Middleware registration order fixed to comply with chi router requirement that all middlewares must be defined before routes. Prevented panic: "chi: all middlewares must be defined before routes on a mux" by moving `RateLimit()` and `TenantContextMiddleware` before route group definitions.
+
+## [0.44.11] - 2026-04-26
 
 ### Added
 - **Contract Form Refactor — Complete Data & Tests** — Overhauled contract creation/editing with full field coverage and comprehensive testing:
