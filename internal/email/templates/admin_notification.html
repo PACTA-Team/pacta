@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a; }
+        .field { margin: 10px 0; }
+        .label { font-weight: bold; }
+        .action { margin-top: 20px; }
+        .footer { color: #666; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2 style="color:#1a1a1a">{{.Title}}</h2>
+    <div class="field">
+        <strong class="label">{{.NameLabel}}:</strong> {{.UserName}}
+    </div>
+    <div class="field">
+        <strong class="label">{{.EmailLabel}}:</strong> {{.UserEmail}}
+    </div>
+    <div class="field">
+        <strong class="label">{{.CompanyLabel}}:</strong> {{.CompanyName}}
+    </div>
+    <p class="action">{{.ActionText}}</p>
+    <p class="footer">{{.FooterText}}</p>
+</body>
+</html>
