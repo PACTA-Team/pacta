@@ -1,0 +1,20 @@
+{
+  "title": "Empresas",
+  "addNew": "Agregar empresa",
+  "directory": "Directorio de empresas",
+  "searchPlaceholder": "Buscar empresas...",
+  "noCompanies": "No se encontraron empresas",
+  "editCompany": "Editar empresa",
+  "createCompany": "Crear empresa",
+  "update": "Actualizar",
+  "create": "Crear",
+  "delete": "Eliminar empresa",
+  "deleteConfirm": "¿Estás seguro de eliminar esta empresa?",
+  "loading": "Cargando empresas...",
+  "name": "Nombre",
+  "taxId": "RUT / NIF",
+  "type": "Tipo",
+  "parent": "Matriz",
+  "subsidiary": "Subsidiaria",
+  "standalone": "Independiente"
+}
