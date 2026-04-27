@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.44.17] - 2026-04-26
+## [0.44.18] - 2026-04-26
 
 ### Fixed
+- **Frontend build failure** — Vite parse5 error due to invalid HTML placeholder in `index.html`. Replaced `<!-- CSP_NONCE -->` with valid `nonce="__CSP_NONCE__"` and updated server-side injection accordingly. Production frontend now builds correctly and SPA loads without blank page.
 - **Compilation error** — Removed stray diff artifact (`+`) from `internal/server/server.go` line 101 that caused Go compiler error: "r.Use(h.TenantContextMiddleware) (no value) used as value". Also corrected indentation to consistent two-tab spacing.
+
+## [0.44.17] - 2026-04-26
 
 ## [0.44.16] - 2026-04-26
 
