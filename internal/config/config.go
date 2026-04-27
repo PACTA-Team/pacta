@@ -18,9 +18,10 @@ const (
 var AppVersion = "0.44.18"
 
 type Config struct {
-	Addr    string
-	DataDir string
-	Version string
+	Addr             string
+	DataDir          string
+	Version          string
+	AIEncryptionKey  string `env:"AI_ENCRYPTION_KEY"` // AES key for encrypting AI API keys (16/24/32 bytes)
 }
 
 func Default() *Config {
@@ -29,10 +30,12 @@ func Default() *Config {
 	if addr == "" {
 		addr = fmt.Sprintf("127.0.0.1:%d", DefaultPort)
 	}
+	aiKey := os.Getenv("AI_ENCRYPTION_KEY")
 	return &Config{
-		Addr:    addr,
-		DataDir: dataDir,
-		Version: AppVersion,
+		Addr:             addr,
+		DataDir:          dataDir,
+		Version:          AppVersion,
+		AIEncryptionKey:  aiKey,
 	}
 }
 
@@ -100,4 +103,17 @@ func (s *Service) GetUsersByCompanyAndRole(companyID int64, role string) ([]mode
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+
+// Validate validates the configuration
+func (c *Config) Validate() error {
+	// AI encryption key validation
+	if c.AIEncryptionKey != "" {
+		lenKey := len(c.AIEncryptionKey)
+		if lenKey != 16 && lenKey != 24 && lenKey != 32 {
+			return fmt.Errorf("AI_ENCRYPTION_KEY must be 16, 24, or 32 bytes for AES, got %d", lenKey)
+		}
+	}
+	// No error if empty - AI features are optional
+	return nil
 }
