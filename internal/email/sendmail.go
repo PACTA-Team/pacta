@@ -1,6 +1,7 @@
 package email
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"time"
 
 	"github.com/wneessen/go-mail"
+
+	"github.com/PACTA-Team/pacta/internal/reports"
 )
 
 // IsSMTPEnabled checks if SMTP is enabled in settings
@@ -103,5 +106,46 @@ func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail,
 	}
 
 	log.Printf("[email] admin notification sent to %s (%s)", adminEmail, lang)
+	return nil
+}
+
+// SendReport sends a contract report email with PDF attachment
+func SendReport(ctx context.Context, to string, contracts []reports.Contract, db *sql.DB) error {
+	cfg, err := GetSMTPConfig(db)
+	if err != nil {
+		return fmt.Errorf("failed to get SMTP config: %w", err)
+	}
+
+	// Generate PDF
+	pdfBytes, err := reports.GenerateContractsPDF(contracts)
+	if err != nil {
+		return fmt.Errorf("failed to generate PDF: %w", err)
+	}
+
+	msg := mail.NewMsg()
+	if err := msg.From(cfg.From); err != nil {
+		return fmt.Errorf("failed to set from: %w", err)
+	}
+	if err := msg.To(to); err != nil {
+		return fmt.Errorf("failed to set to: %w", err)
+	}
+	msg.Subject("Reporte de Contratos - PACTA")
+
+	// Set email body
+	body := fmt.Sprintf(
+		"Estimado/a,\n\nAdjunto encontrará el reporte de contratos generado el %s.\n\nSaludos,\nEquipo PACTA",
+		time.Now().Format("2006-01-02 15:04"),
+	)
+	msg.SetBodyString(mail.TypeTextPlain, body)
+
+	// Attach PDF - go-mail's AttachReader accepts io.Reader
+	pdfReader := bytes.NewReader(pdfBytes)
+	msg.AttachReader("reporte_contratos.pdf", pdfReader, mail.WithFileName("reporte_contratos.pdf"))
+
+	if err := SendEmail(ctx, msg, db); err != nil {
+		return fmt.Errorf("failed to send report email: %w", err)
+	}
+
+	log.Printf("[email] report sent to %s with %d contracts", to, len(contracts))
 	return nil
 }

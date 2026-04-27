@@ -16,6 +16,7 @@ import ForbiddenPage from './pages/ForbiddenPage';
 import DownloadPage from './pages/DownloadPage';
 import ChangelogPage from './pages/ChangelogPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import RegistrationExpiredPage from './pages/RegistrationExpiredPage';
 
 // Lazy-loaded page components for code splitting
@@ -185,6 +186,7 @@ function App() {
             
             {/* Email verification routes */}
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/registration-expired" element={<RegistrationExpiredPage />} />
 
             {/* 404 Catch-all route - must be last */}
