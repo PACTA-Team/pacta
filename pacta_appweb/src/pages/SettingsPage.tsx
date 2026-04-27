@@ -8,6 +8,7 @@ import { RegistrationSection } from "./SettingsPage/RegistrationSection";
 import { GeneralSection } from "./SettingsPage/GeneralSection";
 import { NotificationsTab } from "./SettingsPage/NotificationsTab";
 import { EmailSettingsTab } from "./SettingsPage/EmailSettingsTab";
+import { AISection } from "./SettingsPage/AISection";
 
 export default function SettingsPage() {
   const { t } = useTranslation("settings");
@@ -26,6 +27,7 @@ export default function SettingsPage() {
             <EmailSection />
             <CompanySection />
             <RegistrationSection />
+            <AISection />
           </>
         )}
         <GeneralSection />
