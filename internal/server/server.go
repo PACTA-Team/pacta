@@ -293,7 +293,7 @@ func spaHandler(fsys fs.FS) http.Handler {
 			// Inject CSP nonce if available
 			html := string(data)
 			if nonce := middleware.GetCSPNonce(r); nonce != "" {
-				html = strings.ReplaceAll(html, "<!-- CSP_NONCE -->", `nonce="`+nonce+`"`)
+				html = strings.ReplaceAll(html, "__CSP_NONCE__", `nonce="`+nonce+`"`)
 			}
 
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
