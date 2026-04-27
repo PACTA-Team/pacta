@@ -111,6 +111,17 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		// Auth routes (no auth required)
 		r.Get("/api/auth/me", h.HandleMe)
 
+		// AI routes (experimental, authenticated)
+		r.Route("/api/ai", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Use(h.TenantContextMiddleware)
+			r.Use(h.CompanyMiddleware)
+
+			r.Post("/generate-contract", h.HandleAIGenerateContract)
+			r.Post("/review-contract", h.HandleAIReviewContract)
+			r.Post("/test", h.HandleAITestConnection)
+		})
+
 		// Viewer+ (read-only)
 		r.Group(func(r chi.Router) {
 			r.Use(h.RequireRole(auth.RoleViewer))
