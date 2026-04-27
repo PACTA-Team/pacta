@@ -1,0 +1,12 @@
+{
+  "title": "Changelog",
+  "subtitle": "What's new in PACTA",
+  "description": "Track every improvement, fix, and feature across PACTA releases.",
+  "version": "Version",
+  "releasedOn": "Released on",
+  "viewOnGitHub": "View on GitHub",
+  "teamNotes": "Team Notes",
+  "fetchError": "Unable to load changelog. Check our GitHub releases page.",
+  "backToHome": "Back to Home",
+  "loading": "Loading releases..."
+}
