@@ -1,0 +1,45 @@
+{
+  "title": "Descargar PACTA",
+  "subtitle": "Comienza en minutos",
+  "description": "PACTA es un único binario sin dependencias externas. Descarga para tu plataforma y ejecuta localmente.",
+  "platforms": {
+    "linux": {
+      "name": "Linux",
+      "description": "Linux 64-bit (AMD64)",
+      "installTitle": "Instrucciones de Instalación",
+      "installSteps": [
+        "Descarga el archivo .tar.gz para tu arquitectura",
+        "Extrae: tar -xzf pacta_*.tar.gz",
+        "Mueve a PATH: sudo mv pacta /usr/local/bin/",
+        "Ejecuta: pacta"
+      ]
+    },
+    "macos": {
+      "name": "macOS",
+      "description": "Apple Silicon e Intel (Universal)",
+      "installTitle": "Instrucciones de Instalación",
+      "installSteps": [
+        "Descarga el archivo .tar.gz",
+        "Extrae: tar -xzf pacta_*.tar.gz",
+        "Mueve a PATH: sudo mv pacta /usr/local/bin/",
+        "Ejecuta: pacta"
+      ]
+    },
+    "windows": {
+      "name": "Windows",
+      "description": "Windows 64-bit (AMD64)",
+      "installTitle": "Instrucciones de Instalación",
+      "installSteps": [
+        "Descarga el archivo .zip",
+        "Extrae el archivo",
+        "Mueve pacta.exe a una carpeta en tu PATH",
+        "Ejecuta: pacta"
+      ]
+    }
+  },
+  "latestVersion": "Última Versión",
+  "downloadNow": "Descargar Ahora",
+  "viewAllReleases": "Ver Todas las Versiones",
+  "fetchError": "No se pudo obtener la información de la última versión. Consulta nuestra página de releases en GitHub.",
+  "backToHome": "Volver al Inicio"
+}
