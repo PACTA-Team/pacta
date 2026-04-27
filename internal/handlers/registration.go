@@ -133,7 +133,7 @@ func sendAdminNotifications(ctx context.Context, db *sql.DB, userName, userEmail
 		if err := rows.Scan(&adminEmail); err != nil {
 			continue
 		}
-		email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName, lang)
+		email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName, lang, db)
 	}
 	return nil
 }
