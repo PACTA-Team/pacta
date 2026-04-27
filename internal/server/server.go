@@ -243,14 +243,14 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	}
 
 	go func() {
-		log.Printf("PACTA v%s running on http://127.0.0.1%s", cfg.Version, cfg.Addr)
+		log.Printf("PACTA v%s running on http://%s", cfg.Version, cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Listen: %v", err)
 		}
 	}()
 
 	// Open browser
-	openBrowser("http://127.0.0.1" + cfg.Addr)
+	openBrowser("http://" + cfg.Addr)
 
 	// Wait for signal
 	quit := make(chan os.Signal, 1)
