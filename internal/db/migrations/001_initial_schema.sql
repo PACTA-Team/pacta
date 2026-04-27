@@ -365,7 +365,10 @@ INSERT INTO system_settings (key, value, category) VALUES
     ('email_verification_required', 'false', 'email'),
     ('smtp_enabled', 'false', 'email'),
     ('brevo_enabled', 'false', 'email'),
-    ('brevo_api_key', '', 'email');
+    ('brevo_api_key', '', 'email'),
+    ('mailtrap_smtp_host', '', 'smtp'),
+    ('mailtrap_smtp_user', '', 'smtp'),
+    ('mailtrap_smtp_pass', '', 'smtp');
 
 INSERT OR IGNORE INTO contract_expiry_notification_settings (id) VALUES (1);
 
