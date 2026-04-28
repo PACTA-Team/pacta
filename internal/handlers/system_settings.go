@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/PACTA-Team/pacta/internal/ai"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
@@ -78,12 +79,22 @@ func (h *Handler) UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 
 	userID := h.getUserID(r)
 	for _, s := range req {
+		value := s.Value
+		// Encrypt AI API key if present
+		if s.Key == "ai_api_key" && value != "" {
+			encrypted, err := ai.EncryptAPIKey(value)
+			if err != nil {
+				h.Error(w, http.StatusBadRequest, "failed to encrypt API key: "+err.Error())
+				return
+			}
+			value = encrypted
+		}
 		_, err := h.DB.Exec(
 			"UPDATE system_settings SET value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
-			s.Value, userID, s.Key,
+			value, userID, s.Key,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.Error(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
