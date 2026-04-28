@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/cors v1.2.2
 	github.com/go-chi/httprate v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/rsc/pdf v0.1.1
 	github.com/stretchr/testify v1.11.1

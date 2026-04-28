@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/PACTA-Team/pacta/internal/ai"
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
@@ -28,23 +29,28 @@ var authLimit = middleware.RateLimitConfig{
 	Window:   time.Minute,
 }
 
-func Start(cfg *config.Config, staticFS fs.FS, rateLimiter *ai.RateLimiter) error {
+func Start(cfg *config.Config, staticFS fs.FS) error {
 	database, err := db.Open(cfg.DataDir)
 	if err != nil {
 		return err
 	}
 	defer database.Close()
 
-	// Configure connection pool for production workloads
-	// NOTE: SQLite connection pool size is managed by GORM/sqlx defaults
-	// For RLS via session_tenant_context table, we rely on each request
-	// setting its own tenant context within its transaction scope.
-	// database.SetMaxOpenConns(100)  // Optional: tune based on load
+	// Configure connection pool (optional tuning)
+	// database.SetMaxOpenConns(100)
 	// database.SetMaxIdleConns(10)
 
 	if err := db.Migrate(database); err != nil {
 		return err
 	}
+
+	// Validate AI configuration if AI is configured
+	if err := ai.ValidateStartupConfig(database, cfg.AIEncryptionKey); err != nil {
+		log.Fatalf("AI configuration invalid: %v", err)
+	}
+
+	// Create DB-backed rate limiter
+	rateLimiter := ai.NewRateLimiter(database)
 
 	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
 

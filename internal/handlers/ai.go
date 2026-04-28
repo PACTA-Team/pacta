@@ -135,7 +135,7 @@ func (h *Handler) HandleAIGenerateContract(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get company ID for rate limiting and RAG
-	companyID := h.getCompanyID(r)
+	companyID := h.GetCompanyID(r)
 	if companyID == 0 {
 		h.Error(w, http.StatusForbidden, "no company assigned")
 		return
@@ -159,11 +159,6 @@ func (h *Handler) HandleAIGenerateContract(w http.ResponseWriter, r *http.Reques
 
 	// Get RAG context
 	retriever := ai.NewContractRetriever(h.DB)
-	companyID := h.getCompanyID(r)
-	if companyID == 0 {
-		h.Error(w, http.StatusForbidden, "no company assigned")
-		return
-	}
 	similar, err := retriever.GetSimilarContracts(companyID, req.ContractType, req.ClientID, req.SupplierID, 3)
 	if err != nil {
 		log.Printf("[AI] RAG warning: %v", err)
@@ -175,7 +170,10 @@ func (h *Handler) HandleAIGenerateContract(w http.ResponseWriter, r *http.Reques
 	prompt := ai.BuildContractPrompt(req, context)
 
 	// Call LLM
-	client := ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
+	client := h.LLMClient
+	if client == nil {
+		client = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
+	}
 	response, err := client.Generate(ctx, prompt, context)
 	if err != nil {
 		log.Printf("[AI] Generation failed: %v", err)
@@ -184,8 +182,7 @@ func (h *Handler) HandleAIGenerateContract(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ai.GenerateResponse{Text: response})
+	h.success(w, http.StatusOK, ai.GenerateResponse{Text: response})
 }
 
 // HandleAIReviewContract handles contract review requests
@@ -200,7 +197,7 @@ func (h *Handler) HandleAIReviewContract(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get company ID for rate limiting
-	companyID := h.getCompanyID(r)
+	companyID := h.GetCompanyID(r)
 	if companyID == 0 {
 		h.Error(w, http.StatusForbidden, "no company assigned")
 		return
@@ -267,7 +264,10 @@ func (h *Handler) HandleAIReviewContract(w http.ResponseWriter, r *http.Request)
 	prompt := ai.BuildReviewPrompt(contractText)
 
 	// Call LLM
-	client := ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
+	client := h.LLMClient
+	if client == nil {
+		client = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
+	}
 	response, err := client.Generate(ctx, prompt, "")
 	if err != nil {
 		log.Printf("[AI] Review failed: %v", err)
@@ -278,19 +278,14 @@ func (h *Handler) HandleAIReviewContract(w http.ResponseWriter, r *http.Request)
 	// Parse the response into structured format
 	reviewResp, err := ai.ParseReviewResponse(response)
 	if err != nil {
-		// Log but still return raw text with warning
+		// Log and return a generic error — do not expose raw LLM output
 		log.Printf("[AI] Parse error: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Failed to parse AI structured response. Raw output shown.",
-			"raw":   response,
-		})
+		h.Error(w, http.StatusInternalServerError, "Failed to parse AI response")
 		return
 	}
 
 	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reviewResp)
+	h.success(w, http.StatusOK, reviewResp)
 }
 
 // HandleAITestConnection tests the AI connection
@@ -308,7 +303,10 @@ func (h *Handler) HandleAITestConnection(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Create temporary client and test
-	client := ai.NewLLMClient(ai.LLMProvider(req.Provider), req.APIKey, req.Model, req.Endpoint)
+	client := h.LLMClient
+	if client == nil {
+		client = ai.NewLLMClient(ai.LLMProvider(req.Provider), req.APIKey, req.Model, req.Endpoint)
+	}
 
 	// Simple test prompt
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
@@ -319,6 +317,5 @@ func (h *Handler) HandleAITestConnection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Connection successful"})
+	h.success(w, http.StatusOK, map[string]string{"status": "success", "message": "Connection successful"})
 }

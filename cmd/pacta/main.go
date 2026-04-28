@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"log"
 
 	"github.com/PACTA-Team/pacta/internal/ai"
@@ -8,11 +9,14 @@ import (
 	"github.com/PACTA-Team/pacta/internal/server"
 )
 
+//go:embed pacta_appweb/dist
+var staticFS embed.FS
+
 func main() {
 	cfg := config.Default()
 	log.Printf("PACTA v%s starting...", cfg.Version)
 
-	// Initialize AI encryption key if configured
+	// Initialize AI encryption key if provided
 	if cfg.AIEncryptionKey != "" {
 		keyLen := len(cfg.AIEncryptionKey)
 		if keyLen != 16 && keyLen != 24 && keyLen != 32 {
@@ -21,10 +25,8 @@ func main() {
 		ai.SetEncryptionKey([]byte(cfg.AIEncryptionKey))
 	}
 
-	// Initialize AI rate limiter (100 requests per day per company)
-	rateLimiter := ai.NewRateLimiter(100)
-
-	if err := server.Start(cfg, staticFS, rateLimiter); err != nil {
+	// Start server (rate limiter created internally with DB)
+	if err := server.Start(cfg, staticFS); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

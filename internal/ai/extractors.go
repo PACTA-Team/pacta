@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"github.com/rsc/pdf"

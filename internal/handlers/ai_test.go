@@ -1,151 +1,327 @@
 package handlers
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/PACTA-Team/pacta/internal/ai"
-	"github.com/PACTA-Team/pacta/internal/db"
 )
 
-// TestHandleAI_NotConfigured tests that AI endpoints return service unavailable when not configured
-func TestHandleAI_NotConfigured(t *testing.T) {
-	// This test will be expanded when we have the actual implementation
-	// For now, just verify the method signature exists
-	t.Skip("Implementation pending full integration")
-}
+// TestHandleAIGenerateContract tests the contract generation endpoint with table-driven tests.
+func TestHandleAIGenerateContract(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
 
-// TestHandleAIGenerateContract_InvalidRequest tests that invalid contract generation requests return 400
-func TestHandleAIGenerateContract_InvalidRequest(t *testing.T) {
-	// Set up test database
-	dir := t.TempDir()
-	database, err := db.Open(dir)
+	companyID := insertTestCompany(t, db)
+
+	// Configure AI encryption
+	ai.SetEncryptionKey([]byte("32-byte-test-key-1234567890ab"))
+	encKey, err := ai.EncryptAPIKey("sk-test-mock-key")
 	if err != nil {
-		t.Fatalf("Failed to open test DB: %v", err)
+		t.Fatalf("EncryptAPIKey: %v", err)
 	}
-	defer database.Close()
-
-	if err := db.Migrate(database); err != nil {
-		t.Fatalf("Failed to migrate test DB: %v", err)
-	}
-
-	h := &Handler{DB: database}
-
-	// Invalid request: missing required fields (empty contract_type)
-	reqBody := []byte(`{"contract_type": ""}`)
-	req := httptest.NewRequest("POST", "/api/ai/generate-contract", bytes.NewReader(reqBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	h.HandleAIGenerateContract(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
-	}
-}
-
-// TestHandleAIGenerateContract_InvalidInput tests various invalid inputs for contract generation
-func TestHandleAIGenerateContract_InvalidInput(t *testing.T) {
-	dir := t.TempDir()
-	database, err := db.Open(dir)
-	if err != nil {
-		t.Fatalf("Failed to open test DB: %v", err)
-	}
-	defer database.Close()
-
-	if err := db.Migrate(database); err != nil {
-		t.Fatalf("Failed to migrate test DB: %v", err)
+	// Insert system AI settings
+	if _, err := db.Exec(
+		"INSERT INTO system_settings (key, value, category) VALUES (?, ?, ?), (?, ?, ?), (?, ?, ?), (?, ?, ?)",
+		"ai_provider", "openai", "ai",
+		"ai_api_key", encKey, "ai",
+		"ai_model", "gpt-4o", "ai",
+		"ai_endpoint", "", "ai",
+	); err != nil {
+		t.Fatalf("insert system_settings: %v", err)
 	}
 
-	h := &Handler{DB: database}
+	// Base handler with mock client and rate limiter
+	mockSuccessClient := &mockLLMClient{response: "Generated contract text"}
+	h := &Handler{
+		DB:          db,
+		RateLimiter: ai.NewRateLimiter(db),
+		LLMClient:   mockSuccessClient,
+	}
 
 	tests := []struct {
-		name    string
-		body    string
-		wantCode int
+		name            string
+		body            string
+		modifyHandler   func(*testing.T, *Handler)
+		wantStatus      int
+		wantBodyContains []string
 	}{
 		{
-			name: "amount zero",
+			name: "valid request",
+			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":1,"supplier_id":2,"description":"test"}`,
+			modifyHandler: nil,
+			wantStatus: 200,
+			wantBodyContains: []string{`"text":"Generated contract text"`},
+		},
+		{
+			name: "missing required fields - empty contract_type",
+			body: `{"contract_type":""}`,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`Missing required fields`},
+		},
+		{
+			name: "invalid amount zero",
 			body: `{"contract_type":"service","amount":0,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":1,"supplier_id":2,"description":"test"}`,
-			wantCode: http.StatusBadRequest,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`amount must be greater than zero`},
 		},
 		{
-			name: "clientID negative",
+			name: "client_id negative",
 			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":-1,"supplier_id":2,"description":"test"}`,
-			wantCode: http.StatusBadRequest,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`client_id and supplier_id must be positive integers`},
 		},
 		{
-			name: "supplierID negative",
+			name: "supplier_id negative",
 			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":1,"supplier_id":-2,"description":"test"}`,
-			wantCode: http.StatusBadRequest,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`client_id and supplier_id must be positive integers`},
 		},
 		{
-			name: "startDate >= endDate",
+			name: "start_date after end_date",
 			body: `{"contract_type":"service","amount":1000,"start_date":"2025-12-31","end_date":"2025-01-01","client_id":1,"supplier_id":2,"description":"test"}`,
-			wantCode: http.StatusBadRequest,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`start_date must be before end_date`},
 		},
 		{
-			name: "startDate equals endDate",
+			name: "start_date equals end_date",
 			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-01-01","client_id":1,"supplier_id":2,"description":"test"}`,
-			wantCode: http.StatusBadRequest,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`start_date must be before end_date`},
 		},
 		{
 			name: "description too long",
 			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":1,"supplier_id":2,"description":"` + strings.Repeat("x", 10001) + `"}`,
-			wantCode: http.StatusBadRequest,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`description too long`},
+		},
+		{
+			name: "rate limit exceeded",
+			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":1,"supplier_id":2,"description":"test"}`,
+			modifyHandler: func(t *testing.T, h *Handler) {
+				today := time.Now().UTC().Format("2006-01-02")
+				if _, err := db.Exec("INSERT INTO ai_rate_limits (company_id, date, count) VALUES (?, ?, ?)", companyID, today, 100); err != nil {
+					t.Fatalf("seed rate limit: %v", err)
+				}
+			},
+			wantStatus: 429,
+			wantBodyContains: []string{`daily AI request limit`},
+		},
+		{
+			name: "LLM returns error",
+			body: `{"contract_type":"service","amount":1000,"start_date":"2025-01-01","end_date":"2025-12-31","client_id":1,"supplier_id":2,"description":"test"}`,
+			modifyHandler: func(t *testing.T, h *Handler) {
+				h.LLMClient = &mockLLMClient{err: errors.New("LLM unavailable")}
+			},
+			wantStatus: 500,
+			wantBodyContains: []string{`AI generation failed`},
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/api/ai/generate-contract", bytes.NewReader([]byte(tt.body)))
+			// Apply any handler modifications per test
+			if tt.modifyHandler != nil {
+				tt.modifyHandler(t, h)
+			}
+
+			req := httptest.NewRequest("POST", "/api/ai/generate-contract", strings.NewReader(tt.body))
 			req.Header.Set("Content-Type", "application/json")
+			// Inject company context
+			req = withCompanyContext(req, companyID)
 			w := httptest.NewRecorder()
 
 			h.HandleAIGenerateContract(w, req)
 
-			if w.Code != tt.wantCode {
-				t.Errorf("expected %d, got %d, body: %s", tt.wantCode, w.Code, w.Body.String())
+			if w.Code != tt.wantStatus {
+				t.Errorf("expected status %d, got %d, body: %s", tt.wantStatus, w.Code, w.Body.String())
+				return
+			}
+			body := w.Body.String()
+			for _, substr := range tt.wantBodyContains {
+				if !strings.Contains(body, substr) {
+					t.Errorf("body missing substring %q.\nFull body: %s", substr, body)
+				}
 			}
 		})
 	}
 }
 
-// TestHandleAITestConnection_Valid tests the connection test endpoint with a mock
-func TestHandleAITestConnection_Valid(t *testing.T) {
-	dir := t.TempDir()
-	database, err := db.Open(dir)
-	if err != nil {
-		t.Fatalf("Failed to open test DB: %v", err)
+// TestHandleAIReviewContract tests the contract review endpoint.
+func TestHandleAIReviewContract(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	companyID := insertTestCompany(t, db)
+
+	// AI config
+	ai.SetEncryptionKey([]byte("32-byte-test-key-1234567890ab"))
+	encKey, _ := ai.EncryptAPIKey("sk-test")
+	db.Exec(
+		"INSERT INTO system_settings (key, value, category) VALUES (?, ?, ?), (?, ?, ?), (?, ?, ?), (?, ?, ?)",
+		"ai_provider", "openai", "ai",
+		"ai_api_key", encKey, "ai",
+		"ai_model", "gpt-4o", "ai",
+		"ai_endpoint", "", "ai",
+	)
+
+	mockClient := &mockLLMClient{response: `{"summary":"Review OK","risks":[],"missing_clauses":[],"overall_risk":"low"}`}
+	h := &Handler{
+		DB:          db,
+		RateLimiter: ai.NewRateLimiter(db),
+		LLMClient:   mockClient,
 	}
-	defer database.Close()
 
-	if err := db.Migrate(database); err != nil {
-		t.Fatalf("Failed to migrate test DB: %v", err)
+	tests := []struct {
+		name            string
+		body            string
+		modifyHandler   func(t *testing.T)
+		wantStatus      int
+		wantBodyContains []string
+	}{
+		{
+			name: "valid review via text",
+			body: `{"text":"This is a contract text to review."}`,
+			modifyHandler: nil,
+			wantStatus: 200,
+			wantBodyContains: []string{`"summary":"Review OK"`},
+		},
+		{
+			name: "missing both text and document_url",
+			body: `{}`,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`either text or document_url must be provided`},
+		},
+		{
+			name: "rate limit exceeded",
+			body: `{"text":"contract"}`,
+			modifyHandler: func(t *testing.T) {
+				today := time.Now().UTC().Format("2006-01-02")
+				db.Exec("INSERT INTO ai_rate_limits (company_id, date, count) VALUES (?,?,100)", companyID, today)
+			},
+			wantStatus: 429,
+			wantBodyContains: []string{`daily AI request limit`},
+		},
+		{
+			name: "LLM error",
+			body: `{"text":"contract"}`,
+			modifyHandler: func(t *testing.T) {
+				h.LLMClient = &mockLLMClient{err: errors.New("LLM down")}
+			},
+			wantStatus: 500,
+			wantBodyContains: []string{`AI review failed`},
+		},
+		{
+			name: "invalid JSON",
+			body: `not json`,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`Invalid request body`},
+		},
 	}
 
-	h := &Handler{DB: database}
-
-	reqBody := map[string]string{
-		"provider": "openai",
-		"api_key":  "sk-test-invalid-key-that-will-fail",
-		"model":    "gpt-4o",
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.modifyHandler != nil {
+				tt.modifyHandler(t)
+			}
+			req := httptest.NewRequest("POST", "/api/ai/review-contract", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			req = withCompanyContext(req, companyID)
+			w := httptest.NewRecorder()
+			h.HandleAIReviewContract(w, req)
+			if w.Code != tt.wantStatus {
+				t.Errorf("expected %d, got %d, body: %s", tt.wantStatus, w.Code, w.Body.String())
+				return
+			}
+			body := w.Body.String()
+			for _, substr := range tt.wantBodyContains {
+				if !strings.Contains(body, substr) {
+					t.Errorf("body missing substring %q. got: %s", substr, body)
+				}
+			}
+		})
 	}
-	encoded, _ := json.Marshal(reqBody)
-	req := httptest.NewRequest("POST", "/api/ai/test", bytes.NewReader(encoded))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+}
 
-	h.HandleAITestConnection(w, req)
+// TestHandleAITestConnection tests the AI connection test endpoint.
+func TestHandleAITestConnection(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
 
-	// Expect a failure because the API key is invalid, but not a server error (5xx)
-	// Should be 502 Bad Gateway from "Connection failed"
-	if w.Code == http.StatusInternalServerError {
-		t.Errorf("got 500 Internal Server Error, expected either 502 (connection fail) or 200 if mocking")
+	// Mock client; we don't need AI config
+	mockSuccess := &mockLLMClient{response: "Test successful"}
+	h := &Handler{
+		DB:        db,
+		LLMClient: mockSuccess,
+	}
+
+	tests := []struct {
+		name            string
+		body            string
+		modifyHandler   func(t *testing.T)
+		wantStatus      int
+		wantBodyContains []string
+	}{
+		{
+			name: "valid credentials",
+			body: `{"provider":"openai","api_key":"sk-test","model":"gpt-4o"}`,
+			modifyHandler: nil,
+			wantStatus: 200,
+			wantBodyContains: []string{`"status":"success"`, `"message":"Connection successful"`},
+		},
+		{
+			name: "LLM error",
+			body: `{"provider":"openai","api_key":"sk-test","model":"gpt-4o"}`,
+			modifyHandler: func(t *testing.T) {
+				h.LLMClient = &mockLLMClient{err: errors.New("connection failed")}
+			},
+			wantStatus: 502,
+			wantBodyContains: []string{`Connection failed`},
+		},
+		{
+			name: "invalid JSON",
+			body: `not json`,
+			modifyHandler: nil,
+			wantStatus: 400,
+			wantBodyContains: []string{`Invalid request body`},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.modifyHandler != nil {
+				tt.modifyHandler(t)
+			}
+			req := httptest.NewRequest("POST", "/api/ai/test", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			h.HandleAITestConnection(w, req)
+			if w.Code != tt.wantStatus {
+				t.Errorf("expected %d, got %d, body: %s", tt.wantStatus, w.Code, w.Body.String())
+				return
+			}
+			body := w.Body.String()
+			for _, substr := range tt.wantBodyContains {
+				if !strings.Contains(body, substr) {
+					t.Errorf("body missing substring %q.\nFull body: %s", substr, body)
+				}
+			}
+		})
 	}
 }

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { settingsAPI, SystemSetting } from "@/lib/settings-api";
+import { settingsAPI } from "@/lib/settings-api";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -29,32 +29,32 @@ export function AISection() {
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
 
-  const handleSave = async () => {
-    if (!provider || !apiKey) {
-      toast.error(t('aiSettings.errors.provider_and_key_required'));
-      return;
-    }
+   const handleSave = async () => {
+     if (!provider || !apiKey) {
+       toast.error(t('aiSettings.errors.provider_and_key_required'));
+       return;
+     }
 
-    setLoading(true);
-    try {
-      const settings: SystemSetting[] = [
-        { key: "ai_provider", value: provider, category: "ai" },
-        { key: "ai_api_key", value: apiKey, category: "ai" },
-        { key: "ai_model", value: model, category: "ai" },
-      ];
+     setLoading(true);
+     try {
+       const settings = [
+         { key: "ai_provider", value: provider },
+         { key: "ai_api_key", value: apiKey },
+         { key: "ai_model", value: model },
+       ];
 
-      if (endpoint) {
-        settings.push({ key: "ai_endpoint", value: endpoint, category: "ai" });
-      }
+       if (endpoint) {
+         settings.push({ key: "ai_endpoint", value: endpoint });
+       }
 
-      await settingsAPI.update(settings);
-      toast.success(t('aiSettings.saveSuccess'));
-    } catch (err: any) {
-      toast.error(err.message || t('aiSettings.saveError'));
-    } finally {
-      setLoading(false);
-    }
-  };
+       await settingsAPI.update(settings);
+       toast.success(t('aiSettings.saveSuccess'));
+     } catch (err: any) {
+       toast.error(err.message || t('aiSettings.saveError'));
+     } finally {
+       setLoading(false);
+     }
+   };
 
   const handleTest = async () => {
     if (!apiKey) {
