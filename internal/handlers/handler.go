@@ -19,8 +19,9 @@ const (
 )
 
 type Handler struct {
-	DB      *sql.DB
-	DataDir string
+	DB          *sql.DB
+	DataDir     string
+	RateLimiter *ai.RateLimiter
 }
 
 func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {
@@ -82,6 +83,19 @@ func (h *Handler) getUserRole(r *http.Request) string {
 		return ""
 	}
 	return v.(string)
+}
+
+func (h *Handler) getCompanyID(r *http.Request) int {
+	userID := h.getUserID(r)
+	if userID == 0 {
+		return 0
+	}
+	var companyID int
+	err := h.DB.QueryRow("SELECT company_id FROM users WHERE id = ? AND deleted_at IS NULL", userID).Scan(&companyID)
+	if err != nil {
+		return 0
+	}
+	return companyID
 }
 
 // roleLevel returns the numeric permission level for a role.
