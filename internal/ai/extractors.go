@@ -25,14 +25,12 @@ func ExtractTextFromPDF(r io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer reader.Close()
 
 	// Extract plain text from entire document
 	textReader, err := reader.GetPlainText()
 	if err != nil {
 		return "", err
 	}
-	defer textReader.Close()
 
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(textReader)
