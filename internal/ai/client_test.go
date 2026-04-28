@@ -2,7 +2,6 @@ package ai
 
 import (
 	"context"
-	"net/http"
 	"testing"
 	"time"
 )

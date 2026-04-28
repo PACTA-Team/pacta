@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/PACTA-Team/pacta/internal/auth"
-	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 func createCompany(t *testing.T, db *sql.DB, name string) int64 {
