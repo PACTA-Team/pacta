@@ -5,18 +5,21 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailSection } from "./SettingsPage/EmailSection";
 import { NotificationsTab } from "./SettingsPage/NotificationsTab";
+import { AISection } from "./SettingsPage/AISection";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabType = "email" | "notifications";
+type TabType = "email" | "notifications" | "ai";
 
 const TABS: Array<{id: TabType; label: string; icon: string}> = [
   { id: "email", label: "Email Services", icon: "✉️" },
-  { id: "notifications", label: "Notifications", icon: "🔔" }
+  { id: "notifications", label: "Notifications", icon: "🔔" },
+  { id: "ai", label: "AI Configuration", icon: "🤖" }
 ];
 
 export default function SettingsPage() {
   const { t } = useTranslation("settings");
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState<TabType>("email");
   const [isMobile, setIsMobile] = useState(false);
 
@@ -33,6 +36,8 @@ export default function SettingsPage() {
         return <EmailSection />;
       case "notifications":
         return <NotificationsTab />;
+      case "ai":
+        return isAdmin ? <AISection /> : <div>AI configuration is only available to admins.</div>;
       default:
         return <EmailSection />;
     }

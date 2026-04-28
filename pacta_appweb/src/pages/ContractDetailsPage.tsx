@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Download, FilePlus, Upload, Eye, Trash2 } from 'lucide-react';
+import { Edit, Download, FilePlus, Upload, Eye, Trash2, Sparkles } from 'lucide-react';
 import { contractsAPI } from '@/lib/contracts-api';
 import { supplementsAPI } from '@/lib/supplements-api';
 import { documentsAPI, APIDocument } from '@/lib/documents-api';
@@ -15,6 +15,7 @@ import { getContractAuditLogs } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { AuditLog } from '@/types';
+import { aiAPI, ReviewResponse } from '@/lib/ai-api';
 
 export default function ContractDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +29,10 @@ export default function ContractDetailsPage() {
   const { hasPermission } = useAuth();
   const { t } = useTranslation('contracts');
   const { t: tCommon } = useTranslation('common');
+
+  // AI review state
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewResult, setReviewResult] = useState<ReviewResponse | null>(null);
 
   const contractId = id ? parseInt(id) : 0;
 
@@ -97,17 +102,42 @@ export default function ContractDetailsPage() {
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'destructive' | 'secondary' | 'outline'> = {
-      active: 'default',
-      expired: 'destructive',
-      pending: 'secondary',
-      cancelled: 'outline',
-      draft: 'secondary',
-      approved: 'default',
-    };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
-  };
+   const getStatusBadge = (status: string) => {
+     const variants: Record<string, 'default' | 'destructive' | 'secondary' | 'outline'> = {
+       active: 'default',
+       expired: 'destructive',
+       pending: 'secondary',
+       cancelled: 'outline',
+       draft: 'secondary',
+       approved: 'default',
+     };
+     return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+   };
+
+   const handleReviewWithAI = async () => {
+     if (!contract || !documents.length) {
+       toast.error("No document available for review");
+       return;
+     }
+
+     setReviewing(true);
+     try {
+       // For now, use a placeholder - in future: extract text from document
+       const text = `Contract: ${contract.title}\nType: ${contract.type}\nAmount: ${contract.amount}\n\nFull contract text would be extracted from the attached document.`;
+       
+       const result = await aiAPI.reviewContract({
+         contract_id: contract.id,
+         text,
+       });
+       
+       setReviewResult(result);
+       toast.success("Review completed");
+     } catch (err: any) {
+       toast.error(err.message || "Failed to review contract");
+     } finally {
+       setReviewing(false);
+     }
+   };
 
   return (
     
@@ -134,6 +164,14 @@ export default function ContractDetailsPage() {
                 </Link>
               </>
             )}
+            <Button 
+              variant="outline" 
+              onClick={handleReviewWithAI}
+              disabled={reviewing || !documents.length}
+            >
+              {reviewing ? "Analyzing..." : "Review with Themis"}
+              <Badge variant="secondary" className="ml-2">Experimental</Badge>
+            </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
               {t('generateReport')}
@@ -276,6 +314,60 @@ export default function ContractDetailsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* AI Review Results Panel */}
+        {reviewResult && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Themis AI Assessment</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="font-semibold mb-2">Summary:</h4>
+                <p className="text-sm">{reviewResult.summary}</p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold mb-2">Overall Risk: 
+                  <Badge 
+                    variant={reviewResult.overall_risk === 'high' ? 'destructive' : 
+                            reviewResult.overall_risk === 'medium' ? 'secondary' : 'default'}
+                  >
+                    {reviewResult.overall_risk}
+                  </Badge>
+                </h4>
+              </div>
+
+              {reviewResult.risks && reviewResult.risks.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Risk Clauses:</h4>
+                  <ul className="space-y-3">
+                    {reviewResult.risks.map((risk: any, i: number) => (
+                      <li key={i} className="border-l-4 border-red-500 pl-4 py-1 bg-red-50 dark:bg-red-950/20 rounded-r">
+                        <p className="font-medium">{risk.clause}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Risk level: <span className="font-semibold">{risk.risk}</span>
+                        </p>
+                        <p className="text-sm mt-1">{risk.suggestion}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {reviewResult.missing_clauses && reviewResult.missing_clauses.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Missing Clauses:</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {reviewResult.missing_clauses.map((clause: string, i: number) => (
+                      <li key={i} className="text-sm">{clause}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

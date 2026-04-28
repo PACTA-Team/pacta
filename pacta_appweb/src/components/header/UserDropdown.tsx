@@ -50,7 +50,6 @@ export default function UserDropdown() {
 
   const toggleLanguage = () => {
     // Language toggle functionality - could be expanded
-    console.log("Language toggle clicked");
   };
 
   const userInitials = useMemo(() => {

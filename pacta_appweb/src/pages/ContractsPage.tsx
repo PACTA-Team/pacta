@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Sparkles } from 'lucide-react';
 import { Contract, Client, Supplier, Company, ContractType, ContractStatus } from '@/types';
 import { contractsAPI, CreateContractRequest, UpdateContractRequest } from '@/lib/contracts-api';
 import type { ContractSubmitData } from '@/types/contract';
@@ -21,6 +21,8 @@ import { Link } from 'react-router-dom';
 import ContractForm from '@/components/contracts/ContractForm';
 import { useOwnCompanies } from '@/hooks/useOwnCompanies';
 import { useCompanyFilter } from '@/hooks/useCompanyFilter';
+import { AISection } from './SettingsPage/AISection';
+import { ContractAIForm } from '@/components/contracts/ContractAIForm';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ContractAIForm } from '@/components/contracts/ContractAIForm';
 
 export default function ContractsPage() {
   const { hasPermission } = useAuth();
@@ -51,8 +54,10 @@ export default function ContractsPage() {
   const { ownCompanies, selectedOwnCompany, setSelectedOwnCompany, loading: loadingCompanies } = useOwnCompanies();
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [contractToDelete, setContractToDelete] = useState<number | null>(null);
+   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
+   const [showNewContractWithAI, setShowNewContractWithAI] = useState(false);
+   const [aiDraft, setAiDraft] = useState<string>("");
 
   const loadData = useCallback(async () => {
     try {
@@ -61,9 +66,9 @@ export default function ContractsPage() {
         clientsAPI.list(),
         suppliersAPI.list(),
       ]);
-      setContracts(contractsData as any[]);
-      setClients(clientsData as any[]);
-      setSuppliers(suppliersData as any[]);
+      setContracts(contractsData as Contract[]);
+      setClients(clientsData as Client[]);
+      setSuppliers(suppliersData as Supplier[]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load data');
     }
@@ -149,7 +154,7 @@ export default function ContractsPage() {
     }
   };
 
-  const handleEdit = (contract: any) => {
+  const handleEdit = (contract: Contract) => {
     if (!hasPermission('editor')) {
       toast.error('You do not have permission to edit contracts');
       return;
@@ -202,16 +207,18 @@ export default function ContractsPage() {
 
   return (
     <>
-      {showForm ? (
-        <ContractForm
-          contract={editingContract}
-          onSubmit={handleCreateOrUpdate}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingContract(undefined);
-          }}
-        />
-      ) : (
+       {showForm ? (
+         <ContractForm
+           contract={editingContract}
+           aiDraft={aiDraft}
+           onSubmit={handleCreateOrUpdate}
+           onCancel={() => {
+             setShowForm(false);
+             setEditingContract(undefined);
+             setAiDraft("");
+           }}
+         />
+       ) : (
         <div className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
@@ -299,16 +306,28 @@ export default function ContractsPage() {
                     </SelectContent>
                   </Select>
                 )}
-              </div>
             </div>
-            {hasPermission('editor') && (
+          </div>
+          {hasPermission('editor') && (
+            <div className="flex gap-2">
               <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">{t('createNew')}</span>
                 <span className="sm:hidden">{t('newContract')}</span>
               </Button>
-            )}
-          </div>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => setShowNewContractWithAI(true)}
+                className="border-dashed w-full sm:w-auto"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                New with AI
+                <Badge variant="secondary" className="ml-2">Experimental</Badge>
+              </Button>
+            </div>
+          )}
+        </div>
 
           <Card>
             <CardContent className="p-0">
@@ -334,7 +353,7 @@ export default function ContractsPage() {
                         </TableCell>
                       </TableRow>
 ) : (
-                      filteredContracts.map((contract: any) => {
+                       filteredContracts.map((contract: Contract) => {
                         const isClient = String(contract.client_id) === String(currentCompany?.id);
                         const isSupplier = String(contract.supplier_id) === String(currentCompany?.id);
                         const contractCompany = isClient ? 'Client' : isSupplier ? 'Supplier' : 'Other';
@@ -387,20 +406,32 @@ export default function ContractsPage() {
         </div>
       )}
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tCommon('areYouSure')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('deleteConfirm')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>{tCommon('delete')}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-}
+       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+         <AlertDialogContent>
+           <AlertDialogHeader>
+             <AlertDialogTitle>{tCommon('areYouSure')}</AlertDialogTitle>
+             <AlertDialogDescription>
+               {t('deleteConfirm')}
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+           <AlertDialogFooter>
+             <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
+             <AlertDialogAction onClick={confirmDelete}>{tCommon('delete')}</AlertDialogAction>
+           </AlertDialogFooter>
+         </AlertDialogContent>
+       </AlertDialog>
+
+        {/* AI Contract Generation Modal */}
+        {showNewContractWithAI && (
+          <ContractAIForm
+            onClose={() => setShowNewContractWithAI(false)}
+            onSuccess={(generatedText) => {
+              setShowNewContractWithAI(false);
+              setAiDraft(generatedText);
+              setShowForm(true);
+            }}
+          />
+        )}
+     </>
+   );
+ }

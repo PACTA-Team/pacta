@@ -22,6 +22,7 @@ import logger from '@/lib/logger';
 
 interface ContractFormWrapperProps {
   contract?: Contract | null;
+  aiDraft?: string;           // NEW: AI-generated draft to pre-fill
   onSubmit: (data: ContractSubmitData) => Promise<void>;
   onCancel: () => void;
 }
@@ -119,44 +120,51 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
   }, [selectedOwnCompany, ourRole]);
 
   // ─── Effect: Load signers for selected counterpart ───
-  useEffect(() => {
-    const loadSigners = async () => {
-      if (!selectedOwnCompany) {
-        setSigners([]);
-        return;
-      }
+   useEffect(() => {
+     const loadSigners = async () => {
+       if (!selectedOwnCompany) {
+         setSigners([]);
+         return;
+       }
 
-      const counterpartId = ourRole === 'client'
-        ? formDataRef.current.client_id
-        : formDataRef.current.supplier_id;
+       const counterpartId = ourRole === 'client'
+         ? formDataRef.current.client_id
+         : formDataRef.current.supplier_id;
 
-      if (!counterpartId) {
-        setSigners([]);
-        return;
-      }
+       if (!counterpartId) {
+         setSigners([]);
+         return;
+       }
 
-      setLoadingSigners(true);
-      try {
-        // Use optimized endpoint that filters by company_id AND company_type
-        const data = await signersAPI.listByCompany(counterpartId, ourRole, loadAbortRef.current?.signal);
-        setSigners(data);
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          toast.error('Failed to load authorized signers');
-        }
-      } finally {
-        setLoadingSigners(false);
-      }
-    };
+       setLoadingSigners(true);
+       try {
+         // Use optimized endpoint that filters by company_id AND company_type
+         const data = await signersAPI.listByCompany(counterpartId, ourRole, loadAbortRef.current?.signal);
+         setSigners(data);
+       } catch (err: any) {
+         if (err.name !== 'AbortError') {
+           toast.error('Failed to load authorized signers');
+         }
+       } finally {
+         setLoadingSigners(false);
+       }
+     };
 
-    loadSigners();
+     loadSigners();
 
-    return () => {
-      if (loadAbortRef.current) {
-        loadAbortRef.current.abort();
-      }
-    };
-  }, [selectedOwnCompany, ourRole, formDataRef.current.client_id, formDataRef.current.supplier_id]);
+     return () => {
+       if (loadAbortRef.current) {
+         loadAbortRef.current.abort();
+       }
+     };
+   }, [selectedOwnCompany, ourRole, formDataRef.current.client_id, formDataRef.current.supplier_id]);
+
+   // ─── Effect: Pre-fill description when aiDraft changes ───
+   useEffect(() => {
+     if (aiDraft) {
+       formDataRef.current.description = aiDraft
+     }
+   }, [aiDraft]);
 
    // ─── Handlers ───
    const handleCompanyChange = (value: string) => {
@@ -357,6 +365,16 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6" id="contract-form">
+          {/* AI Draft Banner */}
+          {aiDraft && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>AI Draft Generated:</strong> The description field has been pre-filled with AI-generated content.
+                Please review and edit as needed before saving.
+              </p>
+            </div>
+          )}
+
           {/* Company Selector (multi-company only, new contracts) */}
           {isMultiCompany && !isEditing && (
             <div className="space-y-2">
