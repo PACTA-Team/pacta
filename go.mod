@@ -10,6 +10,7 @@ require (
 	github.com/go-chi/httprate v0.15.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/pressly/goose/v3 v3.27.1
+	github.com/rsc/pdf v0.1.1
 	github.com/stretchr/testify v1.11.1
 	github.com/wneessen/go-mail v0.7.2
 	golang.org/x/crypto v0.50.0

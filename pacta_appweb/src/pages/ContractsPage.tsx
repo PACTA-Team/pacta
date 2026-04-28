@@ -54,9 +54,10 @@ export default function ContractsPage() {
   const { ownCompanies, selectedOwnCompany, setSelectedOwnCompany, loading: loadingCompanies } = useOwnCompanies();
   const [showForm, setShowForm] = useState(false);
   const [editingContract, setEditingContract] = useState<any>(undefined);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [contractToDelete, setContractToDelete] = useState<number | null>(null);
-  const [showNewContractWithAI, setShowNewContractWithAI] = useState(false);
+   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
+   const [showNewContractWithAI, setShowNewContractWithAI] = useState(false);
+   const [aiDraft, setAiDraft] = useState<string>("");
 
   const loadData = useCallback(async () => {
     try {
@@ -206,16 +207,18 @@ export default function ContractsPage() {
 
   return (
     <>
-      {showForm ? (
-        <ContractForm
-          contract={editingContract}
-          onSubmit={handleCreateOrUpdate}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingContract(undefined);
-          }}
-        />
-      ) : (
+       {showForm ? (
+         <ContractForm
+           contract={editingContract}
+           aiDraft={aiDraft}
+           onSubmit={handleCreateOrUpdate}
+           onCancel={() => {
+             setShowForm(false);
+             setEditingContract(undefined);
+             setAiDraft("");
+           }}
+         />
+       ) : (
         <div className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
@@ -418,17 +421,17 @@ export default function ContractsPage() {
          </AlertDialogContent>
        </AlertDialog>
 
-       {/* AI Contract Generation Modal */}
-       {showNewContractWithAI && (
-         <ContractAIForm
-           onClose={() => setShowNewContractWithAI(false)}
-           onSuccess={(generatedText) => {
-             setShowNewContractWithAI(false);
-             // TODO: Open the regular ContractForm with generatedText pre-filled
-             toast.success("Contract generated - integration pending");
-           }}
-         />
-       )}
+        {/* AI Contract Generation Modal */}
+        {showNewContractWithAI && (
+          <ContractAIForm
+            onClose={() => setShowNewContractWithAI(false)}
+            onSuccess={(generatedText) => {
+              setShowNewContractWithAI(false);
+              setAiDraft(generatedText);
+              setShowForm(true);
+            }}
+          />
+        )}
      </>
    );
  }

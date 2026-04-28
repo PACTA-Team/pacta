@@ -170,10 +170,21 @@ func (h *Handler) HandleAIReviewContract(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// TODO: Parse JSON response into ReviewResponse struct
+	// Parse the response into structured format
+	reviewResp, err := ai.ParseReviewResponse(response)
+	if err != nil {
+		// Log but still return raw text with warning
+		log.Printf("[AI] Parse error: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Failed to parse AI structured response. Raw output shown.",
+			"raw":   response,
+		})
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"text": response})
+	json.NewEncoder(w).Encode(reviewResp)
 }
 
 // HandleAITestConnection tests the AI connection
