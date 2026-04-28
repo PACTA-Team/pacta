@@ -72,6 +72,11 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.DB.Exec(
+		"INSERT INTO audit_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+		userID, "password_reset_request", "Password reset requested", r.RemoteAddr,
+	)
+
 	resetLink := "http://" + r.Host + "/reset-password?token=" + token
 	if lang == "" {
 		lang = detectLanguageFromHeader(r.Header.Get("Accept-Language"))
@@ -146,6 +151,11 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if err := email.MarkTokenUsed(h.DB, req.Token); err != nil {
 		log.Printf("[password_reset] error marking token used: %v", err)
 	}
+
+	h.DB.Exec(
+		"INSERT INTO audit_logs (user_id, action, details, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+		userID, "password_reset_complete", "Password reset completed successfully",
+	)
 
 	log.Printf("[password_reset] password reset for user %d", userID)
 	h.JSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
