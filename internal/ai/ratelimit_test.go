@@ -220,8 +220,6 @@ func TestRateLimiter_Concurrency_101stDenied(t *testing.T) {
 		t.Errorf("final count should be 100, got %d", count)
 	}
 }
-}
-
 	wg.Wait()
 	close(results)
 
@@ -253,6 +251,4 @@ func TestRateLimiter_Concurrency_101stDenied(t *testing.T) {
 	if count != 100 {
 		t.Errorf("final count should be 100, got %d", count)
 	}
-}
-
 }
