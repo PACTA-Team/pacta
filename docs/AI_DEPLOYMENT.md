@@ -8,8 +8,17 @@
 ## Pre-Deployment Checks
 
 1. Ensure Go 1.25+ and Node 22+ in CI
-2. Verify migrations folder includes `005_ai_settings.sql`
+2. Verify migrations folder includes `005_ai_settings.sql` and `006_ai_rate_limits.sql`
 3. Confirm `internal/server/server.go` applies migrations on startup
+4. Set all required environment variables (see above)
+
+## Rate Limiting
+
+Implemented via `ai_rate_limits` table (SQLite). Shared automatically across all server instances. Each company gets 100 requests per UTC day. The limit resets at midnight UTC. No additional configuration needed.
+
+## CSRF Configuration
+
+The frontend uses the shared `api-client` module, which reads the CSRF token from the `csrf_token` cookie and sends it in the `X-CSRF-Token` request header. The CSRF cookie **must be readable by JavaScript** (not `HttpOnly`). The Go CSRF middleware (`github.com/filippo.io/csrf/gorilla`) is configured with `HttpOnly=false` to enable this pattern.
 
 ## Deployment Steps
 
