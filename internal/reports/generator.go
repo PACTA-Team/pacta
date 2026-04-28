@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/phpdave11/gofpdf/v2"
+	"github.com/phpdave11/gofpdf"
 )
 
 type Contract struct {
