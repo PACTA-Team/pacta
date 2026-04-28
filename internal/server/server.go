@@ -28,7 +28,7 @@ var authLimit = middleware.RateLimitConfig{
 	Window:   time.Minute,
 }
 
-func Start(cfg *config.Config, staticFS fs.FS) error {
+func Start(cfg *config.Config, staticFS fs.FS, rateLimiter *ai.RateLimiter) error {
 	database, err := db.Open(cfg.DataDir)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		return err
 	}
 
-	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir}
+	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
 
 	// Create a service that bundles config and DB for worker and settings handler
 	svc := &config.Service{Config: cfg, DB: database}
@@ -111,6 +111,17 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		// Auth routes (no auth required)
 		r.Get("/api/auth/me", h.HandleMe)
+
+		// AI routes (experimental, authenticated)
+		r.Route("/api/ai", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Use(h.TenantContextMiddleware)
+			r.Use(h.CompanyMiddleware)
+
+			r.Post("/generate-contract", h.HandleAIGenerateContract)
+			r.Post("/review-contract", h.HandleAIReviewContract)
+			r.Post("/test", h.HandleAITestConnection)
+		})
 
 		// Viewer+ (read-only)
 		r.Group(func(r chi.Router) {
