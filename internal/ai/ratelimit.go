@@ -2,7 +2,6 @@ package ai
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 )
 

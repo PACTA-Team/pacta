@@ -25,11 +25,7 @@ func ExtractTextFromPDF(r io.Reader) (string, error) {
 	}
 	var text strings.Builder
 	for i := 0; i < p.NumPage(); i++ {
-		page, err := p.Page(i)
-		if err != nil {
-			// Skip pages that fail; log later
-			continue
-		}
+		page := p.Page(i)
 		text.WriteString(page.Text)
 		text.WriteByte('\n')
 	}
