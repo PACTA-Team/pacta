@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
-	"github.com/rsc/pdf"
+
+	"github.com/ledongthuc/pdf"
 )
 
 // ExtractTextFromPDF extracts plain text from PDF bytes
@@ -19,15 +19,26 @@ func ExtractTextFromPDF(r io.Reader) (string, error) {
 	if int64(len(data)) >= maxPDFSize {
 		return "", fmt.Errorf("PDF exceeds 10 MB limit")
 	}
-	p, err := pdf.NewReader(bytes.NewReader(data), 0)
+
+	// Create PDF reader from bytes
+	reader, err := pdf.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return "", err
 	}
-	var text strings.Builder
-	for i := 0; i < p.NumPage(); i++ {
-		page := p.Page(i)
-		text.WriteString(page.Text)
-		text.WriteByte('\n')
+	defer reader.Close()
+
+	// Extract plain text from entire document
+	textReader, err := reader.GetPlainText()
+	if err != nil {
+		return "", err
 	}
-	return text.String(), nil
+	defer textReader.Close()
+
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(textReader)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
