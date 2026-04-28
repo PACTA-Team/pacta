@@ -73,8 +73,8 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.DB.Exec(
-		"INSERT INTO audit_logs (user_id, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
-		userID, "password_reset_request", "Password reset requested", r.RemoteAddr,
+		"INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+		userID, "password_reset_request", "user", userID, r.RemoteAddr,
 	)
 
 	resetLink := "http://" + r.Host + "/reset-password?token=" + token
@@ -153,8 +153,8 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.DB.Exec(
-		"INSERT INTO audit_logs (user_id, action, details, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-		userID, "password_reset_complete", "Password reset completed successfully",
+		"INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_state, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+		userID, "password_reset_complete", "user", userID, "Password reset completed successfully",
 	)
 
 	log.Printf("[password_reset] password reset for user %d", userID)
