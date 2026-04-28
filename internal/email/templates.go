@@ -101,9 +101,10 @@ func GetPasswordResetTemplate(lang, resetLink, userName string) EmailTemplate {
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load password reset template: %v", err)
 	return EmailTemplate{
 		Subject: "Reset Your PACTA Password",
-		HTML:    "<html><body>Password reset: " + resetLink + "</body></html>",
+		HTML:    "<html><body>Password reset requested. Please contact support if you need assistance.</body></html>",
 	}
 }
 
@@ -191,9 +192,10 @@ func GetContractExpiryTemplate(contractNumber, daysLeft, expiryDate, contractNam
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load contract expiry template: %v", err)
 	return EmailTemplate{
 		Subject: "Contract Expiry Notice",
-		HTML:    "<html><body>Contract " + contractNumber + " expires in " + daysLeft + " days.</body></html>",
+		HTML:    "<html><body>A contract is expiring soon. Log in to PACTA to review.</body></html>",
 	}
 }
 
@@ -218,8 +220,9 @@ func GetReportTemplate(reportDate string) EmailTemplate {
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load report template: %v", err)
 	return EmailTemplate{
 		Subject: "PACTA Report",
-		HTML:    "<html><body>Report date: " + reportDate + "</body></html>",
+		HTML:    "<html><body>A new report is available. Log in to PACTA to view.</body></html>",
 	}
 }
