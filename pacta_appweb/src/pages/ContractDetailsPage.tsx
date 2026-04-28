@@ -15,7 +15,18 @@ import { getContractAuditLogs } from '@/lib/audit';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { AuditLog } from '@/types';
-import { aiAPI, ReviewResponse } from '@/lib/ai-api';
+import { api } from '@/lib/api-client';
+
+interface ReviewResponse {
+  summary: string;
+  risks: Array<{
+    clause: string;
+    risk: 'high' | 'medium' | 'low';
+    suggestion: string;
+  }>;
+  missing_clauses: string[];
+  overall_risk: 'high' | 'medium' | 'low';
+}
 
 export default function ContractDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -114,30 +125,28 @@ export default function ContractDetailsPage() {
      return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
    };
 
-   const handleReviewWithAI = async () => {
-     if (!contract || !documents.length) {
-       toast.error("No document available for review");
-       return;
-     }
+  const handleReviewWithAI = async () => {
+    if (!contract || !documents.length) {
+      toast.error(t('ai.review.no_document'));
+      return;
+    }
 
-     setReviewing(true);
-     try {
-       // For now, use a placeholder - in future: extract text from document
-       const text = `Contract: ${contract.title}\nType: ${contract.type}\nAmount: ${contract.amount}\n\nFull contract text would be extracted from the attached document.`;
-       
-       const result = await aiAPI.reviewContract({
-         contract_id: contract.id,
-         text,
-       });
-       
-       setReviewResult(result);
-       toast.success("Review completed");
-     } catch (err: any) {
-       toast.error(err.message || "Failed to review contract");
-     } finally {
-       setReviewing(false);
-     }
-   };
+    setReviewing(true);
+    try {
+      // For now, use a placeholder - in future: extract text from document
+      const text = `Contract: ${contract.title}\nType: ${contract.type}\nAmount: ${contract.amount}\n\nFull contract text would be extracted from the attached document.`;
+
+      const result = await api.post<ReviewResponse>('/ai/review-contract', {
+        text,
+      });
+      setReviewResult(result);
+      toast.success(t('ai.review.success'));
+    } catch (err: any) {
+      toast.error(err.message || t('ai.review.error'));
+    } finally {
+      setReviewing(false);
+    }
+  };
 
   return (
     
@@ -169,8 +178,8 @@ export default function ContractDetailsPage() {
               onClick={handleReviewWithAI}
               disabled={reviewing || !documents.length}
             >
-              {reviewing ? "Analyzing..." : "Review with Themis"}
-              <Badge variant="secondary" className="ml-2">Experimental</Badge>
+              {reviewing ? t('ai.review.analyzing') : t('ai.review.button')}
+              <Badge variant="secondary" className="ml-2">{t('ai.experimental')}</Badge>
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
@@ -315,11 +324,10 @@ export default function ContractDetailsPage() {
           </CardContent>
         </Card>
 
-        {/* AI Review Results Panel */}
         {reviewResult && (
-          <Card className="mt-6">
+          <Card>
             <CardHeader>
-              <CardTitle>Themis AI Assessment</CardTitle>
+              <CardTitle>{t('ai.review.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>

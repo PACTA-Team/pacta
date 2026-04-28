@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { aiAPI, GenerateContractRequest } from "@/lib/ai-api";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -30,13 +30,13 @@ export function ContractAIForm({ onClose, onSuccess }: ContractAIFormProps) {
 
   const handleGenerate = async () => {
     if (!contractType || !amount || !startDate || !endDate) {
-      toast.error("Please fill in all required fields");
+      toast.error(t('ai.generate.required_fields'));
       return;
     }
 
     setGenerating(true);
     try {
-      const req: GenerateContractRequest = {
+      const req = {
         contract_type: contractType,
         amount: parseFloat(amount),
         start_date: startDate,
@@ -46,11 +46,11 @@ export function ContractAIForm({ onClose, onSuccess }: ContractAIFormProps) {
         description,
       };
 
-      const res = await aiAPI.generateContract(req);
+      const res = await api.post<{ text: string }>('/ai/generate-contract', req);
       setGeneratedText(res.text);
-      toast.success("Draft generated successfully");
+      toast.success(t('ai.generate.success'));
     } catch (err: any) {
-      toast.error(err.message || "Failed to generate contract");
+      toast.error(err.message || t('ai.generate.error'));
     } finally {
       setGenerating(false);
     }
@@ -93,9 +93,9 @@ export function ContractAIForm({ onClose, onSuccess }: ContractAIFormProps) {
         <div className="flex gap-2">
           <Button onClick={handleGenerate} disabled={generating}>
             {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {generating ? "Generating..." : "Generate Draft with AI"}
+            {generating ? t('ai.generate.submitting') : t('ai.generate.button')}
           </Button>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t('cancel', 'Cancel')}</Button>
         </div>
 
         {generatedText && (

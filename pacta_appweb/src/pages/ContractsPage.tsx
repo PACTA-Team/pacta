@@ -33,7 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ContractAIForm } from '@/components/contracts/ContractAIForm';
 
 export default function ContractsPage() {
   const { hasPermission } = useAuth();
@@ -316,15 +315,15 @@ export default function ContractsPage() {
                 <span className="sm:hidden">{t('newContract')}</span>
               </Button>
               
-              <Button 
-                variant="outline" 
-                onClick={() => setShowNewContractWithAI(true)}
-                className="border-dashed w-full sm:w-auto"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                New with AI
-                <Badge variant="secondary" className="ml-2">Experimental</Badge>
-              </Button>
+               <Button 
+                 variant="outline" 
+                 onClick={() => setShowNewContractWithAI(true)}
+                 className="border-dashed w-full sm:w-auto"
+               >
+                 <Sparkles className="mr-2 h-4 w-4" />
+                 {t('ai.generate.button_short')}
+                 <Badge variant="secondary" className="ml-2">{t('ai.experimental')}</Badge>
+               </Button>
             </div>
           )}
         </div>

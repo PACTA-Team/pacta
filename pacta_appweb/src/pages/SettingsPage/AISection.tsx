@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { settingsAPI, SystemSetting } from "@/lib/settings-api";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -30,7 +31,7 @@ export function AISection() {
 
   const handleSave = async () => {
     if (!provider || !apiKey) {
-      toast.error("Provider and API Key are required");
+      toast.error(t('aiSettings.errors.provider_and_key_required'));
       return;
     }
 
@@ -47,9 +48,9 @@ export function AISection() {
       }
 
       await settingsAPI.update(settings);
-      toast.success("AI settings saved");
+      toast.success(t('aiSettings.saveSuccess'));
     } catch (err: any) {
-      toast.error(err.message || "Failed to save settings");
+      toast.error(err.message || t('aiSettings.saveError'));
     } finally {
       setLoading(false);
     }
@@ -57,26 +58,21 @@ export function AISection() {
 
   const handleTest = async () => {
     if (!apiKey) {
-      toast.error("API Key is required for testing");
+      toast.error(t('aiSettings.errors.api_key_required'));
       return;
     }
 
     setTesting(true);
     try {
-      const res = await fetch("/api/ai/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, api_key: apiKey, model, endpoint }),
+      const res = await api.post<{ status: string; message: string }>('/ai/test', {
+        provider,
+        api_key: apiKey,
+        model,
+        endpoint,
       });
-
-      if (res.ok) {
-        toast.success("Connection successful!");
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Connection failed");
-      }
+      toast.success(res.message || t('aiSettings.connectionSuccess'));
     } catch (err: any) {
-      toast.error(err.message || "Test failed");
+      toast.error(err.message || t('aiSettings.connectionFailed'));
     } finally {
       setTesting(false);
     }
@@ -86,18 +82,17 @@ export function AISection() {
     <Card>
       <CardHeader>
         <CardTitle>
-          Themis AI
-          <Badge variant="secondary" className="ml-2">Experimental</Badge>
+          {t('aiSettings.title')}
+          <Badge variant="secondary" className="ml-2">{t('aiSettings.experimental')}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Configure the LLM provider for AI-assisted contract generation and review.
-          Your API key will be encrypted before storage.
+          {t('aiSettings.description')}
         </p>
 
         <div className="space-y-2">
-          <Label>LLM Provider</Label>
+          <Label>{t('aiSettings.providerLabel')}</Label>
           <Select value={provider} onValueChange={setProvider}>
             <SelectTrigger>
               <SelectValue placeholder="Select provider..." />
@@ -113,7 +108,7 @@ export function AISection() {
         </div>
 
         <div className="space-y-2">
-          <Label>API Key</Label>
+          <Label>{t('aiSettings.apiKeyLabel')}</Label>
           <Input
             type="password"
             value={apiKey}
@@ -123,7 +118,7 @@ export function AISection() {
         </div>
 
         <div className="space-y-2">
-          <Label>Model</Label>
+          <Label>{t('aiSettings.modelLabel')}</Label>
           <Input
             value={model}
             onChange={(e) => setModel(e.target.value)}
@@ -133,7 +128,7 @@ export function AISection() {
 
         {provider === "custom" && (
           <div className="space-y-2">
-            <Label>Endpoint URL</Label>
+            <Label>{t('aiSettings.endpointLabel')}</Label>
             <Input
               value={endpoint}
               onChange={(e) => setEndpoint(e.target.value)}
@@ -144,10 +139,10 @@ export function AISection() {
 
         <div className="flex gap-2">
           <Button onClick={handleTest} disabled={testing || !apiKey}>
-            {testing ? "Testing..." : "Test Connection"}
+            {testing ? t('aiSettings.testing') : t('aiSettings.testConnection')}
           </Button>
           <Button onClick={handleSave} disabled={loading || !provider || !apiKey}>
-            {loading ? "Saving..." : "Save Settings"}
+            {loading ? t('aiSettings.saving') : t('aiSettings.save')}
           </Button>
         </div>
       </CardContent>

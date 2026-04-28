@@ -37,7 +37,7 @@ interface ContractFormWrapperProps {
  * - Verifies document existence via HEAD before final submit
  * - Coordinates ContraparteForm, ContractDocumentUpload, and modals
  */
-export default function ContractFormWrapper({ contract, onSubmit, onCancel }: ContractFormWrapperProps) {
+export default function ContractFormWrapper({ contract, aiDraft, onSubmit, onCancel }: ContractFormWrapperProps) {
   const { t } = useTranslation('contracts');
 
   // ─── Global State ───
@@ -369,8 +369,7 @@ export default function ContractFormWrapper({ contract, onSubmit, onCancel }: Co
           {aiDraft && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                <strong>AI Draft Generated:</strong> The description field has been pre-filled with AI-generated content.
-                Please review and edit as needed before saving.
+                <strong>{t('ai.draftBanner.title')}</strong> {t('ai.draftBanner.description')} {t('ai.draftBanner.instructions')}
               </p>
             </div>
           )}
