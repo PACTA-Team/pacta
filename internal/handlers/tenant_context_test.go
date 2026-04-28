@@ -12,18 +12,6 @@ import (
 	"github.com/PACTA-Team/pacta/internal/db"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
-	dir := t.TempDir()
-	database, err := db.Open(dir)
-	if err != nil {
-		t.Fatalf("Failed to open test DB: %v", err)
-	}
-	if err := db.Migrate(database); err != nil {
-		t.Fatalf("Failed to migrate test DB: %v", err)
-	}
-	return database
-}
-
 func createCompany(t *testing.T, db *sql.DB, name string) int64 {
 	res, err := db.Exec(
 		"INSERT INTO companies (name, address, tax_id, company_type) VALUES (?, ?, ?, ?)",

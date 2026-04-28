@@ -2,6 +2,7 @@ package ai
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
