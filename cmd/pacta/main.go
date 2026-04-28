@@ -1,16 +1,12 @@
 package main
 
 import (
-	"embed"
 	"log"
 
 	"github.com/PACTA-Team/pacta/internal/ai"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/server"
 )
-
-//go:embed pacta_appweb/dist
-var staticFS embed.FS
 
 func main() {
 	cfg := config.Default()

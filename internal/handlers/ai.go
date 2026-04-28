@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"pacta/internal/ai"
+	"github.com/PACTA-Team/pacta/internal/ai"
 )
 
 // isAIConfigured checks if AI is configured in system settings
