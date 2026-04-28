@@ -68,7 +68,7 @@ func GetPasswordResetTemplate(lang, resetLink, userName string) EmailTemplate {
 		if err == nil {
 			data := map[string]string{
 				"ResetLink":   resetLink,
-				"ExpiryText":  "This link expires in 1 hour.",
+				"ExpiryText":  "This link expires in 30 minutes.",
 				"IgnoreText":   "If you didn't request this, ignore this email.",
 				"FooterText":  "If you didn't request this, ignore this email.",
 			}
@@ -77,7 +77,7 @@ func GetPasswordResetTemplate(lang, resetLink, userName string) EmailTemplate {
 				data["Title"] = "Restablecer Contraseña de PACTA"
 				data["Greeting"] = "Hola " + userName + ","
 				data["Instruction"] = "Haz clic en el siguiente enlace para restablecer tu contraseña:"
-				data["ExpiryText"] = "Este enlace expira en 1 hora."
+				data["ExpiryText"] = "Este enlace expira en 30 minutos."
 				data["IgnoreText"] = "Si no solicitaste esto, ignora este correo."
 				data["FooterText"] = "Si no solicitaste esto, ignora este correo."
 			default: // "en"
