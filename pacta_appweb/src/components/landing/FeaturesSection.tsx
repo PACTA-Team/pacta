@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { FileText, Bell, BarChart3, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -23,8 +23,9 @@ const cardVariants = {
   },
 };
 
-export function FeaturesSection() {
+  export function FeaturesSection() {
   const { t } = useTranslation('landing');
+  const prefersReducedMotion = useReducedMotion();
 
   const features = [
     {
@@ -69,8 +70,8 @@ export function FeaturesSection() {
         {/* Feature cards */}
         <motion.div
           variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          whileInView={prefersReducedMotion ? undefined : "visible"}
           viewport={{ once: true, margin: '-100px' }}
           className="grid gap-6 md:grid-cols-3"
         >

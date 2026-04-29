@@ -15,8 +15,9 @@ const cardVariants = {
   },
 };
 
-export function AboutSection() {
+  export function AboutSection() {
   const { t } = useTranslation('landing');
+  const prefersReducedMotion = useReducedMotion();
 
   const values = [
     { icon: Shield, key: 'localFirst' },
@@ -50,10 +51,10 @@ export function AboutSection() {
         <motion.div
           variants={{
             hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
+            visible: { opacity: 1, transition: { staggerChildren: prefersReducedMotion ? 0 : 0.15 } },
           }}
-          initial="hidden"
-          whileInView="visible"
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          whileInView={prefersReducedMotion ? undefined : "visible"}
           viewport={{ once: true, margin: '-50px' }}
           className="grid gap-6 md:grid-cols-3"
         >
