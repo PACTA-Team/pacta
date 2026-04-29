@@ -5,7 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.44.18] - 2026-04-26
+## [0.46.0] - 2026-04-29 (planned)
+
+### Added
+- **Password Reset Flow** — Complete forgot/reset password functionality with secure token-based authentication:
+  - New `password_reset_tokens` table with 1-hour expiry
+  - Token generation using cryptographically-secure random bytes (32 bytes, URL-safe base64)
+  - Backend endpoints: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `GET /api/auth/validate-token/{token}`
+  - Frontend: New `ResetPasswordPage` component, updated `LoginForm` with "Forgot password?" link
+  - HTML email template for password reset (Handlebars, embedded for production)
+- **Email System Refactor — Mailtrap SMTP** — Migrated from Brevo/Gmail fallback to dedicated Mailtrap SMTP client:
+  - New SMTP client using `github.com/wneessen/go-mail`
+  - HTML email support via Go `text/template` with embedded templates
+  - Templates: password reset, verification, contract expiry, admin notifications, report notifications
+  - Configuration via `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_USERNAME`, `EMAIL_SMTP_PASSWORD`
+- **PDF Report Generator** — Server-side PDF report generation capability:
+  - New `internal/reports/generator.go` using `github.com/phpdave11/gofpdf`
+  - Foundation for future contract/PDF export features
+- **Settings Page Restored** — Re-added CompanySection, GeneralSection, RegistrationSection sections that were removed in PR #290
+
+### Changed
+- **Email Infrastructure** — Replaced Brevo API fallback with pure SMTP; all email now goes through Mailtrap (dev) or configured SMTP (prod)
+- **Authentication Flow** — Login page now includes "Forgot password?" link triggering email-based reset
+
+### Technical Details
+- **Files Created:** 18 (backend: 6, frontend: 7, migrations: 1, tests: 4)
+- **Files Modified:** 18
+- **Lines Added:** ~1,835
+- **Lines Deleted:** ~541
+- **Database migrations:** 1 new
+  - `005_password_reset_tokens.sql` — Adds `password_reset_tokens` table (token, user_id, expires_at)
+- **Go Tests:** `token_test.go`, `mailtrap_test.go`
+- **Build:** ✅ Go 1.25 compatible
+
+### Backend Integration
+| Method   | Path                            | Auth | Description                         |
+|----------|---------------------------------|------|-------------------------------------|
+| `POST`   | `/api/auth/forgot-password`     | No   | Request password reset email       |
+| `POST`   | `/api/auth/reset-password`      | No   | Complete password reset with token |
+| `GET`    | `/api/auth/validate-token/{token}` | No | Check if reset token is valid      |
+
+### Frontend Changes
+- `src/pages/ResetPasswordPage.tsx` — New page for setting new password
+- `src/components/auth/LoginForm.tsx` — Added "Forgot password?" link
+- `src/lib/auth-api.ts` — Added `forgotPassword` API function
+- `src/lib/forgot-password-api.ts` — New module for reset flow
+
+### Configuration
+See [docs/EMAIL-CONFIGURATION.md](docs/EMAIL-CONFIGURATION.md) for Mailtrap SMTP setup.
+
+---
+
+## [0.45.0] - 2026-04-28
+
+### Added
+- **Themis AI (alpha)**: AI-powered contract generation and review
 
 ### Fixed
 - **Frontend build failure** — Vite parse5 error due to invalid HTML placeholder in `index.html`. Replaced `<!-- CSP_NONCE -->` with valid `nonce="__CSP_NONCE__"` and updated server-side injection accordingly. Production frontend now builds correctly and SPA loads without blank page.

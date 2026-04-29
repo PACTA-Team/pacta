@@ -17,6 +17,8 @@ PACTA is a local-first contract management platform designed for organizations t
 ## Features
 
 - **AI-Powered Contract Generation & Review (Themis AI — alpha)** — Generate contracts and review existing ones using AI with PDF text extraction, multi-tenant RAG, and per-company rate limiting. Settings in `/settings/ai`. Feature disabled by default.
+- **Password Reset Flow** — Secure email-based password reset with time-limited tokens (1 hour expiry). Uses Mailtrap SMTP for development, configurable SMTP for production.
+- **Email Notifications** — HTML email templates (Handlebars) for password resets, verification, contract expiry, and admin alerts. Configurable via SMTP.
 - **Contract Management** — Full CRUD operations with soft delete, version tracking, and status workflows
 - **Hybrid Registration** — Email code verification (via local SMTP) or admin approval with company assignment
 - **Party Management** — Centralized registry of clients, suppliers, and authorized signers
@@ -133,6 +135,9 @@ PACTA follows a minimalist, self-contained architecture:
 | `POST`   | `/api/auth/register`  | No   | Register new user      |
 | `POST`   | `/api/auth/login`     | No   | Authenticate user      |
 | `POST`   | `/api/auth/logout`    | Yes  | Destroy session        |
+| `POST`   | `/api/auth/forgot-password` | No | Request password reset email |
+| `POST`   | `/api/auth/reset-password`  | No | Complete password reset with token |
+| `GET`    | `/api/auth/validate-token/{token}` | No | Check if reset token is valid |
 | `GET`    | `/api/auth/me`        | Yes  | Get current user       |
 | `GET`    | `/api/contracts`      | Yes  | List contracts         |
 | `POST`   | `/api/contracts`      | Yes  | Create contract        |
