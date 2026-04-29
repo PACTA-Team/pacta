@@ -3,6 +3,7 @@ package email
 import (
 	"bytes"
 	"html/template"
+	"log"
 )
 
 // EmailTemplate holds localized email content
@@ -45,17 +46,18 @@ func GetVerificationTemplate(lang, code string) EmailTemplate {
 		}
 	}
 
-	// Fallback to inline HTML if template loading fails
+	// Fallback to simple HTML if template loading fails
+	log.Printf("[email] failed to load verification template: %v", err)
 	switch lang {
 	case "es":
 		return EmailTemplate{
 			Subject: "Tu código de verificación de PACTA",
-			HTML:    verificationEmailHTML(code, "Verifica tu cuenta de PACTA", "Ingresa este código para completar tu registro:", "Este código expira en 5 minutos.", "Si no solicitaste esto, ignora este correo."),
+			HTML:    "<html><body><p>Ingresa el código enviado a tu correo para completar tu registro.</p></body></html>",
 		}
 	default: // "en"
 		return EmailTemplate{
 			Subject: "Your PACTA Verification Code",
-			HTML:    verificationEmailHTML(code, "Verify Your PACTA Account", "Enter this code to complete your registration:", "This code expires in 5 minutes.", "If you didn't request this, ignore this email."),
+			HTML:    "<html><body>Please use the verification code sent to your email.</body></html>",
 		}
 	}
 }
@@ -68,7 +70,7 @@ func GetPasswordResetTemplate(lang, resetLink, userName string) EmailTemplate {
 		if err == nil {
 			data := map[string]string{
 				"ResetLink":   resetLink,
-				"ExpiryText":  "This link expires in 1 hour.",
+				"ExpiryText":  "This link expires in 30 minutes.",
 				"IgnoreText":   "If you didn't request this, ignore this email.",
 				"FooterText":  "If you didn't request this, ignore this email.",
 			}
@@ -77,7 +79,7 @@ func GetPasswordResetTemplate(lang, resetLink, userName string) EmailTemplate {
 				data["Title"] = "Restablecer Contraseña de PACTA"
 				data["Greeting"] = "Hola " + userName + ","
 				data["Instruction"] = "Haz clic en el siguiente enlace para restablecer tu contraseña:"
-				data["ExpiryText"] = "Este enlace expira en 1 hora."
+				data["ExpiryText"] = "Este enlace expira en 30 minutos."
 				data["IgnoreText"] = "Si no solicitaste esto, ignora este correo."
 				data["FooterText"] = "Si no solicitaste esto, ignora este correo."
 			default: // "en"
@@ -99,9 +101,10 @@ func GetPasswordResetTemplate(lang, resetLink, userName string) EmailTemplate {
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load password reset template: %v", err)
 	return EmailTemplate{
 		Subject: "Reset Your PACTA Password",
-		HTML:    "<html><body>Password reset: " + resetLink + "</body></html>",
+		HTML:    "<html><body>Password reset requested. Please contact support if you need assistance.</body></html>",
 	}
 }
 
@@ -146,16 +149,17 @@ func GetAdminNotificationTemplate(lang, userName, userEmail, companyName string)
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load admin notification template: %v", err)
 	switch lang {
 	case "es":
 		return EmailTemplate{
 			Subject: "Nueva solicitud de registro pendiente",
-			HTML:    adminNotificationHTML("Nueva solicitud de registro", "Nombre", userName, "Correo", userEmail, "Empresa", companyName, "Inicia sesión en PACTA como administrador para revisar y aprobar este registro."),
+			HTML:    "<html><body><p>Nueva solicitud de registro pendiente. Inicia sesión en PACTA para revisar.</p></body></html>",
 		}
 	default: // "en"
 		return EmailTemplate{
-			Subject: "New User Registration Pending Approval",
-			HTML:    adminNotificationHTML("New User Registration Pending", "Name", userName, "Email", userEmail, "Company", companyName, "Log in to PACTA as admin to review and approve this registration."),
+			Subject: "New User Registration Pending",
+			HTML:    "<html><body>New user registration pending. Log in to PACTA to review.</body></html>",
 		}
 	}
 }
@@ -188,9 +192,10 @@ func GetContractExpiryTemplate(contractNumber, daysLeft, expiryDate, contractNam
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load contract expiry template: %v", err)
 	return EmailTemplate{
 		Subject: "Contract Expiry Notice",
-		HTML:    "<html><body>Contract " + contractNumber + " expires in " + daysLeft + " days.</body></html>",
+		HTML:    "<html><body>A contract is expiring soon. Log in to PACTA to review.</body></html>",
 	}
 }
 
@@ -215,28 +220,9 @@ func GetReportTemplate(reportDate string) EmailTemplate {
 	}
 
 	// Fallback
+	log.Printf("[email] failed to load report template: %v", err)
 	return EmailTemplate{
 		Subject: "PACTA Report",
-		HTML:    "<html><body>Report date: " + reportDate + "</body></html>",
+		HTML:    "<html><body>A new report is available. Log in to PACTA to view.</body></html>",
 	}
-}
-
-func verificationEmailHTML(code, title, instruction, expiry, ignore string) string {
-	return `<html><body style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#1a1a1a">` + title + `</h2>
-        <p>` + instruction + `</p>
-        <div style="background:#f5f5f5;padding:20px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px;border-radius:8px;margin:20px 0">` + code + `</div>
-        <p style="color:#666;font-size:14px">` + expiry + `</p>
-        <p style="color:#666;font-size:12px">` + ignore + `</p>
-    </body></html>`
-}
-
-func adminNotificationHTML(title, nameLabel, userName, emailLabel, userEmail, companyLabel, companyName, action string) string {
-	return `<html><body style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#1a1a1a">` + title + `</h2>
-        <p><strong>` + nameLabel + `:</strong> ` + userName + `</p>
-        <p><strong>` + emailLabel + `:</strong> ` + userEmail + `</p>
-        <p><strong>` + companyLabel + `:</strong> ` + companyName + `</p>
-        <p style="margin-top:20px">` + action + `</p>
-    </body></html>`
 }

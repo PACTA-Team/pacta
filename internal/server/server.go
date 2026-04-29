@@ -68,6 +68,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		"/api/auth/register",
 		"/api/auth/logout",
 		"/api/auth/verify-code",
+		"/api/auth/forgot-password",
+		"/api/auth/reset-password",
+		"/api/auth/validate-token/*",
 		"/api/setup/status",
 		"/api/setup",
 	}))
@@ -82,6 +85,9 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		r.Post("/api/auth/register", h.HandleRegister)
 		r.Post("/api/auth/logout", h.HandleLogout)
 		r.Post("/api/auth/verify-code", h.HandleVerifyCode)
+		r.Post("/api/auth/forgot-password", h.ForgotPassword)
+		r.Post("/api/auth/reset-password", h.ResetPassword)
+		r.Get("/api/auth/validate-token/{token}", h.ValidateResetToken)
 	})
 
 	// Public companies list (for registration form)

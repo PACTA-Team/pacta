@@ -16,8 +16,12 @@ PACTA es una plataforma de gestión de contratos con enfoque local-first, diseñ
 
 ## Características
 
+- **IA Potenciada para Contratos (Themis AI — alpha)** — Genera y revisa contratos con IA, extracción de texto PDF, RAG multi-tenant, encriptación AES-256-GCM, rate limiting por empresa (100 req/día), i18n completo (EN/ES). Desactivada por defecto.
+- **Restablecimiento de Contraseña** — Flujo completo de recuperación por correo con tokens seguros (caducidad 1 hora). Incluye enlace "¿Olvidaste tu contraseña?" en login y página dedicada.
+- **Notificaciones por Correo (SMTP Mailtrap)** — Plantillas HTML (Handlebars) enviadas vía SMTP configurable: restablecimiento, verificación, expiración de contratos, alertas admin, informes.
+- **Generador de Reportes PDF** — Generación de PDFs del lado del servidor (fundación para exportación de contratos).
 - **Gestión de Contratos** — Operaciones CRUD completas con borrado suave, seguimiento de versiones y flujos de estado
-- **Registro Híbrido** — Verificación por código de correo (vía SMTP local) o aprobación de administrador con asignación de empresa
+- **Registro Híbrido** — Verificación por código de correo (SMTP local) o aprobación de admin con asignación de empresa
 - **Gestión de Partes** — Registro centralizado de clientes, proveedores y firmantes autorizados
 - **Flujos de Aprobación** — Aprobaciones estructuradas de suplementos con estados de borrador, aprobado y activo
 - **Adjuntos de Documentos** — Vincula documentos de respaldo directamente a contratos y partes
@@ -131,6 +135,9 @@ PACTA sigue una arquitectura minimalista y autocontenida:
 | `POST`   | `/api/auth/register`  | No   | Registrar nuevo usuario              |
 | `POST`   | `/api/auth/login`     | No   | Autenticar usuario                   |
 | `POST`   | `/api/auth/logout`    | Sí   | Destruir sesión                      |
+| `POST`   | `/api/auth/forgot-password` | No | Solicitar restablecimiento de contraseña |
+| `POST`   | `/api/auth/reset-password`  | No | Completar restablecimiento con token |
+| `GET`    | `/api/auth/validate-token/{token}` | No | Verificar que el token es válido |
 | `GET`    | `/api/auth/me`        | Sí   | Obtener usuario actual               |
 | `GET`    | `/api/contracts`      | Sí   | Listar contratos                     |
 | `POST`   | `/api/contracts`      | Sí   | Crear contrato                       |

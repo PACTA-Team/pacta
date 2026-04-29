@@ -33,6 +33,9 @@ PACTA occupies the middle ground: a professional-grade contract management syste
 | Feature | Description |
 |---------|-------------|
 | **Themis AI (alpha)** | AI-powered contract generation and review with PDF text extraction, multi-tenant RAG, AES-256-GCM encryption, DB-backed rate limiting, and full i18n. Feature flag disabled by default. |
+| **Password Reset Flow** | Secure email-based password reset with cryptographically-signed tokens (1 hour expiry), forgot/reset/validate endpoints, and dedicated reset page. |
+| **Email Notifications (Mailtrap SMTP)** | HTML email via SMTP using Handlebars templates. Configurable SMTP host/port/credentials. Templates: password reset, verification, contract expiry, admin alerts, reports. |
+| **PDF Report Generator** | Server-side PDF generation using gofpdf for contracts and reports (foundation for future export features). |
 | Contract CRUD | Create, read, update, delete contracts with soft delete protection |
 | Internal Contract IDs | Auto-generated system identifiers (`CNT-YYYY-NNNN`) for internal tracking, independent of legal contract numbers |
 | Party Management | Centralized registry of clients and suppliers with contact details |
@@ -195,6 +198,10 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | Audit History | Complete (v0.43.0 -- full-history audit screen with pagination/filters, TypeScript audit-api wrapper, activity log block in User Profile, expanded logging for CREATE company and LOGIN actions, user_id nullable migration) |
 | Multi-Company Contracts | Complete (v0.43.0 -- company_id on contracts table with FK validation, company-scoped contract listings and forms, conditional Company field in ContractForm, signers scoped by company, migration 037) |
 | Setup Flow Refactor | Complete (v0.43.0 -- GET /api/setup endpoint, enhanced wizard (company info, role selection, dynamic signers), setup_completed field, pending_activations → pending_approvals, route protection for pending_setup, tutorial mode toggle, AuthContext updates, auto-redirect on completion, migration 036) |
+| Email System — Mailtrap SMTP | Complete (v0.46.0 — Migrated from Brevo/Gmail fallback to dedicated SMTP client using github.com/wneessen/go-mail; all email now routed through configurable SMTP server; HTML templates via Go text/template with embedded production strings) |
+| Password Reset Flow | Complete (v0.46.0 — Secure token-based reset with 1h expiry via `password_reset_tokens` table; endpoints: POST /api/auth/forgot-password, POST /api/auth/reset-password, GET /api/auth/validate-token/{token}; frontend ResetPasswordPage, LoginForm "Forgot password?" link) |
+| HTML Email Templates | Complete (v0.46.0 — Handlebars-style Go templates for password reset, verification, contract expiry, admin notifications, report notifications; embedded in binary for production) |
+| PDF Report Generator | Complete (v0.46.0 — Server-side PDF generation using github.com/phpdave11/gofpdf in internal/reports/generator.go; foundation for contract/PDF export features) |
 
 ---
 

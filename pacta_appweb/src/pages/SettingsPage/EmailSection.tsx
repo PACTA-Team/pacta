@@ -16,6 +16,9 @@ const EMAIL_SETTINGS_KEYS = [
   "smtp_pass",
   "email_from",
   "smtp_enabled",
+  "mailtrap_smtp_host",
+  "mailtrap_smtp_user",
+  "mailtrap_smtp_pass",
   "brevo_enabled",
   "brevo_api_key",
   "brevo_list_id",
@@ -137,6 +140,30 @@ export function EmailSection() {
                 value={settings.email_from || ""}
                 onChange={(e) => handleChange("email_from", e.target.value)}
                 placeholder="noreply@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mailtrap SMTP Host</Label>
+              <Input
+                value={settings.mailtrap_smtp_host || ""}
+                onChange={(e) => handleChange("mailtrap_smtp_host", e.target.value)}
+                placeholder="smtp.mailtrap.io"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mailtrap SMTP User</Label>
+              <Input
+                type="password"
+                value={settings.mailtrap_smtp_user || ""}
+                onChange={(e) => handleChange("mailtrap_smtp_user", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mailtrap SMTP Pass</Label>
+              <Input
+                type="password"
+                value={settings.mailtrap_smtp_pass || ""}
+                onChange={(e) => handleChange("mailtrap_smtp_pass", e.target.value)}
               />
             </div>
           </div>
