@@ -6,10 +6,11 @@ import { Shield, Globe, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 30, scale: 0.9 },
   visible: {
     opacity: 1,
     y: 0,
+    scale: 1,
     transition: { duration: 0.5, ease: 'easeOut' as const },
   },
 };
@@ -58,17 +59,33 @@ export function AboutSection() {
         >
           {values.map(({ icon: Icon, key }) => (
             <motion.div key={key} variants={cardVariants}>
-              <Card className="group h-full overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20">
-                <CardContent className="pt-6">
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
-                    <Icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold">{t(`about.values.${key}.title`)}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t(`about.values.${key}.description`)}
-                  </p>
-                </CardContent>
-              </Card>
+              <motion.div
+                whileHover={{
+                  y: -4,
+                  scale: 1.02,
+                  boxShadow: "0 10px 30px rgba(37, 99, 235, 0.1)",
+                  transition: { duration: 0.3 }
+                }}
+              >
+                <Card className="group h-full overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:border-primary/20">
+                  <CardContent className="pt-6">
+                    <motion.div 
+                      className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20"
+                      whileHover={{ 
+                        scale: 1.15,
+                        rotate: 10,
+                        transition: { duration: 0.3, type: 'spring', stiffness: 300 }
+                      }}
+                    >
+                      <Icon className="h-6 w-6 text-primary" />
+                    </motion.div>
+                    <h3 className="mb-2 text-lg font-semibold">{t(`about.values.${key}.title`)}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t(`about.values.${key}.description`)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </motion.div>
           ))}
         </motion.div>
