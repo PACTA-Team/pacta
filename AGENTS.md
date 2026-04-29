@@ -75,6 +75,20 @@ Tag with `v*` triggers release workflow (`.github/workflows/release.yml`):
 - **systematic-debugging**: Root cause analysis
 - **brainstorming**: When solution unclear
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live in GitHub Issues. Uses `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical roles with default label strings. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — one `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
+
 ## Self-Improvement Loop
 
  Después de cualquier corrección del usuario, seguir este flujo:

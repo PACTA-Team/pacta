@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Accordion,
   AccordionContent,
@@ -11,6 +11,7 @@ import {
 
 export function FaqSection() {
   const { t } = useTranslation('landing');
+  const prefersReducedMotion = useReducedMotion();
 
   const faqItems = t('faq.items', { returnObjects: true }) as Array<{
     question: string;
@@ -41,10 +42,14 @@ export function FaqSection() {
           {faqItems.map((item, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.08 }}
+              initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={prefersReducedMotion ? { duration: 0 } : {
+                duration: 0.5,
+                delay: index * 0.1,
+                ease: 'easeOut' as const,
+              }}
             >
               <AccordionItem value={`item-${index}`} className="border-b border-border/50">
                 <AccordionTrigger className="text-left text-base font-medium">

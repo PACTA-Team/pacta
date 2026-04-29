@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { FileText, Bell, BarChart3, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -14,16 +14,18 @@ const containerVariants = {
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
   visible: {
     opacity: 1,
     y: 0,
+    scale: 1,
     transition: { duration: 0.6, ease: 'easeOut' as const },
   },
 };
 
-export function FeaturesSection() {
+  export function FeaturesSection() {
   const { t } = useTranslation('landing');
+  const prefersReducedMotion = useReducedMotion();
 
   const features = [
     {
@@ -68,19 +70,37 @@ export function FeaturesSection() {
         {/* Feature cards */}
         <motion.div
           variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          whileInView={prefersReducedMotion ? undefined : "visible"}
           viewport={{ once: true, margin: '-100px' }}
           className="grid gap-6 md:grid-cols-3"
         >
           {features.map((feature) => (
-            <motion.div key={feature.title} variants={cardVariants}>
-              <Card className="group relative h-full overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-primary/20">
+            <motion.div
+              key={feature.title}
+              variants={cardVariants}
+              whileHover={{
+                y: -8,
+                scale: 1.02,
+                rotate: 0.5,
+                boxShadow: "0 20px 40px rgba(37, 99, 235, 0.15)",
+                transition: { duration: 0.3, ease: 'easeOut' }
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card className="group relative h-full overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:border-primary/20">
                 <div className="pointer-events-none absolute -right-16 -top-16 h-32 w-32 rounded-full bg-gradient-to-br from-primary/5 to-accent/5 transition-all duration-300 group-hover:from-primary/10 group-hover:to-accent/10" />
                 <CardHeader>
-                  <div className="mb-2 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+                  <motion.div 
+                    className="mb-2 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20"
+                    whileHover={{ 
+                      rotate: 5,
+                      scale: 1.1,
+                      transition: { duration: 0.3 }
+                    }}
+                  >
                     <feature.icon className="h-6 w-6 text-primary" />
-                  </div>
+                  </motion.div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
