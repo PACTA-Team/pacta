@@ -15,7 +15,7 @@ const (
 	DefaultPort = 3000
 )
 
-var AppVersion = "0.44.18"
+var AppVersion = "0.46.3"
 
 type Config struct {
 	Addr             string

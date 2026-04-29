@@ -33,9 +33,10 @@ internal/
   models/               - Go data structs
   auth/                 - Bcrypt password hashing & session management
   config/               - App configuration (port, data dir, version)
-pacta_appweb/           - Next.js frontend (App Router, static export)
+pacta_appweb/           - React frontend (Vite, Tailwind, shadcn/ui)
   src/app/              - Pages and routes
-  src/components/       - React components (shadcn/ui)
+  src/components/       - React components with shadcn/ui
+  src/components/landing/ - Landing page with Framer Motion animations
   src/contexts/         - React context providers
   src/lib/              - Utility functions
   src/types/            - TypeScript type definitions
@@ -48,6 +49,18 @@ frontend/out/           - Static build output (embedded in Go binary)
 1. Create `internal/db/NNN_description.sql` in the `internal/db/` directory
 2. The migration runner (`internal/db/migrate.go`) auto-applies it on next startup
 3. Migrations are tracked in `schema_migrations` table
+
+## Frontend: Landing Page Animations
+
+The landing page (`pacta_appweb/src/components/landing/`) uses Framer Motion for sophisticated animations:
+
+- **HeroSection**: Parallax backgrounds (`useScroll` + `useTransform`), sequential text animation, floating geometric shapes
+- **FeaturesSection**: Stagger animations, card hover effects (lift/scale/rotation), icon rotation
+- **AboutSection**: Progressive reveal with staggered children, spring-physics icon animations
+- **FaqSection**: Scroll-triggered stagger for FAQ items
+- **ContactSection**: Glow card effects, link hover scaling
+
+All animations respect `prefers-reduced-motion` for accessibility.
 
 ## Building for release
 

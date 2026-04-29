@@ -8,30 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Landing page refactor with 5 tutorial animation techniques:
-  - Floating/bounce effects in hero section
-  - Progressive appearance on scroll for all sections
-  - Parallax background effects
-  - Interactive hover effects (glow, scale, rotation)
-  - Sequential text animation (word-by-word)
-- DigitalPlat FreeDomain sponsor badge in footer
-- Plus Jakarta Sans font integration
-- CSS keyframes for complex animations (float, glow-pulse, shimmer)
+- **Landing Page Refactor** — Complete redesign with 5 tutorial animation techniques:
+  - Floating/bounce effects in HeroSection (Framer Motion infinite animations)
+  - Progressive scroll appearance with stagger animations for all sections
+  - Parallax background gradient using `useScroll` + `useTransform`
+  - Interactive hover effects: glow, scale, rotation on buttons/cards/icons
+  - Sequential text animation (word-by-word reveal) in hero headline
+- Plus Jakarta Sans font integration from Google Fonts
+- Custom CSS keyframes (`float`, `glow-pulse`, `shimmer`) for complex animations
+- DigitalPlat FreeDomain sponsor badge in LandingFooter
+- Comprehensive accessibility tests (`Accessibility.test.tsx`)
 
 ### Changed
-- Enhanced HeroSection with parallax, sequential text, and glow effects
-- Improved FeaturesSection with stagger animation and hover effects
-- Updated AboutSection with progressive reveal and icon animations
-- Refactored FaqSection with stagger animation
-- Enhanced ContactSection with glow cards and hover effects
+- Enhanced HeroSection with parallax, sequential text, and glow CTA effects
+- Improved FeaturesSection with card hover lift/scale/rotation and icon animation
+- Updated AboutSection with progressive reveal and spring-physics icon rotation
+- Refactored FaqSection with staggered accordion appearance on scroll
+- Enhanced ContactSection with glow cards and link hover animations
 
 ### Fixed
-- Accessibility: Added `prefers-reduced-motion` support to all landing page components
-- Fixed missing `useReducedMotion` import in FeaturesSection, FaqSection, ContactSection, and LandingNavbar
-- Ensured all animations respect user's motion preferences
+- Accessibility: All animations respect `prefers-reduced-motion`
+- Added missing imports (`useReducedMotion`, `MotionValue`) across landing components
+- Test mocks updated to use `React.createElement` for dynamic tags
+- TypeScript compilation errors resolved
 
 ### Technical
-- Uses Framer Motion useScroll, useTransform, whileHover
-- Implements Trust & Authority design system
-- Follows WCAG AA accessibility standards
-- Added accessibility tests for keyboard navigation and reduced motion support
+- Framework: Framer Motion `useScroll`, `useTransform`, `whileHover`
+- Design System: Trust & Authority with WCAG AA compliance
+- Testing: Integration + accessibility tests for keyboard navigation and reduced motion
+- CI: Passing builds on all branches
+

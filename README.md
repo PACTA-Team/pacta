@@ -16,6 +16,7 @@ PACTA is a local-first contract management platform designed for organizations t
 
 ## Features
 
+- **Landing Page Experience** — Polished onboarding with animated hero, parallax backgrounds, and smooth scroll interactions
 - **AI-Powered Contract Generation & Review (Themis AI — alpha)** — Generate contracts and review existing ones using AI with PDF text extraction, multi-tenant RAG, and per-company rate limiting. Settings in `/settings/ai`. Feature disabled by default.
 - **Password Reset Flow** — Secure email-based password reset with time-limited tokens (1 hour expiry). Uses Mailtrap SMTP for development, configurable SMTP for production.
 - **Email Notifications** — HTML email templates (Handlebars) for password resets, verification, contract expiry, and admin alerts. Configurable via SMTP.
