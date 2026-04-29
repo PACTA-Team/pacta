@@ -62,6 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Themis AI (alpha)**: AI-powered contract generation and review
+  - PDF text extraction, LLM integration (OpenAI/Anthropic)
+  - Multi-tenant RAG with company/client/supplier filtering
+  - AES-256-GCM API key encryption
+  - Rate limiting: 100 requests/day per company (DB-backed, shared across cluster)
+  - Full i18n: English & Spanish
+  - Settings UI for provider, API key, model, enable toggle
+  - Comprehensive test coverage (unit, integration, handler tests)
 - **Contract Form Refactor — Complete Data & Tests** — Overhauled contract creation/editing with full field coverage and comprehensive testing:
   - Added all missing contract fields to form: contract_number, dates, amount, type, status, description, object, fulfillment_place, dispute_resolution, guarantees, renewal_type, has_confidentiality
   - Unified client/supplier form via `ContraparteForm` component with dynamic role-based labels

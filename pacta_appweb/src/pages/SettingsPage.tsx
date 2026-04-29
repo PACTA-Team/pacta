@@ -5,18 +5,21 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailSection } from "./SettingsPage/EmailSection";
 import { NotificationsTab } from "./SettingsPage/NotificationsTab";
+import { AISection } from "./SettingsPage/AISection";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabType = "email" | "notifications";
+type TabType = "email" | "notifications" | "ai";
 
-const TABS: Array<{id: TabType; label: string; icon: string}> = [
-  { id: "email", label: "Email Services", icon: "✉️" },
-  { id: "notifications", label: "Notifications", icon: "🔔" }
+const TABS_CONFIG: Array<{id: TabType; labelKey: string; icon: string}> = [
+  { id: "email", labelKey: "tabs.email", icon: "✉️" },
+  { id: "notifications", labelKey: "tabs.notifications", icon: "🔔" },
+  { id: "ai", labelKey: "aiSettings.title", icon: "🤖" }
 ];
 
 export default function SettingsPage() {
   const { t } = useTranslation("settings");
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState<TabType>("email");
   const [isMobile, setIsMobile] = useState(false);
 
@@ -33,6 +36,8 @@ export default function SettingsPage() {
         return <EmailSection />;
       case "notifications":
         return <NotificationsTab />;
+      case "ai":
+        return isAdmin ? <AISection /> : <div>AI configuration is only available to admins.</div>;
       default:
         return <EmailSection />;
     }
@@ -72,7 +77,7 @@ export default function SettingsPage() {
           {isMobile ? (
             // Mobile Tabs - Horizontal scroll
             <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
-              {TABS.map((tab) => (
+              {TABS_CONFIG.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
@@ -83,7 +88,7 @@ export default function SettingsPage() {
                   }`}
                 >
                   <span className="text-lg">{tab.icon}</span>
-                  <span>{tab.label}</span>
+                  <span>{t(tab.labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -93,7 +98,7 @@ export default function SettingsPage() {
               <div className="sticky top-24">
                 <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 p-3 shadow-xl shadow-slate-200/20">
                   <div className="space-y-2">
-                    {TABS.map((tab) => (
+                    {TABS_CONFIG.map((tab) => (
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
@@ -104,7 +109,7 @@ export default function SettingsPage() {
                         }`}
                       >
                         <span className="text-xl">{tab.icon}</span>
-                        <span className="text-left">{tab.label}</span>
+                        <span className="text-left">{t(tab.labelKey)}</span>
                         {activeTab === tab.id && (
                           <div className="ml-auto">
                             <div className="w-1.5 h-1.5 rounded-full bg-white/80" />
@@ -144,11 +149,11 @@ export default function SettingsPage() {
                   <div className="mb-6 pb-4 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">
-                        {TABS.find(t => t.id === activeTab)?.icon}
+                        {TABS_CONFIG.find(t => t.id === activeTab)?.icon}
                       </span>
                       <div>
                         <h2 className="text-lg font-bold text-slate-900">
-                          {TABS.find(t => t.id === activeTab)?.label}
+                          {t(TABS_CONFIG.find(t => t.id === activeTab)?.labelKey || '')}
                         </h2>
                         <p className="text-xs text-slate-500">
                           Configure your settings

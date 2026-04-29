@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/PACTA-Team/pacta/internal/ai"
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
@@ -35,18 +36,23 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	}
 	defer database.Close()
 
-	// Configure connection pool for production workloads
-	// NOTE: SQLite connection pool size is managed by GORM/sqlx defaults
-	// For RLS via session_tenant_context table, we rely on each request
-	// setting its own tenant context within its transaction scope.
-	// database.SetMaxOpenConns(100)  // Optional: tune based on load
+	// Configure connection pool (optional tuning)
+	// database.SetMaxOpenConns(100)
 	// database.SetMaxIdleConns(10)
 
 	if err := db.Migrate(database); err != nil {
 		return err
 	}
 
-	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir}
+	// Validate AI configuration if AI is configured
+	if err := ai.ValidateStartupConfig(database, cfg.AIEncryptionKey); err != nil {
+		log.Fatalf("AI configuration invalid: %v", err)
+	}
+
+	// Create DB-backed rate limiter
+	rateLimiter := ai.NewRateLimiter(database)
+
+	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
 
 	// Create a service that bundles config and DB for worker and settings handler
 	svc := &config.Service{Config: cfg, DB: database}
@@ -111,6 +117,17 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 
 		// Auth routes (no auth required)
 		r.Get("/api/auth/me", h.HandleMe)
+
+		// AI routes (experimental, authenticated)
+		r.Route("/api/ai", func(r chi.Router) {
+			r.Use(h.AuthMiddleware)
+			r.Use(h.TenantContextMiddleware)
+			r.Use(h.CompanyMiddleware)
+
+			r.Post("/generate-contract", h.HandleAIGenerateContract)
+			r.Post("/review-contract", h.HandleAIReviewContract)
+			r.Post("/test", h.HandleAITestConnection)
+		})
 
 		// Viewer+ (read-only)
 		r.Group(func(r chi.Router) {
