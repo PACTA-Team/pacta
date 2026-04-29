@@ -50,8 +50,8 @@ func GenerateContractsPDF(contracts []Contract) ([]byte, error) {
 	}
 
 	// Output PDF
-	buf, err := pdf.Output()
-	if err != nil {
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
 	return buf.Bytes(), nil
