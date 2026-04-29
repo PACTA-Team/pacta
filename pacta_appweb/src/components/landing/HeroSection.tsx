@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion, MotionValue } from 'framer-motion';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
@@ -75,6 +75,7 @@ function ElegantShape({
 export function HeroSection() {
   const navigate = useNavigate();
   const { t } = useTranslation('landing');
+  const prefersReducedMotion = useReducedMotion();
 
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -106,21 +107,27 @@ export function HeroSection() {
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
         {/* Logo */}
-        <motion.div
-          className="mx-auto mb-8 flex justify-center"
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, type: 'spring', stiffness: 200 }}
-        >
-          <AnimatedLogo size="xl" />
-        </motion.div>
+        {prefersReducedMotion ? (
+          <div className="mx-auto mb-8 flex justify-center">
+            <AnimatedLogo size="xl" />
+          </div>
+        ) : (
+          <motion.div
+            className="mx-auto mb-8 flex justify-center"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, type: 'spring', stiffness: 200 }}
+          >
+            <AnimatedLogo size="xl" />
+          </motion.div>
+        )}
 
         {/* Badge */}
         <motion.div
           variants={fadeUpVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 0.2 }}
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          animate={prefersReducedMotion ? undefined : "visible"}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.2 }}
           className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm"
         >
           <FileText className="h-3.5 w-3.5" />
@@ -130,18 +137,18 @@ export function HeroSection() {
         {/* Headline */}
         <motion.h1
           variants={fadeUpVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 0.4 }}
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          animate={prefersReducedMotion ? undefined : "visible"}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.4 }}
           className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl md:leading-tight"
         >
           <span className="bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
             {t('hero.title').split(' ').map((word, i) => (
               <motion.span
                 key={i}
-                initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                transition={{
+                initial={prefersReducedMotion ? { opacity: 1, y: 0, filter: 'blur(0px)' } : { opacity: 0, y: 20, filter: 'blur(8px)' }}
+                animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={prefersReducedMotion ? { duration: 0 } : {
                   delay: 0.4 + (i * 0.1),
                   duration: 0.6,
                   ease: [0.25, 0.4, 0.25, 1] as [number, number, number, number]
@@ -157,9 +164,9 @@ export function HeroSection() {
         {/* Subheadline */}
         <motion.p
           variants={fadeUpVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 0.6 }}
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          animate={prefersReducedMotion ? undefined : "visible"}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.6 }}
           className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl"
         >
           {t('hero.description')}
@@ -169,9 +176,9 @@ export function HeroSection() {
         {/* CTA Buttons */}
         <motion.div
           variants={fadeUpVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 0.8 }}
+          initial={prefersReducedMotion ? "visible" : "hidden"}
+          animate={prefersReducedMotion ? undefined : "visible"}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.8 }}
           className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
         >
           <MotionButton
@@ -179,12 +186,12 @@ export function HeroSection() {
             variant="gradient"
             onClick={() => navigate('/login')}
             className="group rounded-xl px-8 text-base"
-            whileHover={{
+            whileHover={prefersReducedMotion ? undefined : {
               scale: 1.05,
               boxShadow: "0 0 30px rgba(37, 99, 235, 0.4)",
               transition: { duration: 0.3 }
             }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
           >
             {t('hero.startNow')}
             <motion.div

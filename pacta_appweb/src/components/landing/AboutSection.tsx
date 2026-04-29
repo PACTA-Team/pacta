@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Shield, Globe, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 

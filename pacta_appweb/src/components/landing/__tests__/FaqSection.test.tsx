@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { FaqSection } from '../FaqSection';
 import i18n from '@/i18n';
@@ -21,7 +22,7 @@ vi.mock('framer-motion', () => ({
     delete rest.whileHover;
     delete rest.whileTap;
     delete rest.as;
-    return <tag {...rest}>{children}</tag>;
+    return React.createElement(tag, rest, children);
   } }),
   useScroll: () => ({ scrollYProgress: { get: () => 0 } }),
   useTransform: () => 0,
