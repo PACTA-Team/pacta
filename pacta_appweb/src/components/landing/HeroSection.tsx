@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
@@ -53,6 +53,7 @@ function ElegantShape({
   height?: number;
   parallaxY?: MotionValue<number>;
 }) {
+  const prefersReducedMotion = useReducedMotion();
   return (
     <motion.div
       variants={shapeVariants}
@@ -63,7 +64,7 @@ function ElegantShape({
       style={parallaxY ? { y: parallaxY } : undefined}
     >
       <motion.div
-        animate={floatAnimation}
+        animate={prefersReducedMotion ? { y: 0, rotate: 0 } : floatAnimation}
         style={{ width, height }}
         className="relative rounded-full bg-gradient-to-r from-primary/10 to-transparent blur-[1px] border border-primary/10"
       />
