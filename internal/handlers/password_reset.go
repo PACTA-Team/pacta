@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/go-chi/chi/v5"
