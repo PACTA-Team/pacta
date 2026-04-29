@@ -16,6 +16,7 @@ PACTA is a local-first contract management platform designed for organizations t
 
 ## Features
 
+- **AI-Powered Contract Generation & Review (Themis AI — alpha)** — Generate contracts and review existing ones using AI with PDF text extraction, multi-tenant RAG, and per-company rate limiting. Settings in `/settings/ai`. Feature disabled by default.
 - **Contract Management** — Full CRUD operations with soft delete, version tracking, and status workflows
 - **Hybrid Registration** — Email code verification (via local SMTP) or admin approval with company assignment
 - **Party Management** — Centralized registry of clients, suppliers, and authorized signers
@@ -125,6 +126,8 @@ PACTA follows a minimalist, self-contained architecture:
 
 ## API Reference
 
+### Core API
+
 | Method   | Path                  | Auth | Description            |
 |----------|-----------------------|------|------------------------|
 | `POST`   | `/api/auth/register`  | No   | Register new user      |
@@ -140,9 +143,21 @@ PACTA follows a minimalist, self-contained architecture:
 | `POST`   | `/api/clients`        | Yes  | Create client          |
 | `GET`    | `/api/suppliers`      | Yes  | List suppliers         |
 | `POST`   | `/api/suppliers`      | Yes  | Create supplier        |
+| `GET`    | `/api/signers`        | Yes  | List signers (filter by company_id & company_type) |
 | `GET`    | `/api/setup`          | No   | Get setup status       |
 | `GET`    | `/api/audit-logs`     | Yes  | List audit logs with filters |
 | `GET`    | `/api/audit-logs/contract/{id}` | Yes | Audit history for a contract |
+
+### Themis AI (Alpha — feature flag disabled by default)
+
+| Method   | Path                        | Auth | Description                    |
+|----------|-----------------------------|------|--------------------------------|
+| `POST`   | `/api/v1/ai/generate`       | Yes  | Generate contract draft using AI (requires AI enabled in settings) |
+| `POST`   | `/api/v1/ai/review`         | Yes  | Review existing contract with AI (requires AI enabled in settings) |
+| `GET`    | `/api/v1/ai/settings`       | Yes  | Get current AI settings       |
+| `PUT`    | `/api/v1/ai/settings`       | Yes  | Update AI provider, API key, model, enable toggle |
+
+> **Note:** Themis AI endpoints return `503 Service Unavailable` until enabled in Settings → AI. Rate limited to 100 requests/day per company.
 
 ---
 
