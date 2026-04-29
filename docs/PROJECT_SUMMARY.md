@@ -32,6 +32,7 @@ PACTA occupies the middle ground: a professional-grade contract management syste
 
 | Feature | Description |
 |---------|-------------|
+| **Themis AI (alpha)** | AI-powered contract generation and review with PDF text extraction, multi-tenant RAG, AES-256-GCM encryption, DB-backed rate limiting, and full i18n. Feature flag disabled by default. |
 | Contract CRUD | Create, read, update, delete contracts with soft delete protection |
 | Internal Contract IDs | Auto-generated system identifiers (`CNT-YYYY-NNNN`) for internal tracking, independent of legal contract numbers |
 | Party Management | Centralized registry of clients and suppliers with contact details |
@@ -165,6 +166,7 @@ The CI/CD pipeline runs on GitHub Actions triggered by version tags (`v*`):
 | User Management | Complete (v0.13.0 -- CRUD, password reset, status management, audit logging) |
 | Multi-Company Support | Complete (v0.16.0 -- companies table, user_companies, company_id on all data tables, CompanyMiddleware, company-scoped handlers, frontend CompanyContext + CompanySelector + CompaniesPage) |
 | Security Hardening (CSP, CSRF, CORS, Headers, Rate Limiting) | Complete (v0.44.11 — nonce-based CSP eliminating unsafe-inline/unsafe-eval, CSRF upgraded to filippo.io/csrf/gorilla (CVE-2025-47909), CORS allowed origins configurable via ALLOWED_ORIGINS, centralized storage key validation preventing path traversal, accurate client IP logging via X-Forwarded-For with trusted proxy list, stricter rate limiting on auth endpoints, session lifetime reduced to 8h with sliding expiration, bind to localhost by default (BIND_ADDRESS override), Expect-CT/X-Download-Options/X-Permitted-Cross-Domain-Policies headers, SQL injection prevention in EnforceOwnership, user enumeration prevention across auth endpoints, sanitized error messages, React 19.2.4 (CVE patches), removed hardcoded admin credentials, automated dependency vulnerability scanning (Dependabot + govulncheck), STRIDE threat model and CSO audit report) |
+| Themis AI (Alpha) | Complete (v0.45.0 — AI-powered contract generation and review, PDF text extraction with ledongthuc/pdf, OpenAI/Anthropic LLM integration, AES-256-GCM API key encryption, multi-tenant RAG with company/client/supplier filtering, DB-backed rate limiting (100 req/day per company), full i18n (EN/ES), Settings UI for provider/API key/model/enable, comprehensive test coverage (unit, integration, handler tests); feature flag disabled by default) |
 | Landing Page | Complete (v0.27.0 — About section, FAQ accordion, Contact card, Footer, Download page, Changelog page, professional SEO, favicon, i18n for all new sections) |
 | Auth System | Complete (v0.28.0 — Registration endpoint, auto-login, error message propagation, toast notifications) |
 | Hybrid Registration | Complete (v0.33.0 — go-mail SMTP integration replacing Resend API, i18n email templates (es/en), language detection from request body + Accept-Language header, email error logging, spam folder warnings in UX) |

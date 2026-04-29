@@ -18,7 +18,6 @@ import (
 	"github.com/PACTA-Team/pacta/internal/auth"
 	"github.com/PACTA-Team/pacta/internal/config"
 	"github.com/PACTA-Team/pacta/internal/db"
-	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/handlers"
 	"github.com/PACTA-Team/pacta/internal/server/middleware"
 	"github.com/PACTA-Team/pacta/internal/worker"
@@ -239,14 +238,8 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	}
 	r.Handle("/*", spaHandler(staticSub))
 
-	// --- Initialize Brevo email client and contract expiry worker ---
-	brevoClient, err := email.NewBrevoClient(svc.DB)
-	if err != nil {
-		log.Printf("[email-worker] Brevo client not initialized: %v — contract expiry notifications will use SMTP only", err)
-		brevoClient = nil
-	}
-
-	expiryWorker := worker.NewContractExpiryWorker(svc, brevoClient)
+	// --- Initialize contract expiry worker ---
+	expiryWorker := worker.NewContractExpiryWorker(svc)
 	expiryWorker.Start()
 	defer expiryWorker.Stop()
 	// -----------------------------------------------------------------

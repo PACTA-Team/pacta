@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a; }
+        .warning { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 6px; margin: 20px 0; }
+        .field { margin: 10px 0; }
+        .label { font-weight: bold; }
+        .footer { color: #666; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2 style="color:#1a1a1a">{{.Title}}</h2>
+    <div class="warning">
+        <p><strong>{{.ContractNumber}}</strong> expires in <strong>{{.DaysLeft}} days</strong> ({{.ExpiryDate}})</p>
+    </div>
+    <div class="field">
+        <strong class="label">Contract:</strong> {{.ContractName}}
+    </div>
+    <div class="field">
+        <strong class="label">Client:</strong> {{.ClientName}}
+    </div>
+    <div class="field">
+        <strong class="label">Company:</strong> {{.CompanyName}}
+    </div>
+    <p>Please contact <a href="mailto:{{.AdminEmail}}">{{.AdminEmail}}</a> for renewal.</p>
+    <p class="footer">{{.FooterText}}</p>
+</body>
+</html>

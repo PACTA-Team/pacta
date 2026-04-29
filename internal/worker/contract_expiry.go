@@ -16,21 +16,19 @@ import (
 )
 
 type ContractExpiryWorker struct {
-	config      *config.Service
-	brevoClient *email.BrevoClient
-	logger      *log.Logger
-	ticker      *time.Ticker
-	running     bool
-	mu          sync.RWMutex
+	config  *config.Service
+	logger  *log.Logger
+	ticker  *time.Ticker
+	running bool
+	mu      sync.RWMutex
 }
 
-func NewContractExpiryWorker(cfg *config.Service, brevo *email.BrevoClient) *ContractExpiryWorker {
+func NewContractExpiryWorker(cfg *config.Service) *ContractExpiryWorker {
 	return &ContractExpiryWorker{
-		config:      cfg,
-		brevoClient: brevo,
-		logger:      log.New(os.Stdout, "[email-worker] ", log.LstdFlags),
-		ticker:      nil,
-		running:     false,
+		config:  cfg,
+		logger:  log.New(os.Stdout, "[email-worker] ", log.LstdFlags),
+		ticker:  nil,
+		running: false,
 	}
 }
 
@@ -213,55 +211,37 @@ func (w *ContractExpiryWorker) processContract(ctx context.Context, contract con
 		adminEmail = admins[0].Email
 	}
 
-	// 4. Send with Brevo -> fallback to SMTP
-	err = w.sendViaBrevoWithFallback(ctx, contract, thresholdDays, recipients, adminEmail)
+	// 4. Send via Mailtrap SMTP
+	err = w.sendContractExpiryEmail(ctx, contract, thresholdDays, recipients, adminEmail)
 	if err != nil {
-		w.logger.Printf("[email-worker] final send failed for contract %s (threshold %d): %v", contract.ContractNumber, thresholdDays, err)
+		w.logger.Printf("[email-worker] send failed for contract %s (threshold %d): %v", contract.ContractNumber, thresholdDays, err)
 		// Log failure
 		w.logSend(contract.ID, thresholdDays, false, false, err, "smtp")
 		return err
 	}
 
 	// 5. Log success
-	w.logSend(contract.ID, thresholdDays, true, true, nil, "brevo")
+	w.logSend(contract.ID, thresholdDays, true, true, nil, "mailtrap")
 	return nil
 }
 
-func (w *ContractExpiryWorker) sendViaBrevoWithFallback(
+func (w *ContractExpiryWorker) sendContractExpiryEmail(
 	ctx context.Context,
 	contract contractInfo,
 	thresholdDays int,
 	recipients []string,
 	adminEmail string,
 ) error {
-	// If Brevo client is available, try first
-	if w.brevoClient != nil {
-		err := w.brevoClient.SendContractExpiryViaBrevo(
-			ctx,
-			contract.ContractNumber,
-			thresholdDays,
-			contract.ExpiryDate,
-			contract.Name,
-			contract.ClientName,
-			contract.CompanyName,
-			contract.ID,
-			recipients,
-			adminEmail,
-		)
-		if err == nil {
-			return nil
-		}
-		w.logger.Printf("[email-brevo] failed for %s: %v — falling back to SMTP", contract.ContractNumber, err)
-	} else {
-		w.logger.Printf("[email-worker] Brevo client not initialized, using SMTP directly")
+	cfg, err := email.GetSMTPConfig(w.config.DB)
+	if err != nil {
+		return fmt.Errorf("failed to get SMTP config: %w", err)
 	}
 
-	// Fallback to SMTP using existing SendEmailWithFallback
 	subject := fmt.Sprintf("⚠️ Contrato %s vence en %d días — Acción requerida", contract.ContractNumber, thresholdDays)
 	html := buildEmailHTML(contract, thresholdDays, adminEmail)
 
 	msg := mail.NewMsg()
-	if err := msg.From(os.Getenv("EMAIL_FROM")); err != nil {
+	if err := msg.From(cfg.From); err != nil {
 		return fmt.Errorf("failed to set From: %w", err)
 	}
 	for _, r := range recipients {
@@ -272,7 +252,7 @@ func (w *ContractExpiryWorker) sendViaBrevoWithFallback(
 	msg.Subject(subject)
 	msg.SetBodyString(mail.TypeTextHTML, html)
 
-	return email.SendEmailWithFallback(ctx, msg)
+	return email.SendEmail(ctx, msg, w.config.DB)
 }
 
 func buildEmailHTML(contract contractInfo, daysLeft int, adminEmail string) string {

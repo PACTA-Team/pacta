@@ -59,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Server startup panic** — Middleware registration order fixed to comply with chi router requirement that all middlewares must be defined before routes. Prevented panic: "chi: all middlewares must be defined before routes on a mux" by moving `RateLimit()` and `TenantContextMiddleware` before route group definitions.
 
-## [Unreleased]
+## [0.45.0] - 2026-04-28
 
 ### Added
 - **Themis AI (alpha)**: AI-powered contract generation and review
@@ -95,16 +95,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TypeScript build errors** — Resolved 30+ type errors across contracts UI, API modules, and tests
 
 ### Technical Details
-- **Database migrations:** 1 new migration
+- **Database migrations:** 2 new migrations
+  - `005_ai_settings.sql` — Adds `ai_settings` table for provider, API key (encrypted), model, enabled flag
+  - `006_ai_rate_limits.sql` — Adds `ai_rate_limits` table for per-company daily request tracking
   - `20260424_add_contract_document_url.sql` — Adds `document_url` and `document_key` to contracts table
-- **Files Changed:** ~45 files (backend + frontend)
-- **Lines Added:** ~7,200 (including test infrastructure)
-- **Tests:** 50+ tests passing (unit + E2E)
-- **CI:** ✅ All checks green
+- **Files Changed:** ~50 files (backend + frontend)
+- **Lines Added:** ~3,200
+- **Tests:** 100+ passing (unit, integration, handler tests)
+- **CI:** ✅ Build, Vet, Vulncheck all green
 
 ---
 
-## [0.44.11] - 2026-04-26
+## [Unreleased]
 
 ### Added
 - **Nonce-based CSP** — Eliminates `unsafe-inline` and `unsafe-eval` by injecting cryptographically secure nonces into script tags
