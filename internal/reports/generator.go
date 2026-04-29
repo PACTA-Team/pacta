@@ -2,7 +2,6 @@ package reports
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"time"
 
