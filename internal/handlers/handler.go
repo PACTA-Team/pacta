@@ -8,8 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PACTA-Team/pacta/internal/ai"
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
+
+// LLMClient defines the interface for language model clients.
+type LLMClient interface {
+	Generate(ctx context.Context, prompt string, context string) (string, error)
+}
 
 type ctxKey string
 
@@ -19,14 +25,29 @@ const (
 )
 
 type Handler struct {
-	DB      *sql.DB
-	DataDir string
+	DB          *sql.DB
+	DataDir     string
+	RateLimiter *ai.RateLimiter
+	LLMClient   LLMClient
 }
 
 func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+// ApiResponse is the standard JSON envelope for all API responses.
+type ApiResponse struct {
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Error   string      `json:"error,omitempty"`
+}
+
+// success sends a successful JSON response with envelope {success: true, data: ...}
+func (h *Handler) success(w http.ResponseWriter, status int, data interface{}) {
+	h.JSON(w, status, ApiResponse{Success: true, Data: data})
 }
 
 func (h *Handler) Error(w http.ResponseWriter, status int, message string) {
@@ -82,6 +103,19 @@ func (h *Handler) getUserRole(r *http.Request) string {
 		return ""
 	}
 	return v.(string)
+}
+
+func (h *Handler) getCompanyID(r *http.Request) int {
+	userID := h.getUserID(r)
+	if userID == 0 {
+		return 0
+	}
+	var companyID int
+	err := h.DB.QueryRow("SELECT company_id FROM users WHERE id = ? AND deleted_at IS NULL", userID).Scan(&companyID)
+	if err != nil {
+		return 0
+	}
+	return companyID
 }
 
 // roleLevel returns the numeric permission level for a role.

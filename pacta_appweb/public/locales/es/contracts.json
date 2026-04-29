@@ -85,5 +85,34 @@
   "renewalType": "Tipo de Renovación",
   "renewalTypeTooltip": "Condiciones de renovación automática o manual",
   "confidentialityClause": "Cláusula de Confidencialidad",
-  "confidentialityClauseTooltip": "Art. 5, DL-304: obligación de no revelar información"
+  "confidentialityClauseTooltip": "Art. 5, DL-304: obligación de no revelar información",
+  "ai": {
+    "generate": {
+      "button": "Generar Borrador con IA",
+      "button_short": "Nuevo con IA",
+      "title": "Generación de Contrato con IA",
+      "submitting": "Generando...",
+      "success": "Borrador IA Generado",
+      "error": "Error al generar borrador",
+      "required_fields": "Por favor complete todos los campos requeridos"
+    },
+    "review": {
+      "button": "Revisión con Themis",
+      "analyzing": "Analizando...",
+      "title": "Evaluación de Themis IA",
+      "success": "Revisión completada",
+      "error": "Error al revisar contrato",
+      "no_document": "No hay documento disponible para revisión"
+    },
+    "draftBanner": {
+      "title": "Borrador IA Generado:",
+      "description": "El campo descripción ha sido pre-llenado con contenido generado por IA.",
+      "instructions": "Por favor revise y edite según sea necesario antes de guardar."
+    },
+    "errors": {
+      "provider_and_key_required": "Se requieren Proveedor y API Key",
+      "api_key_required": "Se requiere API Key para probar"
+    },
+    "experimental": "Experimental"
+  }
 }

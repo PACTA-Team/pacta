@@ -85,5 +85,34 @@
   "renewalType": "Renewal Type",
   "renewalTypeTooltip": "Automatic or manual renewal conditions",
   "confidentialityClause": "Confidentiality Clause",
-  "confidentialityClauseTooltip": "Art. 5, DL-304: obligation not to disclose information"
+  "confidentialityClauseTooltip": "Art. 5, DL-304: obligation not to disclose information",
+  "ai": {
+    "generate": {
+      "button": "Generate Draft with AI",
+      "button_short": "New with AI",
+      "title": "AI Contract Generation",
+      "submitting": "Generating...",
+      "success": "AI Draft Generated",
+      "error": "Failed to generate contract",
+      "required_fields": "Please fill in all required fields"
+    },
+    "review": {
+      "button": "Review with Themis",
+      "analyzing": "Analyzing...",
+      "title": "Themis AI Assessment",
+      "success": "Review completed",
+      "error": "Failed to review contract",
+      "no_document": "No document available for review"
+    },
+    "draftBanner": {
+      "title": "AI Draft Generated:",
+      "description": "The description field has been pre-filled with AI-generated content.",
+      "instructions": "Please review and edit as needed before saving."
+    },
+    "errors": {
+      "provider_and_key_required": "Provider and API Key are required",
+      "api_key_required": "API Key is required for testing"
+    },
+    "experimental": "Experimental"
+  }
 }
