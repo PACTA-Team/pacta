@@ -1,8 +1,8 @@
 package reports
 
 import (
-	"bytes"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/phpdave11/gofpdf"
@@ -49,10 +49,21 @@ func GenerateContractsPDF(contracts []Contract) ([]byte, error) {
 		pdf.Ln(-1)
 	}
 
-	// Output PDF
-	buf, err := pdf.Output()
+	// Output PDF to temporary file, then read as bytes
+	tmpFile, err := os.CreateTemp("", "contracts-*.pdf")
 	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if err := pdf.OutputFileAndClose(tmpFile.Name()); err != nil {
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
-	return buf.Bytes(), nil
+
+	// Read generated PDF
+	data, err := os.ReadFile(tmpFile.Name())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read generated PDF: %w", err)
+	}
+	return data, nil
 }
