@@ -45,3 +45,19 @@ func TestBuildReviewPrompt(t *testing.T) {
 		t.Error("prompt should mention JSON format")
 	}
 }
+
+func TestCubanLegalExpertPrompt(t *testing.T) {
+	prompt := SystemPromptCubanLegalExpert()
+
+	if prompt == "" {
+		t.Error("Prompt should not be empty")
+	}
+
+	if !strings.Contains(prompt, "Cuban") {
+		t.Error("Prompt should mention Cuban law")
+	}
+
+	if !strings.Contains(prompt, "contratos") {
+		t.Error("Prompt should mention contracts")
+	}
+}
