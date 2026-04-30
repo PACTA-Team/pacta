@@ -6,16 +6,18 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 )
 
 // VectorDB represents a local vector database using HNSW for similarity search
 type VectorDB struct {
-	mu       sync.RWMutex
-	index    *hnswIndex
-	metadata map[string]DocumentMeta
-	path     string
-	dim      int
+	mu        sync.RWMutex
+	index     *hnswIndex
+	metadata  map[string]DocumentMeta
+	nodeToDoc map[int]string // maps HNSW node ID to document ID
+	path      string
+	dim       int
 }
 
 // DocumentMeta stores metadata for a document
@@ -60,10 +62,11 @@ func NewVectorDB(dim int, path string) (*VectorDB, error) {
 	}
 
 	db := &VectorDB{
-		index:    newHNSWIndex(dim, 16, 200),
-		metadata: make(map[string]DocumentMeta),
-		path:     path,
-		dim:      dim,
+		index:     newHNSWIndex(dim, 16, 200),
+		metadata:  make(map[string]DocumentMeta),
+		nodeToDoc: make(map[int]string),
+		path:      path,
+		dim:       dim,
 	}
 
 	// Try to load existing index
@@ -104,6 +107,7 @@ func (db *VectorDB) AddDocument(id string, embedding []float32, meta DocumentMet
 	// Store metadata
 	meta.ID = id
 	db.metadata[id] = meta
+	db.nodeToDoc[nodeID] = id
 
 	// Persist periodically
 	if len(db.metadata)%10 == 0 {
@@ -133,11 +137,12 @@ func (db *VectorDB) Search(query []float32, k int) []SearchResult {
 		node := db.index.nodes[nodeID]
 		score := CosineSimilarity(normQuery, node.vector)
 
-		// Find metadata (simplified: would need bidirectional mapping in production)
+		// Find metadata using nodeToDoc mapping
 		var meta DocumentMeta
-		for _, m := range db.metadata {
-			meta = m // In production, use proper ID mapping
-			break
+		if docID, ok := db.nodeToDoc[nodeID]; ok {
+			if m, ok := db.metadata[docID]; ok {
+				meta = m
+			}
 		}
 
 		results = append(results, SearchResult{
@@ -374,10 +379,45 @@ func CosineSimilarity(a, b []float32) float32 {
 // save persists the index and metadata to disk
 func (db *VectorDB) save() error {
 	dbPath := filepath.Join(db.path, "index.json")
+
+	// Serialize HNSW nodes
+	type nodeJSON struct {
+		ID       int     `json:"id"`
+		Vector   []float32 `json:"vector"`
+		Neighbors []int   `json:"neighbors"`
+		Level    int     `json:"level"`
+	}
+	type indexJSON struct {
+		Nodes      []nodeJSON `json:"nodes"`
+		EntryPoint int        `json:"entryPoint"`
+		M          int        `json:"m"`
+		Ef         int        `json:"ef"`
+		Dim        int        `json:"dim"`
+	}
+
+	nodesJSON := make([]nodeJSON, 0, len(db.index.nodes))
+	for _, n := range db.index.nodes {
+		if n == nil {
+			continue
+		}
+		nodesJSON = append(nodesJSON, nodeJSON{
+			ID:       n.id,
+			Vector:   n.vector,
+			Neighbors: n.neighbors,
+			Level:    n.level,
+		})
+	}
+
 	data := map[string]interface{}{
 		"metadata": db.metadata,
-		"dim":      db.dim,
-		"entryPoint": db.index.entryPoint,
+		"nodeToDoc": db.nodeToDoc,
+		"index":    indexJSON{
+			Nodes:      nodesJSON,
+			EntryPoint: db.index.entryPoint,
+			M:          db.index.m,
+			Ef:         db.index.ef,
+			Dim:        db.dim,
+		},
 	}
 
 	jsonData, err := json.MarshalIndent(data, "", "  ")
@@ -385,7 +425,12 @@ func (db *VectorDB) save() error {
 		return err
 	}
 
-	return os.WriteFile(dbPath, jsonData, 0644)
+	// Atomic write: write to temp file, then rename
+	tmpPath := dbPath + ".tmp"
+	if err := os.WriteFile(tmpPath, jsonData, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, dbPath)
 }
 
 // load loads the index and metadata from disk
@@ -401,6 +446,7 @@ func (db *VectorDB) load() error {
 		return err
 	}
 
+	// Load metadata
 	if meta, ok := stored["metadata"].(map[string]interface{}); ok {
 		db.metadata = make(map[string]DocumentMeta)
 		for k, v := range meta {
@@ -420,6 +466,81 @@ func (db *VectorDB) load() error {
 				}
 				db.metadata[k] = meta
 			}
+		}
+	}
+
+	// Load nodeToDoc mapping
+	if ntd, ok := stored["nodeToDoc"].(map[string]interface{}); ok {
+		db.nodeToDoc = make(map[int]string)
+		for k, v := range ntd {
+			if nodeID, err := strconv.Atoi(k); err == nil {
+				if docID, ok := v.(string); ok {
+					db.nodeToDoc[nodeID] = docID
+				}
+			}
+		}
+	}
+
+	// Load HNSW index
+	if idxRaw, ok := stored["index"].(map[string]interface{}); ok {
+		// Load index parameters
+		m := 16
+		ef := 200
+		dim := db.dim
+		entryPoint := -1
+		if v, ok := idxRaw["m"].(float64); ok {
+			m = int(v)
+		}
+		if v, ok := idxRaw["ef"].(float64); ok {
+			ef = int(v)
+		}
+		if v, ok := idxRaw["dim"].(float64); ok {
+			dim = int(v)
+		}
+		if v, ok := idxRaw["entryPoint"].(float64); ok {
+			entryPoint = int(v)
+		}
+
+		// Load nodes
+		var nodes []*hnswNode
+		if nodesRaw, ok := idxRaw["nodes"].([]interface{}); ok {
+			nodes = make([]*hnswNode, 0, len(nodesRaw))
+			for _, nRaw := range nodesRaw {
+				if nMap, ok := nRaw.(map[string]interface{}); ok {
+					n := &hnswNode{}
+					if v, ok := nMap["id"].(float64); ok {
+						n.id = int(v)
+					}
+					if v, ok := nMap["vector"].([]interface{}); ok {
+						n.vector = make([]float32, 0, len(v))
+						for _, val := range v {
+							if f, ok := val.(float64); ok {
+								n.vector = append(n.vector, float32(f))
+							}
+						}
+					}
+					if v, ok := nMap["neighbors"].([]interface{}); ok {
+						n.neighbors = make([]int, 0, len(v))
+						for _, val := range v {
+							if f, ok := val.(float64); ok {
+								n.neighbors = append(n.neighbors, int(f))
+							}
+						}
+					}
+					if v, ok := nMap["level"].(float64); ok {
+						n.level = int(v)
+					}
+					nodes = append(nodes, n)
+				}
+			}
+		}
+
+		db.index = &hnswIndex{
+			nodes:     nodes,
+			entryPoint: entryPoint,
+			dim:       dim,
+			m:         m,
+			ef:        ef,
 		}
 	}
 

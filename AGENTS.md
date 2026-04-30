@@ -89,9 +89,50 @@ Five canonical roles with default label strings. See `docs/agents/triage-labels.
 
 Single-context layout — one `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
 
+## CGo Embedding: Phi-3.5-mini-instruct
+
+### Procedimiento para embedding de modelo local
+
+1. **Clonar llama.cpp**:
+   ```bash
+   cd /home/mowgli/pacta/internal/ai/minirag/
+   git clone --depth 1 https://github.com/ggerganov/llama.cpp.git
+   cd llama.cpp && mkdir -p build && cd build
+   cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+   make -j$(nproc)
+   ```
+
+2. **Descargar modelo Phi-3.5-mini-instruct GGUF**:
+   - Desde Hugging Face: `microsoft/Phi-3.5-mini-instruct-gguf`
+   - Archivo: `phi-3.5-mini-instruct.Q4_K_M.gguf` (~2GB)
+   - Ubicación: `internal/ai/minirag/models/phi-3.5-mini-instruct.Q4_K_M.gguf`
+
+3. **CI/CD con GitHub Actions**:
+   - Build.yml y release.yml incluyen pasos para clonar, compilar y descargar modelo
+   - Usar `actions/cache@v4` para cachear builds de llama.cpp
+   - `CGo_ENABLED=1` necesario para compilar con bindings CGo
+
+4. **Configuración de rutas**:
+   - `CGo_CFLAGS`: `-I$(pwd)/internal/ai/minirag/llama.cpp/include`
+   - `CGo_LDFLAGS`: `-L$(pwd)/internal/ai/minirag/llama.cpp/build -llama -lm -lstdc++ -lpthread`
+
+5. **Modos de uso (configurable desde frontend)**:
+   - `"cgo"`: Phi-3.5-mini-instruct embebido en binario (PREFERIDO)
+   - `"ollama"`: Ollama HTTP API (alternativa local)
+   - `"external"`: APIs externas (OpenAI, etc.)
+
+### Archivos clave:
+- `internal/ai/minirag/cgo_llama.go` — CGo bindings (build tag: `//go:build cgo`)
+- `internal/ai/minirag/local_client.go` — LocalClient con 3 modos
+- `internal/ai/hybrid/orchestrator.go` — Hybrid orchestrator
+- `.github/workflows/build.yml` — CI con CGo
+- `.github/workflows/release.yml` — Release con CGo
+
+---
+
 ## Self-Improvement Loop
 
- Después de cualquier corrección del usuario, seguir este flujo:
+Después de cualquier corrección del usuario, seguir este flujo:
 
 1. **Registrar**: Documentar el error en `docs/LESSONS.md` siguiendo el formato establecido
 2. **Regla**: Escribir una regla concreta que prevenga el mismo error

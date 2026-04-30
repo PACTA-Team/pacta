@@ -162,78 +162,143 @@ func (c *OllamaClient) Generate(ctx context.Context, prompt, system string) (str
 	return result.Response, nil
 }
 
-// LocalClient is the main interface for local LLM
-// It tries embedded CGo inference first, falls back to Ollama
+// LocalClient is the main interface for local LLM.
+// Supports 3 modes (configurable from frontend):
+//   - "cgo": CGo + llama.cpp with Phi-3.5-mini-instruct embedded in binary (PREFERRED)
+//   - "ollama": Ollama HTTP API (alternative local option)
+//   - "external": External APIs (OpenAI, Groq, etc.)
+// The mode is selected via RAG settings in the frontend admin panel.
 type LocalClient struct {
-	inference *cgoLLMInference
-	ollama    *OllamaClient
-	useCGo   bool
+	inference *cgoLLMInference // CGo mode (Phi-3.5-mini-instruct embedded)
+	ollama    *OllamaClient      // Ollama HTTP mode (alternative local)
+	mode      string             // "cgo" | "ollama" | "external"
 	modelPath string
 }
 
-// NewLocalClient creates a new local LLM client
+// NewLocalClient creates a new local LLM client.
+// - mode: "cgo" for embedded (Phi-3.5-mini-instruct), "ollama" for HTTP API
+// - modelPath: path to GGUF model (for CGo mode)
+// - ollamaEndpoint: Ollama API endpoint (for Ollama mode)
+func NewLocalClient(mode, modelPath, ollamaEndpoint string) *LocalClient {
+	c := &LocalClient{
+		mode:      mode,
+		modelPath: modelPath,
+	}
+
+	// Initialize based on mode
+	switch mode {
+	case "cgo":
+		// CGo + llama.cpp with Phi-3.5-mini-instruct embedded
+		if modelPath == "" {
+			modelPath = "phi-3.5-mini-instruct.Q4_K_M.gguf"
+		}
+		c.inference = NewCgoLLMInference(modelPath)
+	case "ollama":
+		// Ollama HTTP API
+		c.ollama = NewOllamaClient(ollamaEndpoint, "")
+	default:
+		// Fallback: try Ollama
+		c.ollama = NewOllamaClient(ollamaEndpoint, "")
+	}
+
+	return c
+}
+
+// NewLocalClient creates a new local LLM client.
+// - If modelPath is provided and CGo is enabled, it tries llama.cpp first.
+// - Ollama HTTP client is always set up as fallback.
+// - Production recommendation: use Ollama only (set modelPath="").
 func NewLocalClient(modelPath, ollamaEndpoint string) *LocalClient {
 	c := &LocalClient{
 		modelPath: modelPath,
-		useCGo:   false, // Set to true when CGo is available
+		useCGo:   false,
 	}
 
-	// Try CGo inference first
+	// Try CGo inference if model path provided and CGo is available
+	// (cgoLLMInference will be nil if CGO_ENABLED=0)
 	if modelPath != "" {
 		c.inference = NewCgoLLMInference(modelPath)
-		c.useCGo = true
+		if c.inference != nil {
+			c.useCGo = true
+		}
 	}
 
-	// Always setup Ollama as fallback
+	// Always setup Ollama as fallback (production path)
 	c.ollama = NewOllamaClient(ollamaEndpoint, "")
 
 	return c
 }
 
-// Generate generates text using the best available local method
+// Generate generates text using the configured local method
+// Mode "cgo": uses llama.cpp embedded inference (Phi-3.5-mini-instruct)
+// Mode "ollama": uses Ollama HTTP API
+// Mode "external": falls back to external APIs (handled by orchestrator)
 func (c *LocalClient) Generate(ctx context.Context, prompt, system string) (string, error) {
-	// Try CGo inference first if enabled
-	if c.useCGo && c.inference != nil {
-		result, err := c.inference.Generate(prompt)
-		if err == nil {
-			return result, nil
+	switch c.mode {
+	case "cgo":
+		// CGo + llama.cpp with Phi-3.5-mini-instruct embedded
+		if c.inference != nil {
+			result, err := c.inference.Generate(prompt)
+			if err == nil {
+				return result, nil
+			}
+			return "", fmt.Errorf("cgo inference failed: %w", err)
 		}
-		// Fall back to Ollama on error
-		fmt.Printf("[LocalClient] CGo inference failed, falling back to Ollama: %v\n", err)
-	}
+		return "", fmt.Errorf("cgo mode selected but inference not initialized")
 
-	// Use Ollama fallback
-	if c.ollama != nil {
-		return c.ollama.Generate(ctx, prompt, system)
-	}
+	case "ollama":
+		// Ollama HTTP API
+		if c.ollama != nil {
+			return c.ollama.Generate(ctx, prompt, system)
+		}
+		return "", fmt.Errorf("ollama mode selected but client not initialized")
 
-	return "", fmt.Errorf("no local LLM available")
+	default:
+		// Unknown mode, try Ollama as fallback
+		if c.ollama != nil {
+			return c.ollama.Generate(ctx, prompt, system)
+		}
+		return "", fmt.Errorf("no local LLM available (mode=%s)", c.mode)
+	}
 }
 
-// CheckHealth checks if local LLM is available
+// CheckHealth checks if local LLM is available based on configured mode
 func (c *LocalClient) CheckHealth() bool {
-	if c.useCGo && c.inference != nil && c.inference.ready {
-		return true
+	switch c.mode {
+	case "cgo":
+		return c.inference != nil && c.inference.ready
+	case "ollama":
+		if c.ollama != nil {
+			return c.ollama.CheckHealth()
+		}
+		return false
+	default:
+		// Try Ollama as fallback
+		if c.ollama != nil {
+			return c.ollama.CheckHealth()
+		}
+		return false
 	}
-	if c.ollama != nil {
-		return c.ollama.CheckHealth()
-	}
-	return false
 }
 
 // GetModelInfo returns information about the local model
 func (c *LocalClient) GetModelInfo() map[string]interface{} {
 	info := make(map[string]interface{})
+	info["mode"] = c.mode
 
-	if c.useCGo && c.inference != nil {
-		info["engine"] = "llama.cpp (CGo)"
-		info["model_path"] = c.inference.modelPath
-		info["model_ready"] = c.inference.ready
-	}
-
-	if c.ollama != nil {
-		info["ollama_endpoint"] = c.ollama.Endpoint
-		info["ollama_model"] = c.ollama.Model
+	switch c.mode {
+	case "cgo":
+		if c.inference != nil {
+			info["engine"] = "llama.cpp (CGo) - Phi-3.5-mini-instruct embedded"
+			info["model_path"] = c.inference.modelPath
+			info["model_ready"] = c.inference.ready
+		}
+	case "ollama":
+		if c.ollama != nil {
+			info["engine"] = "Ollama HTTP API"
+			info["ollama_endpoint"] = c.ollama.Endpoint
+			info["ollama_model"] = c.ollama.Model
+		}
 	}
 
 	return info

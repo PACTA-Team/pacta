@@ -124,7 +124,13 @@ func (h *Handler) getRAGConfig() (mode, localModel, embeddingModel, hybridStrate
 	
 	localModel = settings["local_model"]
 	if localModel == "" {
-		localModel = "phi-3.5-mini-instruct"
+		localModel = "phi-3.5-min-i-instruct"
+	}
+	
+	// localMode: "cgo" (Phi-3.5-min-i-instruct EMBEDDED in binary) | "ollama" | "external"
+	localMode := settings["local_mode"]
+	if localMode == "" {
+		localMode = "cgo" // Default: embedded Phi-3.5-min-i-instruct
 	}
 	
 	embeddingModel = settings["embedding_model"] 
@@ -139,7 +145,7 @@ func (h *Handler) getRAGConfig() (mode, localModel, embeddingModel, hybridStrate
 	
 	hybridRerank = settings["hybrid_rerank"] == "true"
 	
-	return mode, localModel, embeddingModel, hybridStrategy, hybridRerank, nil
+	return mode, localMode, localModel, embeddingModel, hybridStrategy, hybridRerank, nil
 }
 
 // getOrCreateVectorDB gets or creates the vector database for the company
@@ -540,7 +546,7 @@ func (h *Handler) HandleRAGHybrid(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Create orchestrator
-	orchestrator := hybrid.NewOrchestrator(mode, hybridStrategy, localModel, embeddingModel)
+		orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
 	orchestrator.VectorDB = vectorDB
 	orchestrator.HybridRerank = hybridRerank
 	
@@ -643,7 +649,7 @@ func (h *Handler) HandleRAGStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Create orchestrator for health check
-	orchestrator := hybrid.NewOrchestrator(mode, hybridStrategy, localModel, embeddingModel)
+		orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
 	orchestrator.VectorDB = vectorDB
 	
 	// Get AI config for external status

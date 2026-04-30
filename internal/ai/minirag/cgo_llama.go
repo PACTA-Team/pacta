@@ -1,5 +1,13 @@
 //go:build cgo
 
+// Package minirag provides local LLM and vector search capabilities.
+// This file (cgo_llama.go) is a CGo-based implementation using llama.cpp.
+// It is OPTIONAL and EXPERIMENTAL — the build tag "cgo" means it only
+// compiles when CGO_ENABLED=1 is set.
+//
+// Production default: Ollama HTTP API (see OllamaClient in local_client.go).
+// To use CGo: set CGO_ENABLED=1 and ensure llama.cpp is built in:
+//   internal/ai/minirag/llama.cpp/ (built with cmake)
 package minirag
 
 /*
@@ -15,7 +23,8 @@ import (
 	"unsafe"
 )
 
-// cgoLLMInference implements LLM inference using llama.cpp via CGo
+// cgoLLMInference implements LLM inference using llama.cpp via CGo.
+// This is optional — LocalClient falls back to Ollama HTTP if CGo is not available.
 type cgoLLMInference struct {
 	modelPath string
 	model     *C.llama_model_t
