@@ -1,7 +1,7 @@
   
 import { useState } from 'react';
 import { useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import AppSidebar from './AppSidebar';
@@ -10,8 +10,9 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import CompanySelector from '@/components/CompanySelector';
 import NotificationsDropdown from '@/components/notifications/NotificationsDropdown';
 import UserDropdown from '@/components/header/UserDropdown';
-import { Menu } from 'lucide-react';
+import { Menu, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api-client';
 
 const TABLET_BREAKPOINT = 1024;
 const MOBILE_BREAKPOINT = 768;
@@ -49,6 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(getInitialDevice);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(device !== 'desktop');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [aiLegalEnabled, setAiLegalEnabled] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -70,14 +72,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? 80 : 256);
 
   // Update document title on route change
-  useEffect(() => {
-    const titleKey = pathname.startsWith('/contracts/') ? 'pageTitles.contractDetails' : (PAGE_TITLE_KEYS[pathname]);
-    const title = titleKey ? t(titleKey) : 'PACTA';
-    document.title = `${title} - PACTA`;
-    mainRef.current?.focus();
-  }, [pathname, t]);
+   useEffect(() => {
+     const titleKey = pathname.startsWith('/contracts/') ? 'pageTitles.contractDetails' : (PAGE_TITLE_KEYS[pathname]);
+     const title = titleKey ? t(titleKey) : 'PACTA';
+     document.title = `${title} - PACTA`;
+     mainRef.current?.focus();
+   }, [pathname, t]);
 
-    // Redirect if not authenticated (backup guard)
+   // Fetch AI Legal feature flag status
+   useEffect(() => {
+     const fetchAiLegalStatus = async () => {
+       try {
+         const status = await api.get<{ enabled: boolean }>('/api/ai/legal/status');
+         setAiLegalEnabled(status.enabled);
+       } catch (error) {
+         // Silently fail - feature remains hidden if endpoint unavailable
+         console.error('Failed to fetch AI Legal status:', error);
+       }
+     };
+     fetchAiLegalStatus();
+   }, []);
+
+     // Redirect if not authenticated (backup guard)
     useEffect(() => {
       if (!isAuthenticated && pathname !== '/') {
         navigate('/login', { replace: true });
@@ -146,21 +162,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {pathname.startsWith('/contracts/') ? t('pageTitles.contractDetails') : (PAGE_TITLE_KEYS[pathname] ? t(PAGE_TITLE_KEYS[pathname]) : '')}
             </h1>
 
-           {/* Acciones Desktop/Tablet (≥768px) - Notifications, Theme, Language */}
-           <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-             <NotificationsDropdown />
-             <LanguageToggle />
-             <ThemeToggle />
-           </div>
-
-{/* UserDropdown - siempre visible (mobile y desktop) */}
-            <div className="flex items-center gap-1">
-              {/* Mobile: Notifications button (visible solo <768px) */}
-              <div className="md:hidden">
-                <NotificationsDropdown />
-              </div>
-              <UserDropdown />
+            {/* Acciones Desktop/Tablet (≥768px) - Notifications, Theme, Language */}
+            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+              <NotificationsDropdown />
+              <LanguageToggle />
+              <ThemeToggle />
+              {aiLegalEnabled && (
+                <Link to="/ai-legal/chat">
+                  <Button variant="ghost" size="sm" className="gap-1">
+                    <Scale className="h-4 w-4" />
+                    <span>{t('legal:chat.title')}</span>
+                  </Button>
+                </Link>
+              )}
             </div>
+
+ {/* UserDropdown - siempre visible (mobile y desktop) */}
+             <div className="flex items-center gap-1">
+               {/* Mobile: Notifications button (visible solo <768px) */}
+               <div className="md:hidden">
+                 <NotificationsDropdown />
+               </div>
+               {aiLegalEnabled && (
+                 <Link to="/ai-legal/chat">
+                   <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden" aria-label={t('legal:chat.title')}>
+                     <Scale className="h-4 w-4" />
+                   </Button>
+                 </Link>
+               )}
+               <UserDropdown />
+             </div>
          </header>
         <main
           ref={mainRef}
