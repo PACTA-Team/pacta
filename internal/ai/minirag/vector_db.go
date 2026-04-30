@@ -39,6 +39,18 @@ type SearchResult struct {
 	Content string
 }
 
+// LegalDocumentMetadata extends DocumentMeta for legal docs
+type LegalDocumentMetadata struct {
+	DocumentID   int    `json:"document_id"`
+	DocumentType string `json:"document_type"`
+	Title        string `json:"title"`
+	Jurisdiction string `json:"jurisdiction"`
+	Language     string `json:"language"`
+	ChunkTitle   string `json:"chunk_title,omitempty"`
+	Source       string `json:"source"`
+	Content      string `json:"content,omitempty"`
+}
+
 // hnswIndex is a simple HNSW implementation for vector similarity search
 type hnswIndex struct {
 	nodes     []*hnswNode
@@ -167,6 +179,123 @@ func (db *VectorDB) GetDocument(id string) (DocumentMeta, bool) {
 
 	meta, ok := db.metadata[id]
 	return meta, ok
+}
+
+// AddLegalDocumentChunks adds legal document chunks to vector DB
+func (db *VectorDB) AddLegalDocumentChunks(chunks []string, chunkTitles []string, metadata LegalDocumentMetadata, embeddings [][]float32) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if len(chunks) != len(embeddings) {
+		return fmt.Errorf("chunks length %d != embeddings length %d", len(chunks), len(embeddings))
+	}
+	if chunkTitles != nil && len(chunkTitles) != len(chunks) {
+		return fmt.Errorf("chunkTitles length %d != chunks length %d", len(chunkTitles), len(chunks))
+	}
+
+	docID := fmt.Sprintf("legal_%d", metadata.DocumentID)
+
+	for i, chunk := range chunks {
+		embedding := embeddings[i]
+		if len(embedding) != db.dim {
+			return fmt.Errorf("embedding dimension mismatch at chunk %d: expected %d, got %d", i, db.dim, len(embedding))
+		}
+
+		// Normalize embedding
+		normEmb := normalizeVector(embedding)
+
+		// Add to HNSW index
+		nodeID := db.index.insert(normEmb)
+
+		// Create chunk ID
+		chunkID := fmt.Sprintf("%s_chunk_%d", docID, i)
+
+		// Get chunk title if available
+		chunkTitle := ""
+		if chunkTitles != nil && i < len(chunkTitles) {
+			chunkTitle = chunkTitles[i]
+		}
+
+		// Store metadata
+		meta := DocumentMeta{
+			ID:      chunkID,
+			Title:   metadata.Title,
+			Type:    metadata.DocumentType,
+			Source:  "legal",
+			Content: chunk,
+			ExtraFields: map[string]string{
+				"document_id":  fmt.Sprintf("%d", metadata.DocumentID),
+				"jurisdiction": metadata.Jurisdiction,
+				"language":     metadata.Language,
+				"chunk_title":  chunkTitle,
+			},
+		}
+
+		db.metadata[chunkID] = meta
+		db.nodeToDoc[nodeID] = chunkID
+	}
+
+	// Persist
+	if len(db.metadata)%10 == 0 {
+		db.save()
+	}
+
+	return nil
+}
+
+// SearchLegalDocuments searches within legal document chunks
+func (db *VectorDB) SearchLegalDocuments(query []float32, filter map[string]interface{}, limit int) []SearchResult {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	if len(db.index.nodes) == 0 || limit <= 0 {
+		return nil
+	}
+
+	normQuery := normalizeVector(query)
+	neighborIDs := db.index.search(normQuery, limit*2)
+
+	var results []SearchResult
+	for _, nodeID := range neighborIDs {
+		if nodeID < 0 || nodeID >= len(db.index.nodes) {
+			continue
+		}
+
+		// Find metadata using nodeToDoc mapping
+		var meta DocumentMeta
+		if docID, ok := db.nodeToDoc[nodeID]; ok {
+			if m, ok := db.metadata[docID]; ok {
+				meta = m
+			}
+		}
+
+		// Filter by source
+		if meta.Source != "legal" {
+			continue
+		}
+
+		// Filter by jurisdiction if specified
+		if jurisdiction, ok := filter["jurisdiction"].(string); ok && jurisdiction != "" {
+			if meta.ExtraFields["jurisdiction"] != jurisdiction {
+				continue
+			}
+		}
+
+		score := CosineSimilarity(normQuery, db.index.nodes[nodeID].vector)
+
+		results = append(results, SearchResult{
+			ID:      meta.ID,
+			Score:   score,
+			Meta:    meta,
+			Content: meta.Content,
+		})
+
+		if len(results) >= limit {
+			break
+		}
+	}
+
+	return results
 }
 
 // DeleteDocument removes a document from the index

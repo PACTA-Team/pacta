@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"pacta/internal/ai/legal"
+	"pacta/internal/models"
 )
 
 // Indexer handles automatic indexing of contracts into the vector database
@@ -229,6 +232,50 @@ func (idx *Indexer) GetIndexStats() map[string]interface{} {
 		"chunk_size":     idx.ChunkSize,
 		"chunk_overlap":  idx.ChunkOverlap,
 	}
+}
+
+// IndexLegalDocument indexes a legal document by chunking and embedding
+func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
+	// Parse document into chunks using legal.ParseByArticles
+	chunks := legal.ParseByArticles(doc.Content)
+
+	if len(chunks) == 0 {
+		return fmt.Errorf("no chunks generated from document content")
+	}
+
+	// Add overlap between chunks using legal.MergeChunksWithOverlap
+	chunks = legal.MergeChunksWithOverlap(chunks, 50)
+
+	// Extract chunk texts and titles
+	chunkTexts := make([]string, len(chunks))
+	chunkTitles := make([]string, len(chunks))
+	for i, chunk := range chunks {
+		chunkTexts[i] = chunk.Text
+		chunkTitles[i] = chunk.Title
+	}
+
+	// Generate embeddings for each chunk
+	embeddings, err := idx.Embedder.GenerateBatchEmbeddings(chunkTexts)
+	if err != nil {
+		return fmt.Errorf("failed to generate embeddings: %w", err)
+	}
+
+	// Store in vector DB using AddLegalDocumentChunks
+	legalMeta := LegalDocumentMetadata{
+		DocumentID:   doc.ID,
+		DocumentType: doc.DocumentType,
+		Title:        doc.Title,
+		Jurisdiction: doc.Jurisdiction,
+		Language:     doc.Language,
+		Source:       "legal",
+	}
+
+	err = idx.VectorDB.AddLegalDocumentChunks(chunkTexts, chunkTitles, legalMeta, embeddings)
+	if err != nil {
+		return fmt.Errorf("failed to add chunks to vector DB: %w", err)
+	}
+
+	return nil
 }
 
 // Search searches for similar documents in the vector database
