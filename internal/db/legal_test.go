@@ -38,15 +38,25 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 			title TEXT NOT NULL,
 			document_type TEXT NOT NULL,
 			source TEXT,
+			source_filename TEXT NOT NULL DEFAULT '',
 			content TEXT NOT NULL,
+			content_text TEXT NOT NULL DEFAULT '',
 			content_hash TEXT NOT NULL,
 			language TEXT DEFAULT 'es',
 			jurisdiction TEXT DEFAULT 'cuba',
 			effective_date DATE,
 			publication_date DATE,
 			gaceta_number TEXT,
+			reference_number TEXT,
 			tags TEXT,
 			chunk_count INTEGER DEFAULT 0,
+			chunk_config TEXT,
+			is_indexed BOOLEAN DEFAULT 0,
+			mime_type TEXT,
+			size_bytes INTEGER,
+			storage_path TEXT NOT NULL,
+			company_id INTEGER NOT NULL DEFAULT 1,
+			uploaded_by INTEGER NOT NULL,
 			indexed_at DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -104,6 +114,13 @@ func TestCreateLegalDocument(t *testing.T) {
 		IndexedAt:     nil,
 		CreatedAt:     now,
 		UpdatedAt:     now,
+		CompanyID:     1,
+		UploadedBy:    1,
+		StoragePath:   "data/legal_corpus/1/test.pdf",
+		MimeType:      "application/pdf",
+		SizeBytes:     1024,
+		ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
+		IsIndexed:     false,
 	}
 
 	doc, err := CreateLegalDocument(ctx, db, arg)
@@ -142,6 +159,13 @@ func TestGetLegalDocument(t *testing.T) {
 		Jurisdiction:  "Cuba",
 		CreatedAt:     now,
 		UpdatedAt:     now,
+		CompanyID:     1,
+		UploadedBy:    1,
+		StoragePath:   "data/legal_corpus/1/test2.pdf",
+		MimeType:      "application/pdf",
+		SizeBytes:     2048,
+		ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
+		IsIndexed:     false,
 	}
 	created, err := CreateLegalDocument(ctx, db, arg)
 	if err != nil {
@@ -180,6 +204,13 @@ func TestListLegalDocuments(t *testing.T) {
 			Jurisdiction:  "Cuba",
 			CreatedAt:     now,
 			UpdatedAt:     now,
+			CompanyID:     1,
+			UploadedBy:    1,
+			StoragePath:   "data/legal_corpus/1/doc1.pdf",
+			MimeType:      "application/pdf",
+			SizeBytes:     1024,
+			ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
+			IsIndexed:     false,
 		},
 		{
 			Title:         "Law 2",
@@ -190,6 +221,13 @@ func TestListLegalDocuments(t *testing.T) {
 			Jurisdiction:  "Cuba",
 			CreatedAt:     now,
 			UpdatedAt:     now,
+			CompanyID:     1,
+			UploadedBy:    1,
+			StoragePath:   "data/legal_corpus/1/doc2.pdf",
+			MimeType:      "application/pdf",
+			SizeBytes:     2048,
+			ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
+			IsIndexed:     false,
 		},
 	}
 
@@ -237,6 +275,13 @@ func TestUpdateLegalDocumentIndexedAt(t *testing.T) {
 		Jurisdiction: "Cuba",
 		CreatedAt:    now,
 		UpdatedAt:    now,
+		CompanyID:    1,
+		UploadedBy:   1,
+		StoragePath:  "data/legal_corpus/1/doc3.pdf",
+		MimeType:     "application/pdf",
+		SizeBytes:    512,
+		ChunkConfig:  `{"size":1000,"overlap":200,"strategy":"structured"}`,
+		IsIndexed:    false,
 	}
 
 	doc, _ := CreateLegalDocument(ctx, db, arg)
@@ -277,6 +322,13 @@ func TestDeleteLegalDocument(t *testing.T) {
 		Jurisdiction: "Cuba",
 		CreatedAt:    now,
 		UpdatedAt:    now,
+		CompanyID:    1,
+		UploadedBy:   1,
+		StoragePath:  "data/legal_corpus/1/delete.pdf",
+		MimeType:     "application/pdf",
+		SizeBytes:    256,
+		ChunkConfig:  `{"size":1000,"overlap":200,"strategy":"structured"}`,
+		IsIndexed:    false,
 	}
 
 	doc, _ := CreateLegalDocument(ctx, db, arg)

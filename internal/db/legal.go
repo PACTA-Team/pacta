@@ -27,6 +27,14 @@ type LegalDocumentRow struct {
 	IndexedAt       *time.Time `json:"indexed_at,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+	DeletedAt       *time.Time `json:"deleted_at,omitempty"`
+	CompanyID       int        `json:"company_id"`
+	UploadedBy      int        `json:"uploaded_by"`
+	StoragePath     string     `json:"storage_path"`
+	MimeType        string     `json:"mime_type,omitempty"`
+	SizeBytes       int        `json:"size_bytes,omitempty"`
+	ChunkConfig     string     `json:"chunk_config,omitempty"`
+	IsIndexed       bool       `json:"is_indexed"`
 }
 
 // CreateLegalDocumentParams parámetros para crear documento legal
@@ -46,6 +54,14 @@ type CreateLegalDocumentParams struct {
 	IndexedAt        *time.Time `json:"indexed_at,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
+	DeletedAt        *time.Time `json:"deleted_at,omitempty"`
+	CompanyID        int        `json:"company_id"`
+	UploadedBy       int        `json:"uploaded_by"`
+	StoragePath      string     `json:"storage_path"`
+	MimeType         string     `json:"mime_type,omitempty"`
+	SizeBytes        int        `json:"size_bytes,omitempty"`
+	ChunkConfig      string     `json:"chunk_config,omitempty"`
+	IsIndexed        bool       `json:"is_indexed"`
 }
 
 // LegalChatMessageRow representa una fila de ai_legal_chat_history
@@ -75,21 +91,28 @@ type CreateLegalChatMessageParams struct {
 
 // CreateLegalDocument inserta un nuevo documento legal
 func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumentParams) (LegalDocumentRow, error) {
-	tagsJSON, _ := json.Marshal(arg.Tags)
+	tagsJSON, err := json.Marshal(arg.Tags)
+	if err != nil {
+		return doc, err
+	}
 
 	row := db.QueryRowContext(ctx, `
 		INSERT INTO legal_documents (
 			title, document_type, source, content, content_hash,
 			language, jurisdiction, effective_date, publication_date,
 			gaceta_number, tags, chunk_count, indexed_at,
-			created_at, updated_at
+			created_at, updated_at, deleted_at, company_id, uploaded_by,
+			storage_path, mime_type, size_bytes, chunk_config, is_indexed
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15
+			$11, $12, $13, $14, $15, $16, $17, $18,
+			$19, $20, $21, $22, $23
 		)
 		RETURNING id, title, document_type, source, content, content_hash,
 		          language, jurisdiction, effective_date, publication_date,
-		          gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at
+		          gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at,
+		          deleted_at, company_id, uploaded_by, storage_path, mime_type, size_bytes,
+		          chunk_config, is_indexed
 	`,
 		arg.Title,
 		arg.DocumentType,
@@ -106,10 +129,18 @@ func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumen
 		arg.IndexedAt,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.DeletedAt,
+		arg.CompanyID,
+		arg.UploadedBy,
+		arg.StoragePath,
+		arg.MimeType,
+		arg.SizeBytes,
+		arg.ChunkConfig,
+		arg.IsIndexed,
 	)
 
 	var doc LegalDocumentRow
-	var effectiveDate, publicationDate, indexedAt sql.NullTime
+	var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
 	var tagsJSONOut []byte
 
 	err := row.Scan(
@@ -129,6 +160,14 @@ func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumen
 		&indexedAt,
 		&doc.CreatedAt,
 		&doc.UpdatedAt,
+		&deletedAt,
+		&doc.CompanyID,
+		&doc.UploadedBy,
+		&doc.StoragePath,
+		&doc.MimeType,
+		&doc.SizeBytes,
+		&doc.ChunkConfig,
+		&doc.IsIndexed,
 	)
 
 	if err != nil {
@@ -148,6 +187,10 @@ func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumen
 		ia := indexedAt.Time
 		doc.IndexedAt = &ia
 	}
+	if deletedAt.Valid {
+		da := deletedAt.Time
+		doc.DeletedAt = &da
+	}
 
 	// Parse tags
 	if len(tagsJSONOut) > 0 {
@@ -162,7 +205,9 @@ func GetLegalDocument(ctx context.Context, db *sql.DB, id int64) (LegalDocumentR
 	row := db.QueryRowContext(ctx, `
 		SELECT id, title, document_type, source, content, content_hash,
 		       language, jurisdiction, effective_date, publication_date,
-		       gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at
+		       gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at,
+		       deleted_at, company_id, uploaded_by, storage_path, mime_type,
+		       size_bytes, chunk_config, is_indexed
 		FROM legal_documents
 		WHERE id = $1 AND deleted_at IS NULL
 		LIMIT 1
@@ -170,7 +215,7 @@ func GetLegalDocument(ctx context.Context, db *sql.DB, id int64) (LegalDocumentR
 
 	var doc LegalDocumentRow
 	var tagsJSON []byte
-	var effectiveDate, publicationDate, indexedAt sql.NullTime
+	var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
 
 	err := row.Scan(
 		&doc.ID,
@@ -189,6 +234,14 @@ func GetLegalDocument(ctx context.Context, db *sql.DB, id int64) (LegalDocumentR
 		&indexedAt,
 		&doc.CreatedAt,
 		&doc.UpdatedAt,
+		&deletedAt,
+		&doc.CompanyID,
+		&doc.UploadedBy,
+		&doc.StoragePath,
+		&doc.MimeType,
+		&doc.SizeBytes,
+		&doc.ChunkConfig,
+		&doc.IsIndexed,
 	)
 
 	if err != nil {
@@ -208,6 +261,10 @@ func GetLegalDocument(ctx context.Context, db *sql.DB, id int64) (LegalDocumentR
 		ia := indexedAt.Time
 		doc.IndexedAt = &ia
 	}
+	if deletedAt.Valid {
+		da := deletedAt.Time
+		doc.DeletedAt = &da
+	}
 
 	if len(tagsJSON) > 0 {
 		json.Unmarshal(tagsJSON, &doc.Tags)
@@ -221,7 +278,9 @@ func ListLegalDocuments(ctx context.Context, db *sql.DB, jurisdiction string) ([
 	query := `
 		SELECT id, title, document_type, source, content, content_hash,
 		       language, jurisdiction, effective_date, publication_date,
-		       gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at
+		       gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at,
+		       deleted_at, company_id, uploaded_by, storage_path, mime_type,
+		       size_bytes, chunk_config, is_indexed
 		FROM legal_documents
 		WHERE deleted_at IS NULL
 	`
@@ -245,7 +304,7 @@ func ListLegalDocuments(ctx context.Context, db *sql.DB, jurisdiction string) ([
 	for rows.Next() {
 		var doc LegalDocumentRow
 		var tagsJSON []byte
-		var effectiveDate, publicationDate, indexedAt sql.NullTime
+		var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
 
 		err := rows.Scan(
 			&doc.ID,
@@ -264,6 +323,14 @@ func ListLegalDocuments(ctx context.Context, db *sql.DB, jurisdiction string) ([
 			&indexedAt,
 			&doc.CreatedAt,
 			&doc.UpdatedAt,
+			&deletedAt,
+			&doc.CompanyID,
+			&doc.UploadedBy,
+			&doc.StoragePath,
+			&doc.MimeType,
+			&doc.SizeBytes,
+			&doc.ChunkConfig,
+			&doc.IsIndexed,
 		)
 		if err != nil {
 			return nil, err
@@ -281,6 +348,10 @@ func ListLegalDocuments(ctx context.Context, db *sql.DB, jurisdiction string) ([
 		if indexedAt.Valid {
 			ia := indexedAt.Time
 			doc.IndexedAt = &ia
+		}
+		if deletedAt.Valid {
+			da := deletedAt.Time
+			doc.DeletedAt = &da
 		}
 
 		// Parse tags
