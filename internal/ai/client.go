@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/PACTA-Team/pacta/internal/ai/minirag"
 )
 
 // LLMClient handles communication with LLM providers
@@ -17,6 +19,9 @@ type LLMClient struct {
 	Model     string
 	Endpoint   string
 	HTTPClient *http.Client
+
+	// Local LLM support
+	LocalClient *minirag.LocalClient
 }
 
 // NewLLMClient creates a new LLM client
@@ -30,8 +35,32 @@ func NewLLMClient(provider LLMProvider, apiKey, model, endpoint string) *LLMClie
 	}
 }
 
+// NewLocalLLMClient creates a new local LLM client (for backward compatibility)
+func NewLocalLLMClient(model, endpoint string) *LLMClient {
+	return &LLMClient{
+		Provider:   ProviderCustom,
+		Model:     model,
+		Endpoint:   endpoint,
+		HTTPClient: &http.Client{Timeout: 120 * time.Second},
+		LocalClient: minirag.NewLocalClient(endpoint, model),
+	}
+}
+
 // Generate sends a prompt to the LLM and returns the generated text
 func (c *LLMClient) Generate(ctx context.Context, prompt string, context string) (string, error) {
+	// Use local LLM if configured
+	if c.LocalClient != nil {
+		// Build system prompt for local LLM
+		var systemPrompt string
+		if c.Provider == ProviderCustom || c.Provider == "" {
+			systemPrompt = SystemPromptLegal
+			if context != "" {
+				systemPrompt = context + "\n\n" + systemPrompt
+			}
+			return c.LocalClient.Generate(ctx, prompt, systemPrompt)
+		}
+	}
+
 	switch c.Provider {
 	case ProviderOpenAI:
 		return c.callOpenAI(ctx, prompt, context)
@@ -42,6 +71,9 @@ func (c *LLMClient) Generate(ctx context.Context, prompt string, context string)
 	case ProviderOpenRouter:
 		return c.callOpenRouter(ctx, prompt, context)
 	case ProviderCustom:
+		if c.LocalClient != nil {
+			return c.LocalClient.Generate(ctx, prompt, context)
+		}
 		return c.callCustom(ctx, prompt, context)
 	default:
 		return "", fmt.Errorf("unsupported provider: %s", c.Provider)
@@ -139,22 +171,18 @@ func (c *LLMClient) callOpenAI(ctx context.Context, prompt, context string) (str
 }
 
 func (c *LLMClient) callGroq(ctx context.Context, prompt, context string) (string, error) {
-	// Groq uses OpenAI-compatible API
 	return c.callOpenAI(ctx, prompt, context)
 }
 
 func (c *LLMClient) callAnthropic(ctx context.Context, prompt, context string) (string, error) {
-	// Anthropic uses different API format
 	return "", fmt.Errorf("anthropic not yet implemented")
 }
 
 func (c *LLMClient) callOpenRouter(ctx context.Context, prompt, context string) (string, error) {
-	// OpenRouter uses OpenAI-compatible API
 	return c.callOpenAI(ctx, prompt, context)
 }
 
 func (c *LLMClient) callCustom(ctx context.Context, prompt, context string) (string, error) {
-	// Custom endpoint - assume OpenAI-compatible
 	return c.callOpenAI(ctx, prompt, context)
 }
 
