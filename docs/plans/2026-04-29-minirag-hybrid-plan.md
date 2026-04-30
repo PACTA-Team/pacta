@@ -16,24 +16,19 @@
 - Actualizado `Config.Validate()` con validación RAG
 
 ### Paso 1.2: Migración de Base de Datos ❌ PENDIENTE
-**Archivo**: `internal/db/XXX_rag_settings.sql` (nuevo)
+**Archivo**: `internal/db/007_rag_settings.sql` (ya creado)
 
-**Tarea**: Crear migración SQL para insertar configuraciones RAG iniciales.
+**Tarea**: La migración ya fue creada con el modelo actualizado a Qwen2.5-0.5B. Verificar que los valores por defecto sean correctos.
 
 ```sql
--- internal/db/XXX_rag_settings.sql
-
--- Add RAG configuration settings
+-- internal/db/007_rag_settings.sql (ACTUALIZADO)
 INSERT INTO system_settings (key, value) VALUES 
 ('rag_mode', 'external'),
-('local_model', 'phi-3.5-mini-instruct'),
+('local_model', 'qwen2.5-0.5b-instruct-q4_0.gguf'),  -- Cambiado desde phi-3.5-mini-instruct
 ('embedding_model', 'all-minilm-l6-v2'),
 ('vector_db_path', ''),
 ('hybrid_strategy', 'local-first'),
 ('hybrid_rerank', 'true');
-
--- Track migration
-INSERT INTO schema_migrations (version) VALUES ('XXX');
 ```
 
 **Verificación**:
@@ -174,7 +169,7 @@ func TestCosineSimilarity(t *testing.T) { ... }
 git add -A
 git commit -m "feat: integrate MiniRAG hybrid local RAG system
 
-- Add local RAG with Phi-3.5-mini-instruct
+- Add local RAG with Qwen2.5-0.5B-Instruct (429MB, under 500MB limit)
 - Add hybrid mode (local + external)
 - Add vector database (HNSW)
 - Add embedding generation (Ollama)

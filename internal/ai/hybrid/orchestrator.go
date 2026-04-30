@@ -25,9 +25,9 @@ type Orchestrator struct {
 
 // NewOrchestrator creates a new hybrid orchestrator.
 // - mode: "local" | "external" | "hybrid"
-// - localMode: "cgo" (Phi-3.5-min-i-instruct EMBEDDED in binary) | "ollama" (HTTP API) | "external"
+// - localMode: "cgo" (Qwen2.5-0.5B-Instruct EMBEDDED in binary) | "ollama" (HTTP API) | "external"
 // - strategy: "local-first" | "external-first" | "parallel"
-// - localModel: GGUF model path (for cgo mode, default: phi-3.5-min-i-instruct.Q4_K_M.gguf)
+// - localModel: GGUF model path (for cgo mode, default: qwen2.5-0.5b-instruct-q4_0.gguf)
 // - embeddingModel: embedding model (default: all-minilm-l6-v2)
 func NewOrchestrator(mode, localMode, strategy, localModel, embeddingModel string) *Orchestrator {
 	o := &Orchestrator{
@@ -39,7 +39,7 @@ func NewOrchestrator(mode, localMode, strategy, localModel, embeddingModel strin
 	// Initialize local components if mode is not external
 	if mode != "external" {
 		// localMode configures which local engine to use:
-		//   - "cgo": Phi-3.5-min-i-instruct EMBEDDED in binary (PREFERRED)
+		//   - "cgo": Qwen2.5-0.5B-Instruct EMBEDDED in binary (PREFERRED)
 		//   - "ollama": Ollama HTTP API (alternative local option)
 		o.LocalClient = minirag.NewLocalClient(localMode, localModel, "")
 		o.Embedder = minirag.NewEmbeddingClient("", embeddingModel)
@@ -76,7 +76,7 @@ func (o *Orchestrator) Query(ctx context.Context, prompt, context string) (strin
 }
 
 // queryLocal queries using only the local RAG system.
-// Uses CGo (Phi-3.5-mini-instruct embedded) or Ollama HTTP based on LocalClient mode.
+// Uses CGo (Qwen2.5-0.5B-Instruct embedded) or Ollama HTTP based on LocalClient mode.
 func (o *Orchestrator) queryLocal(ctx context.Context, prompt, context string) (string, error) {
 	if o.LocalClient == nil {
 		return "", fmt.Errorf("local RAG not initialized")

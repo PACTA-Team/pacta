@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -28,10 +30,10 @@ func NewLLMInference(modelPath string) *LLMInference {
 	}
 }
 
-// LoadModel loads the embedded Phi-3.5 model into memory
+// LoadModel loads the embedded Qwen2.5-0.5B model into memory
 func (l *LLMInference) LoadModel() error {
 	// TODO: Implement actual model loading
-	// For Phi-3.5-mini-instruct (3.8B parameters):
+	// For Qwen2.5-0.5B-Instruct (0.5B parameters, ~429MB Q4_0):
 	// 1. Read GGUF file from embedded resources
 	// 2. Initialize inference context
 	// 3. Load weights into memory
@@ -96,7 +98,23 @@ func NewOllamaClient(endpoint, model string) *OllamaClient {
 		endpoint = "http://localhost:11434"
 	}
 	if model == "" {
-		model = "phi-3.5-mini-instruct"
+		model = "qwen2.5-0.5b-instruct" // Default: lightest model satisfying <500MB binary size constraint
+	}
+	return &OllamaClient{
+		Endpoint: endpoint,
+		Model:    model,
+		Timeout:  120 * time.Second,
+		client:   &http.Client{Timeout: 120 * time.Second},
+	}
+}
+
+// NewOllamaClient creates a client for Ollama fallback
+func NewOllamaClient(endpoint, model string) *OllamaClient {
+	if endpoint == "" {
+		endpoint = "http://localhost:11434"
+	}
+	if model == "" {
+		model = "qwen2.5-0.5b-instruct" // Default: lightest model satisfying <500MB constraint
 	}
 	return &OllamaClient{
 		Endpoint: endpoint,
@@ -164,19 +182,19 @@ func (c *OllamaClient) Generate(ctx context.Context, prompt, system string) (str
 
 // LocalClient is the main interface for local LLM.
 // Supports 3 modes (configurable from frontend):
-//   - "cgo": CGo + llama.cpp with Phi-3.5-mini-instruct embedded in binary (PREFERRED)
+//   - "cgo": CGo + llama.cpp with Qwen2.5-0.5B-Instruct embedded in binary (PREFERRED)
 //   - "ollama": Ollama HTTP API (alternative local option)
 //   - "external": External APIs (OpenAI, Groq, etc.)
 // The mode is selected via RAG settings in the frontend admin panel.
 type LocalClient struct {
-	inference *cgoLLMInference // CGo mode (Phi-3.5-mini-instruct embedded)
-	ollama    *OllamaClient      // Ollama HTTP mode (alternative local)
-	mode      string             // "cgo" | "ollama" | "external"
+	inference *cgoLLMInference // CGo mode (Qwen2.5-0.5B-Instruct embedded)
+	ollama    *OllamaClient    // Ollama HTTP mode (alternative local)
+	mode      string           // "cgo" | "ollama" | "external"
 	modelPath string
 }
 
 // NewLocalClient creates a new local LLM client.
-// - mode: "cgo" for embedded (Phi-3.5-mini-instruct), "ollama" for HTTP API
+// - mode: "cgo" for embedded (Qwen2.5-0.5B-Instruct), "ollama" for HTTP API
 // - modelPath: path to GGUF model (for CGo mode)
 // - ollamaEndpoint: Ollama API endpoint (for Ollama mode)
 func NewLocalClient(mode, modelPath, ollamaEndpoint string) *LocalClient {
@@ -188,9 +206,32 @@ func NewLocalClient(mode, modelPath, ollamaEndpoint string) *LocalClient {
 	// Initialize based on mode
 	switch mode {
 	case "cgo":
-		// CGo + llama.cpp with Phi-3.5-mini-instruct embedded
+		// CGo + llama.cpp with Qwen2.5-0.5B-Instruct embedded
 		if modelPath == "" {
-			modelPath = "phi-3.5-mini-instruct.Q4_K_M.gguf"
+			modelPath = "qwen2.5-0.5b-instruct-q4_0.gguf"
+		}
+		// Normalize: if just a filename, prepend models directory
+		if !strings.ContainsAny(modelPath, "/\\") {
+			modelPath = filepath.Join("internal", "ai", "minirag", "models", modelPath)
+		}
+		c.inference = NewCgoLLMInference(modelPath)
+	case "ollama":
+		// Ollama HTTP API
+		c.ollama = NewOllamaClient(ollamaEndpoint, "")
+	default:
+		// Fallback: try Ollama
+		c.ollama = NewOllamaClient(ollamaEndpoint, "")
+	}
+
+	return c
+}
+
+	// Initialize based on mode
+	switch mode {
+	case "cgo":
+		// CGo + llama.cpp with Qwen2.5-0.5B-Instruct embedded
+		if modelPath == "" {
+			modelPath = "qwen2.5-0.5b-instruct-q4_0.gguf"
 		}
 		c.inference = NewCgoLLMInference(modelPath)
 	case "ollama":
@@ -217,7 +258,12 @@ func NewLocalClient(modelPath, ollamaEndpoint string) *LocalClient {
 	// Try CGo inference if model path provided and CGo is available
 	// (cgoLLMInference will be nil if CGO_ENABLED=0)
 	if modelPath != "" {
-		c.inference = NewCgoLLMInference(modelPath)
+		// Normalize: if just a filename, prepend models directory
+		normPath := modelPath
+		if !strings.ContainsAny(normPath, "/\\") {
+			normPath = filepath.Join("internal", "ai", "minirag", "models", normPath)
+		}
+		c.inference = NewCgoLLMInference(normPath)
 		if c.inference != nil {
 			c.useCGo = true
 		}
@@ -230,13 +276,13 @@ func NewLocalClient(modelPath, ollamaEndpoint string) *LocalClient {
 }
 
 // Generate generates text using the configured local method
-// Mode "cgo": uses llama.cpp embedded inference (Phi-3.5-mini-instruct)
+// Mode "cgo": uses llama.cpp embedded inference (Qwen2.5-0.5B-Instruct)
 // Mode "ollama": uses Ollama HTTP API
 // Mode "external": falls back to external APIs (handled by orchestrator)
 func (c *LocalClient) Generate(ctx context.Context, prompt, system string) (string, error) {
 	switch c.mode {
 	case "cgo":
-		// CGo + llama.cpp with Phi-3.5-mini-instruct embedded
+		// CGo + llama.cpp with Qwen2.5-0.5B-Instruct embedded
 		if c.inference != nil {
 			result, err := c.inference.Generate(prompt)
 			if err == nil {
@@ -289,7 +335,7 @@ func (c *LocalClient) GetModelInfo() map[string]interface{} {
 	switch c.mode {
 	case "cgo":
 		if c.inference != nil {
-			info["engine"] = "llama.cpp (CGo) - Phi-3.5-mini-instruct embedded"
+			info["engine"] = "llama.cpp (CGo) - Qwen2.5-0.5B-Instruct embedded"
 			info["model_path"] = c.inference.modelPath
 			info["model_ready"] = c.inference.ready
 		}

@@ -8,11 +8,12 @@
 
 ## 1. Contexto del Problema
 
-El usuario requiere integrar **Phi-3.5-mini-instruct** dentro del binario Go de PACTA:
+El usuario requiere integrar **Qwen2.5-0.5B-Instruct** dentro del binario Go de PACTA:
 - ✅ 100% offline (sin internet)
 - ✅ Embebido en el binario (no procesos externos)
 - ✅ Activable vía configuración admin
 - ✅ Soporte para contratos PDF/Word
+- ✅ < 500 MB de peso en binario (429 MB Q4_0)
 
 ---
 
@@ -26,9 +27,9 @@ El usuario requiere integrar **Phi-3.5-mini-instruct** dentro del binario Go de 
 - Modelos en formato GGUF (cuantizados)
 
 **Ventajas**:
-- ✅ **Soporte nativo Phi-3.5** (Microsoft lo entrena para esto)
+- ✅ **Soporte nativo Qwen2.5** (Alibaba lo entrena para esto)
 - ✅ **Rendimiento superior en CPU** (instrucciones AVX/NEON)
-- ✅ **Cuantización integrada** (Q4_K_M = 2GB, Q5_K_M = 2.5GB)
+- ✅ **Cuantización integrada** (Q2_K = 415 MB, Q4_0 = 429 MB, Q4_K_M = 491 MB)
 - ✅ **Contexto largo** (128k tokens nativo)
 - ✅ **Misma arquitectura que SQLite** (ya usa CGo en PACTA)
 - ✅ **Embeddings** (all-MiniLM-L6-v2 también GGUF)
@@ -52,15 +53,15 @@ El usuario requiere integrar **Phi-3.5-mini-instruct** dentro del binario Go de 
 **Ventajas**:
 - ✅ Go puro + shared library
 - ✅ Soporte aceleración GPU (CUDA, TensorRT)
-- ✅ Ecosistema Microsoft (mismo que Phi-3.5)
+- ✅ Ecosistema Qwen (mismo que Qwen2.5-0.5B)
 
 **Desventajas**:
-- ❌ **Phi-3.5 NO tiene exportación ONNX oficial**
-- ❌ Modelos ONNX son más grandes (4-5GB vs 2GB GGUF)
+- ❌ **Qwen2.5 NO tiene exportación ONNX oficial**
+- ❌ Modelos ONNX son más grandes (4-5GB vs 429 MB GGUF)
 - ❌ Conversión requiere PyTorch → ONNX (complejo)
 - ❌ Menos optimizado para CPU que llama.cpp
 
-**Razón de rechazo**: No hay forma oficial de convertir Phi-3.5 a ONNX sin pérdida de rendimiento.
+**Razón de rechazo**: No hay forma oficial de convertir Qwen2.5 a ONNX sin pérdida de rendimiento.
 
 ---
 
@@ -77,7 +78,7 @@ El usuario requiere integrar **Phi-3.5-mini-instruct** dentro del binario Go de 
 
 **Desventajas**:
 - ❌ **No hay implementación de transformers optimizada**
-- ❌ Tendríamos que escribir Phi-3.5 desde cero
+- ❌ Tendríamos que escribir Qwen2.5 desde cero
 - ❌ Rendimiento insuficiente para producción
 - ❌ Comunidad pequeña, documentación limitada
 
@@ -91,27 +92,11 @@ El usuario requiere integrar **Phi-3.5-mini-instruct** dentro del binario Go de 
 
 **Justificación técnica**:
 
-1. **Mejor fit para Phi-3.5**:
-   - Microsoft entrena Phi específicamente para GGUF (llama.cpp)
-   - Hugging Face oficial: `microsoft/Phi-3.5-mini-instruct-gguf`
-   - Cuantizaciones validadas por Microsoft
-
-2. **Producción-ready para PACTA**:
-   ```
-   PACTA ya usa CGo:
-   - go-sqlite3 (C library + Go bindings)
-   - mismo patrón: C code + #cgo directives
-   
-   No es un "salto" tecnológico, es consistente con el proyecto.
-   ```
-
-3. **Arquitectura demostrada**:
-   - Mismo patrón que SQLite: C library + Go bindings
-   - CI/CD: Compilar C++ + Go (GitHub Actions soporta)
-   - Distribución: Single binary + GGUF models
-
-4. **Rendimiento validado**:
-   - Phi-3.5 Q4: ~20 tokens/seg en CPU moderna
+1. **Mejor fit para Qwen2.5-0.5B**:
+   - Alibaba entrena Qwen específicamente para GGUF (llama.cpp)
+   - Hugging Face oficial: `Qwen/Qwen2.5-0.5B-Instruct-GGUF`
+   - Cuantizaciones validadas por Qwen team
+   - 429 MB Q4_0 (bajo el límite de 500 MB) ✅
    - 128k context: Maneja contratos largos sin problemas
    - Embeddings: all-MiniLM-L6-v2 corre en < 50ms
 
@@ -208,9 +193,9 @@ func (l *LLMInference) Generate(prompt string) (string, error) {
 ### 4.4 Modelos (GUF)
 
 **Tamaños estimados**:
-- `phi-3.5-mini-instruct.Q4_K_M.gguf`: 2.0GB
-- `all-MiniLM-L6-v2.Q4_K_M.gguf`: 22MB
-- **Total**: ~2.1GB (descarga en primer uso)
+- `qwen2.5-0.5b-instruct-q4_0.gguf`: 429 MB
+- `all-MiniLM-L6-v2.Q4_K_M.gguf`: 22 MB
+- **Total**: ~451 MB (descarga en primer uso)
 
 **Estrategia de distribución**:
 1. **Opción A**: Incluir en binario (rara, gran tamaño)
@@ -264,7 +249,7 @@ func (l *LLMInference) Generate(ctx context.Context, prompt string) (string, err
 ```go
 type RAGConfig struct {
     Mode          string // "local", "external", "hybrid"
-    LocalModel    string // "phi-3.5-mini-instruct.Q4_K_M.gguf"
+    LocalModel    string // "qwen2.5-0.5b-instruct-q4_0.gguf"
     EmbeddingModel string // "all-MiniLM-L6-v2.Q4_K_M.gguf"
     // ...
 }
@@ -286,10 +271,10 @@ type RAGConfig struct {
 
 ## 7. Conclusión
 
-**llama.cpp via CGo es la única opción viable técnicamente** para integrar Phi-3.5-mini-instruct de forma embebida en PACTA.
+**llama.cpp via CGo es la única opción viable técnicamente** para integrar Qwen2.5-0.5B-Instruct de forma embebida en PACTA.
 
 **Razones clave**:
-1. Phi-3.5 está diseñado para GGUF (llama.cpp)
+1. Qwen2.5 está diseñado para GGUF (llama.cpp)
 2. PACTA ya usa CGo (go-sqlite3)
 3. Rendimiento producción-ready
 4. Soporte completo para embeddings + generación
@@ -304,5 +289,5 @@ type RAGConfig struct {
 - Context7: `/liquid4all/liquid_llama.cpp` (Benchmark: 90.88)
 - Context7: `/yalue/onnxruntime_go` (Benchmark: 93.1)
 - Context7: `/gorgonia/gorgonia` (Benchmark: 77.2)
-- Hugging Face: `microsoft/Phi-3.5-mini-instruct-gguf`
+- Hugging Face: `Qwen/Qwen2.5-0.5B-Instruct-GGUF`
 - GitHub: `ggerganov/llama.cpp`

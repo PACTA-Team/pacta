@@ -174,7 +174,7 @@ import "C"
 **Configuraciones insertadas**:
 ```sql
 ('rag_mode', 'external')
-('local_model', 'phi-3.5-min-i-instruct')
+('local_model', 'qwen2.5-0.5b-instruct-q4_0.gguf')
 ('embedding_model', 'all-MiniLM-L6-v2')
 ('vector_db_path', '')
 ('hybrid_strategy', 'local-first')
@@ -276,8 +276,8 @@ go test ./internal/...  # Ejecutar tests
 **Tarea**:
 - Crear `internal/ai/minirag/models/.gitignore`
 - Documentar descarga de:
-  - `phi-3.5-min-i-instruct.Q4_K_M.gguf` (2GB)
-  - `all-MiniLM-L6-v2.Q4_K_M.gguf` (22MB)
+  - `qwen2.5-0.5b-instruct-q4_0.gguf` (429 MB) — modelo principal embebido
+  - `all-MiniLM-L6-v2.Q4_K_M.gguf` (22 MB) — modelo de embeddings (opcional)
 
 ---
 
@@ -380,7 +380,7 @@ git add -A
 git status  # Verificar archivos nuevos
 git commit -m "feat: integrate MiniRAG hybrid local RAG system
 
-- Add local RAG with Phi-3.5-min-i-instruct via CGo/llama.cpp
+- Add local RAG with Qwen2.5-0.5B-Instruct via CGo/llama.cpp
 - Add hybrid mode (local + external) with strategies
 - Add vector database using HNSW (pure Go)
 - Add embedding generation via Ollama API + fallback
@@ -429,7 +429,7 @@ go test ./internal/...
 | **External Fallback** | 100% funcional | ✅ Mantenido compatibilidad |
 | **Hybrid Mode** | Ambos funcionando | ✅ Orchestrator implementado |
 | **Backward Compat** | 100% | ✅ APIs existentes mantenidas |
-| **Embedded Model** | Phi-3.5 loaded | ❌ CGo placeholder (falta llama.cpp) |
+| **Embedded Model** | Qwen2.5-0.5B loaded | ❌ CGo placeholder (falta llama.cpp) |
 
 ---
 

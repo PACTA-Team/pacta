@@ -89,7 +89,7 @@ Five canonical roles with default label strings. See `docs/agents/triage-labels.
 
 Single-context layout — one `CONTEXT.md` + `docs/adr/` at repo root. See `docs/agents/domain.md`.
 
-## CGo Embedding: Phi-3.5-mini-instruct
+## CGo Embedding: Qwen2.5-0.5B-Instruct
 
 ### Procedimiento para embedding de modelo local
 
@@ -102,10 +102,10 @@ Single-context layout — one `CONTEXT.md` + `docs/adr/` at repo root. See `docs
    make -j$(nproc)
    ```
 
-2. **Descargar modelo Phi-3.5-mini-instruct GGUF**:
-   - Desde Hugging Face: `microsoft/Phi-3.5-mini-instruct-gguf`
-   - Archivo: `phi-3.5-mini-instruct.Q4_K_M.gguf` (~2GB)
-   - Ubicación: `internal/ai/minirag/models/phi-3.5-mini-instruct.Q4_K_M.gguf`
+2. **Descargar modelo Qwen2.5-0.5B-Instruct GGUF**:
+   - Desde Hugging Face: `Qwen/Qwen2.5-0.5B-Instruct-GGUF`
+   - Archivo: `qwen2.5-0.5b-instruct-q4_0.gguf` (~429 MB)
+   - Ubicación: `internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf`
 
 3. **CI/CD con GitHub Actions**:
    - Build.yml y release.yml incluyen pasos para clonar, compilar y descargar modelo
@@ -117,7 +117,7 @@ Single-context layout — one `CONTEXT.md` + `docs/adr/` at repo root. See `docs
    - `CGo_LDFLAGS`: `-L$(pwd)/internal/ai/minirag/llama.cpp/build -llama -lm -lstdc++ -lpthread`
 
 5. **Modos de uso (configurable desde frontend)**:
-   - `"cgo"`: Phi-3.5-mini-instruct embebido en binario (PREFERIDO)
+   - `"cgo"`: Qwen2.5-0.5B-Instruct embebido en binario (PREFERIDO)
    - `"ollama"`: Ollama HTTP API (alternativa local)
    - `"external"`: APIs externas (OpenAI, etc.)
 

@@ -124,13 +124,13 @@ func (h *Handler) getRAGConfig() (mode, localModel, embeddingModel, hybridStrate
 	
 	localModel = settings["local_model"]
 	if localModel == "" {
-		localModel = "phi-3.5-min-i-instruct"
+		localModel = "qwen2.5-0.5b-instruct-q4_0.gguf"
 	}
-	
-	// localMode: "cgo" (Phi-3.5-min-i-instruct EMBEDDED in binary) | "ollama" | "external"
+
+	// localMode: "cgo" (Qwen2.5-0.5B-Instruct EMBEDDED in binary) | "ollama" | "external"
 	localMode := settings["local_mode"]
 	if localMode == "" {
-		localMode = "cgo" // Default: embedded Phi-3.5-min-i-instruct
+		localMode = "cgo" // Default: embedded Qwen2.5-0.5B-Instruct
 	}
 	
 	embeddingModel = settings["embedding_model"] 

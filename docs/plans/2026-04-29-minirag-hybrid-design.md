@@ -7,7 +7,7 @@
 ## 1. Resumen Ejecutivo
 
 Se implementará un sistema RAG (Retrieval-Augmented Generation) híbrido que combina:
-- **Modo Local**: Motor MiniRAG integrado con modelo Phi-3.5-mini-instruct ejecutándose localmente sin internet
+- **Modo Local**: Motor MiniRAG integrado con modelo Qwen2.5-0.5B-Instruct ejecutándose localmente sin internet
 - **Modo Externo**: Mantenimiento de APIs actuales (OpenAI, Groq, etc.) configurables por el administrador
 - **Modo Híbrido**: Combinación de ambos con estrategias de merge y reranking
 
@@ -56,10 +56,10 @@ Se implementará un sistema RAG (Retrieval-Augmented Generation) híbrido que co
 │                                                                 │
 └─────────────────────────────────────────────────────────────┘
 
-        ┌─────────────┐      ┌─────────────┐
-        │  Ollama     │      │  SQLite     │
-        │  (Phi-3.5)  │      │  (Contracts) │
-        └─────────────┘      └─────────────┘
+         ┌─────────────┐      ┌─────────────┐
+         │  Ollama     │      │  SQLite     │
+         │  (Qwen2.5)  │      │  (Contracts) │
+         └─────────────┘      └─────────────┘
 ```
 
 ### 2.2 Estructura de Archivos
@@ -104,7 +104,7 @@ type Config struct {
 
 type RAGConfig struct {
     Mode              string // "local" | "external" | "hybrid"
-    LocalModel        string // "phi-3.5-mini-instruct"
+    LocalModel        string // "internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf" (429MB)
     EmbeddingModel    string // "all-minilm-l6-v2"
     VectorDBPath      string // "/data/pacta/rag_vectors"
     HybridStrategy    string // "local-first" | "external-first" | "parallel"
@@ -118,12 +118,12 @@ Nuevos `system_settings` (migración pendiente):
 
 ```sql
 INSERT INTO system_settings (key, value) VALUES 
-('rag_mode', 'external'),                    -- Modo inicial
-('local_model', 'phi-3.5-mini-instruct'),    -- Modelo local
-('embedding_model', 'all-minilm-l6-v2'),     -- Embeddings
-('vector_db_path', '/data/pacta/vectors'),  -- Storage
-('hybrid_strategy', 'local-first'),           -- Estrategia híbrida
-('hybrid_rerank', 'true');                  -- Reranking activo
+('rag_mode', 'external'),
+('local_model', 'qwen2.5-0.5b-instruct-q4_0.gguf'),  -- 429MB, <500MB limit
+('embedding_model', 'all-minilm-l6-v2'),
+('vector_db_path', ''),
+('hybrid_strategy', 'local-first'),
+('hybrid_rerank', 'true');
 ```
 
 ## 4. Motor Local MiniRAG
@@ -164,27 +164,31 @@ func (db *VectorDB) Count() int
 - TF hash embeddings
 - Solo para testing/desarrollo
 
-### 4.3 LLM Local (Phi-3.5-mini-instruct)
+### 4.3 LLM Local (Qwen2.5-0.5B-Instruct)
 
-**Integración via Ollama**:
+**Integración via llama.cpp CGo**:
 ```go
 type LocalClient struct {
-    Endpoint string // http://localhost:11434
-    Model    string // phi-3.5-mini-instruct
-    Timeout  time.Duration
-    client   *http.Client
+    inference *cgoLLMInference // CGo + llama.cpp (EMBEDDED)
+    ollama    *OllamaClient    // Fallback via HTTP
+    mode      string           // "cgo" | "ollama" | "external"
+    modelPath string
 }
 
-func (c *LocalClient) Generate(ctx context.Context, prompt, system string) (string, error)
-func (c *LocalClient) CheckHealth() bool
-func (c *LocalClient) PullModel(ctx context.Context) error
+func NewLocalClient(mode, modelPath string) *LocalClient {
+    // mode "cgo": uso directo de modelo GGUF embebido (429 MB Q4_0)
+    // mode "ollama": consulta a servidor Ollama local
+    // mode "external": fallback a APIs externas
+}
 ```
 
 **Características del modelo**:
-- Parámetros: 3.8B
-- Cuantización: Q4 (2GB RAM)
-- Velocidad: ~20 tokens/segundo en CPU
+- Parámetros: 0.5B (Qwen2.5 family)
+- Cuantización: Q4_0 (429 MB) — bajo límite de 500 MB ✅
+- Velocidad: ~35-40 tokens/segundo en CPU
 - Contexto: 128k tokens
+- Entrenamiento: 18T tokens
+- Licencia: Apache 2.0 (gratis)
 
 ### 4.4 Indexación de Documentos
 
@@ -298,11 +302,11 @@ GET  /api/ai/rag/status     # Estado del sistema RAG
 ├─────────────────────────────────────────────────────┤
 │                                              │
 │  Modo RAG:                                 │
-│  (•) Local       - Phi-3.5 + VectorDB     │
+│  (•) Local       - Qwen2.5-0.5B + VectorDB   │
 │  ( ) Externa     - APIs configuradas        │
 │  ( ) Híbrida     - Ambos + Rerank          │
 │                                              │
-│  Modelo Local: phi-3.5-mini-instruct      │
+│  Modelo Local: qwen2.5-0.5b-instruct-q4_0.gguf
 │  Embeddings:    all-minilm-l6-v2           │
 │  Estrategia:    local-first                  │
 │                                              │
@@ -341,8 +345,8 @@ GET  /api/ai/rag/status     # Estado del sistema RAG
 # Instalar Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Descargar modelos
-ollama pull phi-3.5-mini-instruct
+# Descargar modelos (solo si usas modo "ollama")
+ollama pull qwen2.5-0.5b-instruct
 ollama pull all-minilm-l6-v2
 ```
 
@@ -368,7 +372,7 @@ Crear archivo: `internal/db/XXX_rag_settings.sql`
 -- Add RAG configuration settings
 INSERT INTO system_settings (key, value) VALUES 
 ('rag_mode', 'external'),
-('local_model', 'phi-3.5-mini-instruct'),
+('local_model', 'qwen2.5-0.5b-instruct-q4_0.gguf'),
 ('embedding_model', 'all-minilm-l6-v2'),
 ('vector_db_path', ''),
 ('hybrid_strategy', 'local-first'),
