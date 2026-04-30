@@ -38,10 +38,12 @@ type ChatResponse struct {
 
 // SourceRef es una fuente citada en la respuesta
 type SourceRef struct {
-	DocumentID   int     `json:"document_id"`
-	DocumentType string `json:"document_type"`
-	Title        string  `json:"title"`
-	Relevance    float32 `json:"relevance"`
+	DocumentID     int     `json:"document_id"`
+	DocumentType   string  `json:"document_type"`
+	Title          string  `json:"title"`
+	ChunkTitle     string  `json:"chunk_title,omitempty"`
+	Relevance      float32 `json:"relevance"`
+	ContentSnippet string  `json:"content_snippet,omitempty"`
 }
 
 // NewChatService crea un nuevo servicio de chat legal
@@ -86,6 +88,19 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (stri
 				fmt.Fprintf(&sb, " [ID:%d]", doc.DocumentID)
 			}
 			sb.WriteString("\n")
+			if doc.ChunkTitle != "" {
+				fmt.Fprintf(&sb, "  %s\n", doc.ChunkTitle)
+			}
+			if doc.ContentSnippet != "" {
+				// Truncate for safety (already truncated, but ensure)
+				snippet := doc.ContentSnippet
+				if len(snippet) > 500 {
+					snippet = snippet[:500] + "..."
+				}
+				sb.WriteString("  Fragmento: \"")
+				sb.WriteString(snippet)
+				sb.WriteString("\"\n")
+			}
 		}
 		systemPrompt = sb.String() + "\n\n" + systemPrompt
 	}
@@ -149,11 +164,23 @@ func (s *ChatService) searchContext(ctx context.Context, query string, limit int
 		if idStr, ok := r.Meta.ExtraFields["document_id"]; ok {
 			fmt.Sscanf(idStr, "%d", &docID)
 		}
+		// Extraer chunk_title de metadata ExtraFields
+		chunkTitle := ""
+		if title, ok := r.Meta.ExtraFields["chunk_title"]; ok {
+			chunkTitle = title
+		}
+		// Truncar contenido a máximo 500 caracteres
+		snippet := r.Content
+		if len(snippet) > 500 {
+			snippet = snippet[:500] + "..."
+		}
 		sources = append(sources, SourceRef{
-			DocumentID:   docID,
-			DocumentType: r.Meta.Type,
-			Title:        r.Meta.Title,
-			Relevance:    r.Score,
+			DocumentID:     docID,
+			DocumentType:   r.Meta.Type,
+			Title:          r.Meta.Title,
+			ChunkTitle:     chunkTitle,
+			Relevance:      r.Score,
+			ContentSnippet: snippet,
 		})
 	}
 
