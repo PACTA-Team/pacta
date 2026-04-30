@@ -71,8 +71,10 @@ jobs:
       - name: Build with CGo (embedded Qwen2.5-0.5B)
         run: |
           export CGO_ENABLED=1
-          export CGO_CFLAGS="-I$(pwd)/internal/ai/minirag/llama.cpp/include"
-          export CGO_LDFLAGS="-L$(pwd)/internal/ai/minirag/llama.cpp/build -llama -lm -lstdc++ -lpthread"
+          export CGO_CFLAGS="-I$(pwd)/internal/ai/minirag/llama.cpp/include \
+                             -I$(pwd)/internal/ai/minirag/llama.cpp/ggml/include"
+          export CGO_LDFLAGS="-L$(pwd)/internal/ai/minirag/llama.cpp/build/bin \
+                              -lllama -lggml -lggml-base"
           go build -o pacta ./cmd/pacta
         env:
           CGO_ENABLED: 1
