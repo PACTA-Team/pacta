@@ -294,35 +294,7 @@ func TestDeleteLegalDocument(t *testing.T) {
 	}
 }
 
-func TestGetLegalDocumentChunkCount(t *testing.T) {
-	db := setupLegalTestDB(t)
-	defer db.Close()
 
-	ctx := context.Background()
-	now := time.Now()
-
-	arg := CreateLegalDocumentParams{
-		Title:        "Chunked Doc",
-		DocumentType: "law",
-		Content:      "Content",
-		ContentHash:  "chunk456",
-		Language:     "es",
-		Jurisdiction: "Cuba",
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-
-	doc, _ := CreateLegalDocument(ctx, db, arg)
-
-	// Initially 0 chunks
-	count, err := GetLegalDocumentChunkCount(ctx, db, doc.ID)
-	if err != nil {
-		t.Fatalf("GetLegalDocumentChunkCount failed: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("Expected 0 chunks, got %d", count)
-	}
-}
 
 func TestGetAILegalEnabled(t *testing.T) {
 	db := setupLegalTestDB(t)

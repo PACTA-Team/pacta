@@ -1,93 +1,226 @@
 package legal
 
 import (
-	"context"
-	"encoding/json"
-	"testing"
-	"time"
+    "context"
+    "database/sql"
+    "encoding/json"
+    "fmt"
+    "path/filepath"
+    "testing"
+    "time"
 
-	"github.com/PACTA-Team/pacta/internal/ai/minirag"
-	"github.com/PACTA-Team/pacta/internal/db"
-	"github.com/PACTA-Team/pacta/internal/models"
+    _ "modernc.org/sqlite"
+
+    "github.com/PACTA-Team/pacta/internal/ai"
+    "github.com/PACTA-Team/pacta/internal/ai/minirag"
+    "github.com/PACTA-Team/pacta/internal/db"
+    "github.com/PACTA-Team/pacta/internal/models"
 )
 
-// Mock LLM client para tests
-type mockLLM struct{}
+// setupTestDB creates an in-memory SQLite database with necessary tables for legal chat tests.
+func setupTestDB(t *testing.T) *sql.DB {
+    t.Helper()
+    tmpDir := t.TempDir()
+    dbPath := filepath.Join(tmpDir, "test.db")
+    database, err := sql.Open("sqlite", dbPath)
+    if err != nil {
+        t.Fatalf("failed to open test db: %v", err)
+    }
 
-func (m *mockLLM) Complete(ctx context.Context, prompt string) (string, error) {
-	return "Respuesta de prueba del modelo legal", nil
+    // Create legal_documents table
+    _, err = database.Exec(`
+        CREATE TABLE IF NOT EXISTS legal_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            document_type TEXT,
+            source TEXT,
+            content TEXT,
+            content_hash TEXT,
+            language TEXT DEFAULT 'es',
+            jurisdiction TEXT DEFAULT 'Cuba',
+            effective_date TEXT,
+            publication_date TEXT,
+            gaceta_number TEXT,
+            tags TEXT,
+            chunk_count INTEGER DEFAULT 0,
+            indexed_at TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            deleted_at TEXT
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create legal_documents table: %v", err)
+    }
+
+    // Create ai_legal_chat_history table
+    _, err = database.Exec(`
+        CREATE TABLE IF NOT EXISTS ai_legal_chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            session_id TEXT NOT NULL,
+            message_type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            context_documents TEXT,
+            metadata TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create ai_legal_chat_history table: %v", err)
+    }
+
+    // Insert a test legal document
+    doc := &models.LegalDocument{
+        ID:            1,
+        Title:         "Ley de Contratos",
+        DocumentType:  "law",
+        Content:       "Artículo 1. Disposiciones generales. Las contrataciones se rigen por la presente ley.",
+        ContentHash:   "test123",
+        Language:      "es",
+        Jurisdiction:  "Cuba",
+        CreatedAt:     time.Now(),
+        UpdatedAt:     time.Now(),
+    }
+    _, err = database.Exec(`
+        INSERT INTO legal_documents (id, title, document_type, content, content_hash, language, jurisdiction, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, doc.ID, doc.Title, doc.DocumentType, doc.Content, doc.ContentHash, doc.Language, doc.Jurisdiction, doc.CreatedAt, doc.UpdatedAt)
+    if err != nil {
+        t.Fatalf("failed to insert test legal document: %v", err)
+    }
+
+    t.Cleanup(func() {
+        database.Close()
+    })
+
+    return database
 }
 
-func TestChatService_ProcessMessage(t *testing.T) {
-	// Setup test DB (simulado - no haremos DB real en este test unitario)
-	// Usaremos mocks para vectorDB y db
-	svc := NewChatService(nil, nil) //Por ahora, sin dependencias reales
-
-	msg := ChatMessage{
-		SessionID: "test-session",
-		UserID:    1,
-		Content:   "¿Qué dice la ley sobre contratos?",
-	}
-
-	// En esta prueba unitaria simple, solo verificamos que el struct existe
-	if svc == nil {
-		t.Error("ChatService no debería ser nil")
-	}
+// setupTestVectorDB creates a temporary vector database for testing.
+func setupTestVectorDB(t *testing.T) *minirag.VectorDB {
+    t.Helper()
+    tmpDir := t.TempDir()
+    vdb, err := minirag.NewVectorDB(384, tmpDir)
+    if err != nil {
+        t.Fatalf("failed to create vector DB: %v", err)
+    }
+    return vdb
 }
 
-func TestChatService_BuildPrompt(t *testing.T) {
-	svc := NewChatService(nil, nil)
+// TestChatService_Integration tests the full chat flow with RAG and LLM.
+func TestChatService_Integration(t *testing.T) {
+    // Setup dependencies
+    db := setupTestDB(t)
+    vectorDB := setupTestVectorDB(t)
+    embedder := minirag.NewEmbeddingClient("", "") // uses fallback embeddings
+    // Index the test legal document into the vector DB
+    indexer := minirag.NewIndexer(db, vectorDB, embedder)
+    doc := &models.LegalDocument{
+        ID:           1,
+        Title:        "Ley de Contratos",
+        DocumentType: "law",
+        Content:      "Artículo 1. Disposiciones generales. Las contrataciones se rigen por la presente ley.",
+        ContentHash:  "test123",
+        Language:     "es",
+        Jurisdiction: "Cuba",
+        CreatedAt:    time.Now(),
+        UpdatedAt:    time.Now(),
+    }
+    if err := indexer.IndexLegalDocument(doc); err != nil {
+        t.Fatalf("IndexLegalDocument failed: %v", err)
+    }
 
-	query := "¿Puedo pagar en USD?"
-	contextDocs := []SourceRef{
-		{
-			DocumentID:   1,
-			DocumentType: "ley",
-			Title:        "Ley 173/2022",
-			Relevance:    0.95,
-		},
-	}
+    // Prepare LLM client using local CGo mode (placeholder response)
+    localClient := minirag.NewLocalClient("cgo", "qwen2.5-0.5b-instruct-q4_0.gguf", "")
+    llmClient := &ai.LLMClient{
+        Provider:    ai.ProviderCustom,
+        Model:       "qwen2.5-0.5b-instruct-q4_0.gguf",
+        LocalClient: localClient,
+    }
 
-	prompt := svc.buildPrompt(query, contextDocs)
+    // Create chat service
+    svc := legal.NewChatService(db, vectorDB, embedder, llmClient)
 
-	if prompt == "" {
-		t.Error("Prompt no debería estar vacío")
-	}
-	if !contains(prompt, query) {
-		t.Error("Prompt debería contener la pregunta del usuario")
-	}
-	if !contains(prompt, "Ley 173/2022") {
-		t.Error("Prompt debería contener documentos de contexto")
-	}
+    // Process a message
+    msg := legal.ChatMessage{
+        SessionID: "test-session",
+        UserID:    1,
+        Content:   "¿Qué dice el artículo 1?",
+    }
+    answer, err := svc.ProcessMessage(context.Background(), msg)
+    if err != nil {
+        t.Fatalf("ProcessMessage failed: %v", err)
+    }
+    if answer == "" {
+        t.Error("expected non-empty answer")
+    }
+
+    // Verify that messages were stored in DB
+    var count int
+    err = db.QueryRow("SELECT COUNT(*) FROM ai_legal_chat_history WHERE session_id = ?", msg.SessionID).Scan(&count)
+    if err != nil {
+        t.Fatalf("failed to count chat messages: %v", err)
+    }
+    if count != 2 { // user + assistant
+        t.Errorf("expected 2 messages, got %d", count)
+    }
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && indexOf(s, substr) >= 0)
-}
+// TestGetChatHistory tests retrieval of chat history.
+func TestGetChatHistory(t *testing.T) {
+    db := setupTestDB(t)
+    vectorDB := setupTestVectorDB(t)
+    embedder := minirag.NewEmbeddingClient("", "")
+    indexer := minirag.NewIndexer(db, vectorDB, embedder)
+    doc := &models.LegalDocument{
+        ID:           2,
+        Title:        "Ley de Contratos 2",
+        DocumentType: "law",
+        Content:      "Artículo 2. ...",
+        ContentHash:  "test456",
+        Language:     "es",
+        Jurisdiction: "Cuba",
+        CreatedAt:    time.Now(),
+        UpdatedAt:    time.Now(),
+    }
+    if err := indexer.IndexLegalDocument(doc); err != nil {
+        t.Fatalf("IndexLegalDocument failed: %v", err)
+    }
 
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
-}
+    // Setup chat service with LLM placeholder to avoid real calls
+    localClient := minirag.NewLocalClient("cgo", "", "")
+    llmClient := &ai.LLMClient{
+        Provider:    ai.ProviderCustom,
+        LocalClient: localClient,
+    }
+    svc := legal.NewChatService(db, vectorDB, embedder, llmClient)
 
-// Test de integración con DB (requiere DB real)
-func TestChatService_SearchContext_Integration(t *testing.T) {
-	// Skip si no hay DB configurada
-	// En CI, este test se ejecutará con DB real
-}
+    // No messages yet - history should be empty
+    msgs, err := svc.GetChatHistory("nonexistent")
+    if err != nil {
+        t.Fatalf("GetChatHistory error: %v", err)
+    }
+    if len(msgs) != 0 {
+        t.Errorf("expected 0 messages, got %d", len(msgs))
+    }
 
-// Test LLM client
-func TestLocalLLM_Complete(t *testing.T) {
-	llm := NewLocalLLM()
-	if llm == nil {
-		t.Error("NewLocalLLM should not return nil")
-	}
+    // Send a message to create history
+    _, err = svc.ProcessMessage(context.Background(), legal.ChatMessage{
+        SessionID: "sess123",
+        UserID:    2,
+        Content:   "Pregunta de prueba",
+    })
+    if err != nil {
+        t.Fatalf("ProcessMessage failed: %v", err)
+    }
 
-	// El Complete es wrapper de generate
-	// En test unitario, no probamos la integración CGo real
-	_ = llm
+    // Retrieve history
+    msgs, err = svc.GetChatHistory("sess123")
+    if err != nil {
+        t.Fatalf("GetChatHistory failed: %v", err)
+    }
+    if len(msgs) != 2 {
+        t.Errorf("expected 2 messages, got %d", len(msgs))
+    }
 }

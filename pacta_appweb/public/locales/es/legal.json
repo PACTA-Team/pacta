@@ -1,0 +1,50 @@
+{
+  "legalSettings": {
+    "title": "Configuración de Legal AI",
+    "description": "Configure el análisis de documentos legales y asistencia con IA",
+    "enableLabel": "Activar Legal AI",
+    "enableDescription": "Activar análisis de documentos legales y asistencia por chat con IA",
+    "integrationLabel": "Modo de Integración",
+    "integrationDescription": "Elija cómo integrar el sistema Legal AI",
+    "documentManagement": "Gestión de Documentos",
+    "uploadDocument": "Subir Documento",
+    "documentsDescription": "Gestionar documentos legales para análisis con IA",
+    "enabled": "Activado",
+    "disabled": "Desactivado",
+    "toggleSuccess": "Configuración de Legal AI actualizada correctamente",
+    "saveError": "Error al guardar la configuración de Legal AI",
+    "loadError": "Error al cargar la configuración de Legal AI",
+    "uploadSuccess": "Documento subido correctamente",
+    "table": {
+      "title": "Documentos Legales",
+      "type": "Tipo",
+      "chunks": "Fragmentos",
+      "indexed": "Indexado",
+      "created": "Creado",
+      "actions": "Acciones"
+    }
+  },
+  "chat": {
+    "title": "Chat Legal AI",
+    "subtitle": "Obtenga asistencia con documentos legales y análisis mediante IA",
+    "welcome": "Bienvenido al Asistente Legal AI",
+    "welcomeSubtitle": "Haga preguntas sobre sus documentos legales o solicite análisis",
+    "inputPlaceholder": "Escriba su pregunta legal aquí...",
+    "thinking": "Pensando...",
+    "noResponse": "No se recibió respuesta de la IA",
+    "error": "Ocurrió un error al procesar su solicitud",
+    "disclaimer": "El contenido generado por IA puede contener inexactitudes. Verifique siempre con un profesional legal."
+  },
+  "validation": {
+    "title": "Validación de Documentos",
+    "description": "Valide documentos legales y detecte riesgos potenciales",
+    "risksDetected": "riesgos detectados",
+    "overallRisk": "Nivel de Riesgo General",
+    "apply": "Aplicar Cambios",
+    "applyAll": "Aplicar Todo",
+    "close": "Cerrar",
+    "fullAnalysis": "Análisis Completo",
+    "analyzing": "Analizando documento...",
+    "noResults": "No hay resultados de validación disponibles"
+  }
+}

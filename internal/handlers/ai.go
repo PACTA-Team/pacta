@@ -18,6 +18,7 @@ import (
 	"github.com/PACTA-Team/pacta/internal/ai/hybrid"
 	"github.com/PACTA-Team/pacta/internal/ai/legal"
 	"github.com/PACTA-Team/pacta/internal/ai/minirag"
+	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
@@ -200,10 +201,29 @@ func (h *Handler) HandleAI(w http.ResponseWriter, r *http.Request) {
 		h.HandleUploadLegalDocument(w, r)
 	case path == "/legal/chat" && r.Method == http.MethodPost:
 		h.HandleLegalChat(w, r)
-	case path == "/legal/validate" && r.Method == http.MethodPost:
-		h.HandleValidateContract(w, r)
+    case path == "/legal/validate" && r.Method == http.MethodPost:
+        h.HandleValidateContract(w, r)
+    case strings.HasPrefix(path, "/legal/documents/") && strings.HasSuffix(path, "/reindex") && r.Method == http.MethodPost:
+        // Extract document ID from path
+        idStr := strings.TrimPrefix(path, "/legal/documents/")
+        idStr = strings.TrimSuffix(idStr, "/reindex")
+        idStr = strings.Trim(idStr, "/")
+        if idStr == "" {
+            h.Error(w, http.StatusBadRequest, "Document ID required")
+            return
+        }
+        id, err := strconv.Atoi(idStr)
+        if err != nil {
+            h.Error(w, http.StatusBadRequest, "Invalid document ID")
+            return
+        }
+        h.HandleReindexLegalDocument(w, r, id)
+    case path == "/legal/suggest-clauses" && r.Method == http.MethodGet:
+        h.HandleSuggestClauses(w, r)
+    case path == "/legal/chat/history" && r.Method == http.MethodGet:
+        h.HandleLegalChatHistory(w, r)
 
-	default:
+    default:
 		h.Error(w, http.StatusNotFound, "AI endpoint not found")
 	}
 }
@@ -810,71 +830,108 @@ func (h *Handler) HandleListLegalDocuments(w http.ResponseWriter, r *http.Reques
 func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Parse multipart form
-	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB max
-		h.Error(w, http.StatusBadRequest, "Failed to parse form: "+err.Error())
-		return
-	}
-
-	// Get file
-	file, header, err := r.FormFile("file")
+	// Check if legal AI is enabled
+	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
 	if err != nil {
-		h.Error(w, http.StatusBadRequest, "Missing file: "+err.Error())
+		log.Printf("[Legal Upload] Failed to get enabled status: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
 		return
 	}
-	defer file.Close()
-
-	// Validate file type
-	if header.Size > 50<<20 { // 50MB max
-		h.Error(w, http.StatusBadRequest, "File too large (max 50MB)")
-		return
-	}
-
-	// Read file content
-	contentBytes, err := io.ReadAll(file)
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "Failed to read file")
+	if !enabled {
+		h.Error(w, http.StatusForbidden, "AI legal features are disabled")
 		return
 	}
 
-	// TODO: Extract text from PDF/DOCX using pdfcpu or Tika
-	// For now, assume plain text content
-	content := string(contentBytes)
+	// Determine request type: multipart or JSON
+	contentType := r.Header.Get("Content-Type")
+	var (
+		title       string
+		docType     string
+		jurisdiction string
+		content     string
+		contentHash string
+		err         error
+	)
 
-	// Get form fields
-	title := r.FormValue("title")
-	docType := r.FormValue("document_type")
-	jurisdiction := r.FormValue("jurisdiction")
-	if jurisdiction == "" {
-		jurisdiction = "Cuba"
+	if strings.HasPrefix(contentType, "application/json") {
+		// JSON payload
+		var req struct {
+			Title        string `json:"title"`
+			DocumentType string `json:"document_type"`
+			Content      string `json:"content"`
+			Language     string `json:"language,omitempty"`
+			Jurisdiction string `json:"jurisdiction,omitempty"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.Error(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+			return
+		}
+		title = req.Title
+		docType = req.DocumentType
+		content = req.Content
+		if req.Jurisdiction == "" {
+			jurisdiction = "Cuba"
+		} else {
+			jurisdiction = req.Jurisdiction
+		}
+		// Generate a simple hash for deduplication
+		contentHash = fmt.Sprintf("%x", []byte(content)[:16])
+	} else {
+		// Multipart form upload
+		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB max
+			h.Error(w, http.StatusBadRequest, "Failed to parse form: "+err.Error())
+			return
+		}
+
+		// Get file
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			h.Error(w, http.StatusBadRequest, "Missing file: "+err.Error())
+			return
+		}
+		defer file.Close()
+
+		// Validate file size
+		if header.Size > 50<<20 { // 50MB max
+			h.Error(w, http.StatusBadRequest, "File too large (max 50MB)")
+			return
+		}
+
+		// Read file content
+		contentBytes, err := io.ReadAll(file)
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "Failed to read file")
+			return
+		}
+
+		// Extract text from PDF if needed
+		content = string(contentBytes)
+		filename := header.Filename
+		if strings.HasSuffix(strings.ToLower(filename), ".pdf") {
+			parser := minirag.NewParsePDF()
+			extracted, err := parser.Parse(contentBytes)
+			if err != nil {
+				log.Printf("[Legal Upload] PDF parse warning: %v", err)
+			} else {
+				content = extracted
+			}
+		}
+		// Note: DOCX extraction can be added later
+
+		// Get form fields
+		title = r.FormValue("title")
+		docType = r.FormValue("document_type")
+		jurisdiction = r.FormValue("jurisdiction")
+		if jurisdiction == "" {
+			jurisdiction = "Cuba"
+		}
+		if title == "" || docType == "" {
+			h.Error(w, http.StatusBadRequest, "title and document_type are required")
+			return
+		}
+		// Generate hash
+		contentHash = fmt.Sprintf("%x", []byte(content)[:16])
 	}
-
-	if title == "" || docType == "" {
-		h.Error(w, http.StatusBadRequest, "title and document_type are required")
-		return
-	}
-
-	// Get company ID (for multi-company support, default 1)
-	companyID := h.GetCompanyID(r)
-	if companyID == 0 {
-		companyID = 1
-	}
-
-	// Create legal document record
-	now := time.Now()
-	contentHash := fmt.Sprintf("%x", []byte(content)[:16]) // simple hash for dedup
-
-	doc, err := db.CreateLegalDocument(ctx, h.DB, db.CreateLegalDocumentParams{
-		Title:         title,
-		DocumentType:  docType,
-		Source:        header.Filename,
-		Content:       content,
-		ContentHash:   contentHash,
-		Language:      "es",
-		Jurisdiction:  jurisdiction,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	})
 	if err != nil {
 		log.Printf("[Legal Upload] Create failed: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to save document")
@@ -890,14 +947,34 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		// Use parser (already exists)
-		chunks := legal.ParseByArticles(content)
+		// Create embedder and indexer
+		embedder := minirag.NewEmbeddingClient("", "")
+		indexer := minirag.NewIndexer(h.DB, vectorDB, embedder)
 
-		// Generate embeddings (simplified - would use real embedder)
-		// For now, skip actual embedding insertion since it requires vector DB integration
-		// Just update indexed_at
-		_ = db.UpdateLegalDocumentIndexedAt(ctx, h.DB, doc.ID, len(chunks))
-		log.Printf("[Legal Index] Indexed document %d with %d chunks", doc.ID, len(chunks))
+		// Build models.LegalDocument using stored doc and extracted content
+		legalDoc := &models.LegalDocument{
+			ID:            doc.ID,
+			Title:         doc.Title,
+			DocumentType:  doc.DocumentType,
+			Source:        doc.Source,
+			Content:       content,
+			ContentHash:   doc.ContentHash,
+			Language:      doc.Language,
+			Jurisdiction:  doc.Jurisdiction,
+			EffectiveDate: doc.EffectiveDate,
+			PublicationDate: doc.PublicationDate,
+			GacetaNumber:  doc.GacetaNumber,
+			Tags:          doc.Tags,
+			CreatedAt:     doc.CreatedAt,
+			UpdatedAt:     doc.UpdatedAt,
+		}
+
+		// Index the document (chunking, embedding, storing)
+		if err := indexer.IndexLegalDocument(legalDoc); err != nil {
+			log.Printf("[Legal Index] Failed to index document %d: %v", doc.ID, err)
+		} else {
+			log.Printf("[Legal Index] Successfully indexed document %d with RAG", doc.ID)
+		}
 	}()
 
 	h.success(w, http.StatusCreated, map[string]interface{}{
@@ -912,6 +989,18 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 // HandleLegalChat handles chat messages with the legal AI expert
 func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	// Check if legal AI is enabled
+	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+	if err != nil {
+		log.Printf("[Legal Chat] Failed to get enabled status: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
+		return
+	}
+	if !enabled {
+		h.Error(w, http.StatusForbidden, "AI legal features are disabled")
+		return
+	}
 
 	// Decode request
 	var req struct {
@@ -953,8 +1042,49 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create chat service
-	chatSvc := legal.NewChatService(h.DB, vectorDB)
+	// Create embedder for RAG
+	embedder := minirag.NewEmbeddingClient("", "")
+
+	// Determine LLM client based on RAG configuration
+	llmClient := h.LLMClient
+	if llmClient == nil {
+		// Check RAG mode to decide local vs external
+		mode, localMode, localModel, _, _, _, err := h.getRAGConfig()
+		if err != nil {
+			log.Printf("[Legal Chat] Failed to get RAG config: %v", err)
+			// Fallback: return a simple response for testing/disabled AI
+			h.success(w, http.StatusOK, map[string]interface{}{
+				"session_id": req.SessionID,
+				"reply":      "Respuesta de experto legal no disponible (sin configuración de IA).",
+			})
+			return
+		}
+		if mode == "local" || mode == "hybrid" {
+			// Use local LLM (CGo or Ollama depending on localMode)
+			localClient := minirag.NewLocalClient(localMode, localModel, "")
+			llmClient = &ai.LLMClient{
+				Provider:    ai.ProviderCustom,
+				Model:       localModel,
+				LocalClient: localClient,
+			}
+		} else {
+			// External provider (OpenAI, Groq, etc.)
+			provider, apiKey, model, endpoint, err := h.getAIConfig()
+			if err != nil {
+				log.Printf("[Legal Chat] Failed to get AI config: %v", err)
+				// Fallback: return a simple response
+				h.success(w, http.StatusOK, map[string]interface{}{
+					"session_id": req.SessionID,
+					"reply":      "Respuesta de experto legal no disponible (sin configuración de IA).",
+				})
+				return
+			}
+			llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
+		}
+	}
+
+	// Create chat service with dependencies
+	chatSvc := legal.NewChatService(h.DB, vectorDB, embedder, llmClient)
 
 	// Process message
 	response, err := chatSvc.ProcessMessage(ctx, legal.ChatMessage{
@@ -978,6 +1108,18 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// Check if legal AI is enabled
+	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+	if err != nil {
+		log.Printf("[Legal Validate] Failed to get enabled status: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
+		return
+	}
+	if !enabled {
+		h.Error(w, http.StatusForbidden, "AI legal features are disabled")
+		return
+	}
+
 	var req struct {
 		ContractText string `json:"contract_text"`
 		ContractType string `json:"contract_type"`
@@ -992,28 +1134,58 @@ func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get company vector DB
+	// Get company ID (may be used for future RAG integration)
 	companyID := h.GetCompanyID(r)
 	if companyID == 0 {
 		companyID = 1
 	}
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
-	if err != nil {
-		log.Printf("[Legal Validate] Failed to get vector DB: %v", err)
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
-		return
-	}
-
-	// Create chat service (reuse for validation)
-	chatSvc := legal.NewChatService(h.DB, vectorDB)
+	_ = companyID // currently unused, kept for future use
 
 	// Build prompt for validation
 	validationPrompt := ai.BuildValidationPrompt(req.ContractText, []string{})
 
-	// Get LLM response using the LLM client (similar to chat)
-	// For MVP, use LocalLLM simple completion
-	llm := legal.NewLocalLLM()
-	answer, err := llm.Complete(ctx, validationPrompt)
+	// Determine LLM client (same logic as HandleLegalChat)
+	llmClient := h.LLMClient
+	if llmClient == nil {
+		// Check RAG configuration to decide local vs external
+		mode, localMode, localModel, _, _, _, err := h.getRAGConfig()
+		if err != nil {
+			log.Printf("[Legal Validate] Failed to get RAG config: %v", err)
+			// Fallback: return a canned validation response for testing/disabled AI
+			h.success(w, http.StatusOK, map[string]interface{}{
+				"contract_type": req.ContractType,
+				"analysis":      "Análisis no disponible: falta configuración de IA.",
+				"status":        "completed",
+			})
+			return
+		}
+		if mode == "local" || mode == "hybrid" {
+			// Use local LLM (CGo or Ollama depending on localMode)
+			localClient := minirag.NewLocalClient(localMode, localModel, "")
+			llmClient = &ai.LLMClient{
+				Provider:    ai.ProviderCustom,
+				Model:       localModel,
+				LocalClient: localClient,
+			}
+		} else {
+			// External provider (OpenAI, Groq, etc.)
+			provider, apiKey, model, endpoint, err := h.getAIConfig()
+			if err != nil {
+				log.Printf("[Legal Validate] Failed to get AI config: %v", err)
+				// Fallback: return a canned validation response
+				h.success(w, http.StatusOK, map[string]interface{}{
+					"contract_type": req.ContractType,
+					"analysis":      "Análisis no disponible: falta configuración de IA.",
+					"status":        "completed",
+				})
+				return
+			}
+			llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
+		}
+	}
+
+	// Generate validation answer
+	answer, err := llmClient.Generate(ctx, validationPrompt, "")
 	if err != nil {
 		log.Printf("[Legal Validate] LLM failed: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Validation failed")
@@ -1029,4 +1201,173 @@ func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.success(w, http.StatusOK, response)
+}
+
+// HandleReindexLegalDocument re-indexes a legal document into the vector database
+func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Request, id int) {
+	ctx := r.Context()
+
+	// Retrieve the legal document from the database
+	docRow, err := db.GetLegalDocument(ctx, h.DB, int64(id))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.Error(w, http.StatusNotFound, "Document not found")
+		} else {
+			h.Error(w, http.StatusInternalServerError, "Database error: "+err.Error())
+		}
+		return
+	}
+
+	// Get company ID for vector DB (documents are indexed per company)
+	companyID := h.GetCompanyID(r)
+	if companyID == 0 {
+		companyID = 1 // default company
+	}
+
+	// Get or create vector DB for this company
+	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		return
+	}
+
+	// Delete existing chunks for this document from the vector DB
+	for i := 0; i < docRow.ChunkCount; i++ {
+		chunkID := fmt.Sprintf("legal_%d_chunk_%d", id, i)
+		if err := vectorDB.DeleteDocument(chunkID); err != nil {
+			log.Printf("[Reindex] warning: failed to delete chunk %s: %v", chunkID, err)
+		}
+	}
+
+	// Convert to models.LegalDocument for indexing
+	legalDoc := &models.LegalDocument{
+		ID:            docRow.ID,
+		Title:         docRow.Title,
+		DocumentType:  docRow.DocumentType,
+		Source:        docRow.Source,
+		Content:       docRow.Content,
+		ContentHash:   docRow.ContentHash,
+		Language:      docRow.Language,
+		Jurisdiction:  docRow.Jurisdiction,
+		EffectiveDate: docRow.EffectiveDate,
+		PublicationDate: docRow.PublicationDate,
+		GacetaNumber:  docRow.GacetaNumber,
+		Tags:          docRow.Tags,
+		CreatedAt:     docRow.CreatedAt,
+		UpdatedAt:     docRow.UpdatedAt,
+	}
+
+	// Create embedder and indexer
+	embedder := minirag.NewEmbeddingClient("", "")
+	indexer := minirag.NewIndexer(h.DB, vectorDB, embedder)
+
+	// Re-index the document
+	if err := indexer.IndexLegalDocument(legalDoc); err != nil {
+		log.Printf("[Reindex] Failed to index document %d: %v", id, err)
+		h.Error(w, http.StatusInternalServerError, "Indexing failed: "+err.Error())
+		return
+	}
+
+	h.success(w, http.StatusOK, map[string]interface{}{
+		"status":      "reindexed",
+		"document_id": id,
+	})
+}
+
+// HandleSuggestClauses returns suggested clauses based on contract type
+func (h *Handler) HandleSuggestClauses(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	contractType := r.URL.Query().Get("type")
+	if contractType == "" {
+		h.Error(w, http.StatusBadRequest, "Query parameter 'type' is required")
+		return
+	}
+
+	companyID := h.GetCompanyID(r)
+	if companyID == 0 {
+		companyID = 1 // default
+	}
+	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "Failed to get vector DB")
+		return
+	}
+
+	embedder := minirag.NewEmbeddingClient("", "")
+	embedding, err := embedder.GenerateEmbedding(contractType)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "Failed to generate embedding for query")
+		return
+	}
+
+	// Filter for clause model documents
+	filter := map[string]interface{}{
+		"type":         "modelo_contrato",
+		"jurisdiction": "Cuba",
+	}
+	results, err := vectorDB.SearchLegalDocuments(embedding, filter, 5)
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "Search failed")
+		return
+	}
+
+	type Suggestion struct {
+		ID    int     `json:"id"`
+		Title string  `json:"title"`
+		Score float32 `json:"score,omitempty"`
+	}
+	suggestions := make([]Suggestion, 0, len(results))
+	for _, res := range results {
+		var docID int
+		fmt.Sscanf(res.Meta.ExtraFields["document_id"], "%d", &docID)
+		suggestions = append(suggestions, Suggestion{
+			ID:    docID,
+			Title: res.Meta.Title,
+			Score: res.Score,
+		})
+	}
+
+	h.success(w, http.StatusOK, map[string]interface{}{
+		"suggestions": suggestions,
+		"type":        contractType,
+	})
+}
+
+// HandleLegalChatHistory returns the chat history for a given session
+func (h *Handler) HandleLegalChatHistory(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.URL.Query().Get("session_id")
+	if sessionID == "" {
+		h.Error(w, http.StatusBadRequest, "session_id query parameter is required")
+		return
+	}
+
+	messages, err := db.ListLegalChatMessages(r.Context(), h.DB, sessionID)
+	if err != nil {
+		log.Printf("[Legal Chat History] Failed: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to retrieve chat history")
+		return
+	}
+
+	type outMsg struct {
+		ID          int64     `json:"id"`
+		UserID      int64     `json:"user_id"`
+		MessageType string    `json:"message_type"`
+		Content     string    `json:"content"`
+		CreatedAt   time.Time `json:"created_at"`
+	}
+	out := make([]outMsg, len(messages))
+	for i, m := range messages {
+		out[i] = outMsg{
+			ID:          m.ID,
+			UserID:      m.UserID,
+			MessageType: m.MessageType,
+			Content:     m.Content,
+			CreatedAt:   m.CreatedAt,
+		}
+	}
+
+	h.success(w, http.StatusOK, map[string]interface{}{
+		"session_id": sessionID,
+		"messages":   out,
+	})
 }

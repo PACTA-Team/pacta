@@ -60,10 +60,11 @@ export const api = {
     return apiRequest<T>(url, { method: 'GET' });
   },
 
-  post: <T = any>(endpoint: string, data?: any) =>
+  post: <T = any>(endpoint: string, data?: any, customHeaders?: HeadersInit) =>
     apiRequest<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
+      ...(data instanceof FormData ? {} : { headers: { 'Content-Type': 'application/json', ...customHeaders } }),
     }),
 
   put: <T = any>(endpoint: string, data?: any) =>

@@ -1,0 +1,50 @@
+{
+  "legalSettings": {
+    "title": "Legal AI Settings",
+    "description": "Configure AI-powered legal document analysis and assistance",
+    "enableLabel": "Enable Legal AI",
+    "enableDescription": "Activate AI-powered legal document analysis and chat assistance",
+    "integrationLabel": "Integration Mode",
+    "integrationDescription": "Choose how to integrate the Legal AI system",
+    "documentManagement": "Document Management",
+    "uploadDocument": "Upload Document",
+    "documentsDescription": "Manage legal documents for AI analysis",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "toggleSuccess": "Legal AI settings updated successfully",
+    "saveError": "Failed to save Legal AI settings",
+    "loadError": "Failed to load Legal AI settings",
+    "uploadSuccess": "Document uploaded successfully",
+    "table": {
+      "title": "Legal Documents",
+      "type": "Type",
+      "chunks": "Chunks",
+      "indexed": "Indexed",
+      "created": "Created",
+      "actions": "Actions"
+    }
+  },
+  "chat": {
+    "title": "Legal AI Chat",
+    "subtitle": "Get AI-powered assistance with legal documents and analysis",
+    "welcome": "Welcome to Legal AI Assistant",
+    "welcomeSubtitle": "Ask questions about your legal documents or request analysis",
+    "inputPlaceholder": "Type your legal question here...",
+    "thinking": "Thinking...",
+    "noResponse": "No response received from AI",
+    "error": "An error occurred while processing your request",
+    "disclaimer": "AI-generated content may contain inaccuracies. Always verify with a legal professional."
+  },
+  "validation": {
+    "title": "Document Validation",
+    "description": "Validate legal documents and detect potential risks",
+    "risksDetected": "risks detected",
+    "overallRisk": "Overall Risk Level",
+    "apply": "Apply Changes",
+    "applyAll": "Apply All",
+    "close": "Close",
+    "fullAnalysis": "Full Analysis",
+    "analyzing": "Analyzing document...",
+    "noResults": "No validation results available"
+  }
+}

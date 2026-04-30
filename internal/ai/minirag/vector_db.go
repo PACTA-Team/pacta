@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+
+	"github.com/PACTA-Team/pacta/internal/ai/legal"
 )
 
 // VectorDB represents a local vector database using HNSW for similarity search
@@ -47,8 +49,6 @@ type LegalDocumentMetadata struct {
 	Jurisdiction string `json:"jurisdiction"`
 	Language     string `json:"language"`
 	ChunkTitle   string `json:"chunk_title,omitempty"`
-	Source       string `json:"source"`
-	Content      string `json:"content,omitempty"`
 }
 
 // hnswIndex is a simple HNSW implementation for vector similarity search
@@ -182,15 +182,12 @@ func (db *VectorDB) GetDocument(id string) (DocumentMeta, bool) {
 }
 
 // AddLegalDocumentChunks adds legal document chunks to vector DB
-func (db *VectorDB) AddLegalDocumentChunks(chunks []string, chunkTitles []string, metadata LegalDocumentMetadata, embeddings [][]float32) error {
+func (db *VectorDB) AddLegalDocumentChunks(chunks []legal.Chunk, metadata LegalDocumentMetadata, embeddings [][]float32) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
 	if len(chunks) != len(embeddings) {
 		return fmt.Errorf("chunks length %d != embeddings length %d", len(chunks), len(embeddings))
-	}
-	if chunkTitles != nil && len(chunkTitles) != len(chunks) {
-		return fmt.Errorf("chunkTitles length %d != chunks length %d", len(chunkTitles), len(chunks))
 	}
 
 	docID := fmt.Sprintf("legal_%d", metadata.DocumentID)
@@ -210,24 +207,18 @@ func (db *VectorDB) AddLegalDocumentChunks(chunks []string, chunkTitles []string
 		// Create chunk ID
 		chunkID := fmt.Sprintf("%s_chunk_%d", docID, i)
 
-		// Get chunk title if available
-		chunkTitle := ""
-		if chunkTitles != nil && i < len(chunkTitles) {
-			chunkTitle = chunkTitles[i]
-		}
-
 		// Store metadata
 		meta := DocumentMeta{
 			ID:      chunkID,
 			Title:   metadata.Title,
 			Type:    metadata.DocumentType,
 			Source:  "legal",
-			Content: chunk,
+			Content: chunk.Text,
 			ExtraFields: map[string]string{
 				"document_id":  fmt.Sprintf("%d", metadata.DocumentID),
 				"jurisdiction": metadata.Jurisdiction,
 				"language":     metadata.Language,
-				"chunk_title":  chunkTitle,
+				"chunk_title":  chunk.Title,
 			},
 		}
 
@@ -244,12 +235,12 @@ func (db *VectorDB) AddLegalDocumentChunks(chunks []string, chunkTitles []string
 }
 
 // SearchLegalDocuments searches within legal document chunks
-func (db *VectorDB) SearchLegalDocuments(query []float32, filter map[string]interface{}, limit int) []SearchResult {
+func (db *VectorDB) SearchLegalDocuments(query []float32, filter map[string]interface{}, limit int) ([]SearchResult, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
 	if len(db.index.nodes) == 0 || limit <= 0 {
-		return nil
+		return nil, nil
 	}
 
 	normQuery := normalizeVector(query)
@@ -295,7 +286,7 @@ func (db *VectorDB) SearchLegalDocuments(query []float32, filter map[string]inte
 		}
 	}
 
-	return results
+	return results, nil
 }
 
 // DeleteDocument removes a document from the index

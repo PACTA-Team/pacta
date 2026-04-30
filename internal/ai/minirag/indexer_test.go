@@ -8,7 +8,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"pacta/internal/models"
+	"github.com/PACTA-Team/pacta/internal/models"
 )
 
 // mockEmbeddingClient is a test client that returns deterministic embeddings
@@ -81,21 +81,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to create legal_documents table: %v", err)
 	}
 
-	// Create document_chunks table
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS document_chunks (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			document_id INTEGER,
-			source TEXT,
-			chunk_text TEXT,
-			embedding TEXT,
-			metadata TEXT,
-			created_at TEXT DEFAULT (datetime('now'))
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create document_chunks table: %v", err)
-	}
+	// Note: document_chunks table is no longer used (VectorDB persisted as JSON)
+	// No need to create it
 
 	// Insert a test document
 	doc := &models.LegalDocument{
@@ -169,13 +156,13 @@ Las contrataciones se rigen por la presente ley.`
 	}
 
 	// Verify chunks were created in vector DB
-	count := vectorDB.Count()
-	if count == 0 {
+	vectorCount := vectorDB.Count()
+	if vectorCount == 0 {
 		t.Error("Expected chunks to be created in vector DB")
 	}
 
 	// Verify chunks have correct metadata
-	for i := 0; i < count; i++ {
+	for i := 0; i < vectorCount; i++ {
 		chunkID := fmt.Sprintf("legal_%d_chunk_%d", doc.ID, i)
 		meta, ok := vectorDB.GetDocument(chunkID)
 		if !ok {
@@ -188,5 +175,19 @@ Las contrataciones se rigen por la presente ley.`
 		if meta.ExtraFields["jurisdiction"] != "Cuba" {
 			t.Errorf("Expected jurisdiction 'Cuba', got '%s'", meta.ExtraFields["jurisdiction"])
 		}
+	}
+
+	// Verify legal_documents table: chunk_count and indexed_at updated
+	var dbChunkCount int
+	var indexedAt sql.NullTime
+	err = db.QueryRow("SELECT chunk_count, indexed_at FROM legal_documents WHERE id = ?", doc.ID).Scan(&dbChunkCount, &indexedAt)
+	if err != nil {
+		t.Fatalf("Failed to query legal_documents: %v", err)
+	}
+	if dbChunkCount != vectorCount {
+		t.Errorf("chunk_count mismatch: DB=%d, VectorDB=%d", dbChunkCount, vectorCount)
+	}
+	if !indexedAt.Valid {
+		t.Error("indexed_at should be set after indexing")
 	}
 }

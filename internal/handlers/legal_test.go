@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -119,26 +120,36 @@ func TestUploadLegalDocument(t *testing.T) {
 	// Set ai_legal_enabled = true
 	db.Exec(`INSERT INTO system_settings (key, value, category) VALUES ('ai_legal_enabled', 'true', 'ai')`)
 
-	body := map[string]interface{}{
-		"title":         "Test Law",
-		"document_type": "law",
-		"content":       "Artículo 1...",
-		"language":      "es",
+	// Build multipart form data with a file and fields
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	// File part
+	fw, err := w.CreateFormFile("file", "test.txt")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
 	}
-	jsonBody, _ := json.Marshal(body)
+	fw.Write([]byte("Artículo 1. Disposiciones generales."))
+	// Form fields
+	w.WriteField("title", "Test Law")
+	w.WriteField("document_type", "law")
+	w.WriteField("jurisdiction", "Cuba")
+	// Close writer
+	if err := w.Close(); err != nil {
+		t.Fatalf("multipart close: %v", err)
+	}
 
-	req := httptest.NewRequest("POST", "/api/ai/legal/documents", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/ai/legal/documents", &b)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	rr := httptest.NewRecorder()
 
-	handler.HandleUploadLegalDocument(w, req)
+	handler.HandleUploadLegalDocument(rr, req)
 
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d. Body: %s", w.Code, w.Body.String())
+	if rr.Code != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d. Body: %s", rr.Code, rr.Body.String())
 	}
 
 	var resp map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&resp)
+	json.NewDecoder(rr.Body).Decode(&resp)
 
 	if resp["id"] == nil {
 		t.Error("Expected document ID in response")

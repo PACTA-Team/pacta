@@ -22,7 +22,8 @@ import esDashboard from '../../public/locales/es/dashboard.json';
 import esDownload from '../../public/locales/es/download.json';
 import esChangelog from '../../public/locales/es/changelog.json';
 import esProfile from '../../public/locales/es/profile.json';
-
+import esLegal from '../../public/locales/es/legal.json';
+ 
 // Import English translations
 import enCommon from '../../public/locales/en/common.json';
 import enLanding from '../../public/locales/en/landing.json';
@@ -43,7 +44,8 @@ import enDashboard from '../../public/locales/en/dashboard.json';
 import enDownload from '../../public/locales/en/download.json';
 import enChangelog from '../../public/locales/en/changelog.json';
 import enProfile from '../../public/locales/en/profile.json';
-
+import enLegal from '../../public/locales/en/legal.json';
+ 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -69,6 +71,7 @@ i18n
         download: esDownload,
         changelog: esChangelog,
         profile: esProfile,
+        legal: esLegal,
       },
       en: {
         common: enCommon,
@@ -90,11 +93,12 @@ i18n
         download: enDownload,
         changelog: enChangelog,
         profile: enProfile,
+        legal: enLegal,
       },
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'es'],
-    ns: ['common', 'landing', 'login', 'setup', 'contracts', 'clients', 'suppliers', 'supplements', 'reports', 'settings', 'documents', 'notifications', 'signers', 'companies', 'pending', 'dashboard', 'download', 'changelog', 'profile'],
+    ns: ['common', 'landing', 'login', 'setup', 'contracts', 'clients', 'suppliers', 'supplements', 'reports', 'settings', 'documents', 'notifications', 'signers', 'companies', 'pending', 'dashboard', 'download', 'changelog', 'profile', 'legal'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false,

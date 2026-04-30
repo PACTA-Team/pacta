@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"pacta/internal/ai/legal"
-	"pacta/internal/models"
+	"github.com/PACTA-Team/pacta/internal/ai/legal"
+	"github.com/PACTA-Team/pacta/internal/models"
 )
 
 // Indexer handles automatic indexing of contracts into the vector database
@@ -211,6 +211,11 @@ func nullString(s sql.NullString) string {
 	return ""
 }
 
+// embedText generates embedding for a single text using the embedder
+func (i *Indexer) embedText(text string) ([]float32, error) {
+	return i.Embedder.GenerateEmbedding(text)
+}
+
 // ClearIndex removes all documents from the vector database
 func (idx *Indexer) ClearIndex() error {
 	// This is a simplified version - in production, you'd want to properly clear
@@ -246,18 +251,14 @@ func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
 	// Add overlap between chunks using legal.MergeChunksWithOverlap
 	chunks = legal.MergeChunksWithOverlap(chunks, 50)
 
-	// Extract chunk texts and titles
-	chunkTexts := make([]string, len(chunks))
-	chunkTitles := make([]string, len(chunks))
+	// Generate embeddings for each chunk using embedText helper
+	embeddings := make([][]float32, len(chunks))
 	for i, chunk := range chunks {
-		chunkTexts[i] = chunk.Text
-		chunkTitles[i] = chunk.Title
-	}
-
-	// Generate embeddings for each chunk
-	embeddings, err := idx.Embedder.GenerateBatchEmbeddings(chunkTexts)
-	if err != nil {
-		return fmt.Errorf("failed to generate embeddings: %w", err)
+		embedding, err := idx.embedText(chunk.Text)
+		if err != nil {
+			return fmt.Errorf("failed to generate embedding for chunk %d: %w", i, err)
+		}
+		embeddings[i] = embedding
 	}
 
 	// Store in vector DB using AddLegalDocumentChunks
@@ -267,12 +268,22 @@ func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
 		Title:        doc.Title,
 		Jurisdiction: doc.Jurisdiction,
 		Language:     doc.Language,
-		Source:       "legal",
 	}
 
-	err = idx.VectorDB.AddLegalDocumentChunks(chunkTexts, chunkTitles, legalMeta, embeddings)
+	err := idx.VectorDB.AddLegalDocumentChunks(chunks, legalMeta, embeddings)
 	if err != nil {
 		return fmt.Errorf("failed to add chunks to vector DB: %w", err)
+	}
+
+	// Update document chunk count and indexed timestamp
+	now := time.Now()
+	_, err = idx.DB.Exec(`
+		UPDATE legal_documents
+		SET chunk_count = ?, indexed_at = ?
+		WHERE id = ?
+	`, len(chunks), &now, doc.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update document chunk count: %w", err)
 	}
 
 	return nil
@@ -288,5 +299,22 @@ func (idx *Indexer) Search(queryText string, k int) ([]SearchResult, error) {
 
 	// Search vector database
 	results := idx.VectorDB.Search(embedding, k)
+	return results, nil
+}
+
+// SearchLegalDocuments searches within legal document chunks using a text query
+func (idx *Indexer) SearchLegalDocuments(query string, filter map[string]interface{}, limit int) ([]SearchResult, error) {
+	// Generate embedding for query
+	embedding, err := idx.embedText(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+	}
+
+	// Search vector database
+	results, err := idx.VectorDB.SearchLegalDocuments(embedding, filter, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search legal documents: %w", err)
+	}
+
 	return results, nil
 }

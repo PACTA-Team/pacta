@@ -17,11 +17,22 @@ const (
 
 var AppVersion = "0.46.3"
 
+// RAGConfig holds configuration for Retrieval-Augmented Generation
+type RAGConfig struct {
+    Mode              string `env:"RAG_MODE" default:"external"`
+    LocalMode         string `env:"RAG_LOCAL_MODE" default:"cgo"`
+    LocalModel        string `env:"RAG_LOCAL_MODEL" default:"qwen2.5-0.5b-instruct-q4_0.gguf"`
+    EmbeddingModel    string `env:"RAG_EMBEDDING_MODEL" default:"all-minilm-l6-v2"`
+    HybridStrategy    string `env:"RAG_HYBRID_STRATEGY" default:"local-first"`
+    HybridRerank      bool   `env:"RAG_HYBRID_RERANK" default:"true"`
+}
+
 type Config struct {
 	Addr             string
 	DataDir          string
 	Version          string
 	AIEncryptionKey  string `env:"AI_ENCRYPTION_KEY"` // AES key for encrypting AI API keys (16/24/32 bytes)
+	RAG              RAGConfig
 }
 
 func Default() *Config {

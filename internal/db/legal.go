@@ -314,17 +314,7 @@ func DeleteLegalDocument(ctx context.Context, db *sql.DB, id int64) error {
 	return err
 }
 
-// GetLegalDocumentChunkCount returns number of chunks for a legal document
-func GetLegalDocumentChunkCount(ctx context.Context, db *sql.DB, id int) (int, error) {
-	row := db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM document_chunks
-		WHERE document_id = $1 AND source = 'legal'
-	`, id)
 
-	var count int
-	err := row.Scan(&count)
-	return count, err
-}
 
 // ========== LEGAL CHAT ==========
 
@@ -400,50 +390,7 @@ func ListLegalChatMessages(ctx context.Context, db *sql.DB, sessionID string) ([
 
 // ========== SIMILARITY SEARCH ==========
 
-// FindSimilarLegalChunks searches for similar document chunks using vector similarity
-// Note: For SQLite, we use a simple text-based similarity as fallback since pgvector is not available
-// The actual vector search is handled by the VectorDB HNSW implementation
-func FindSimilarLegalChunks(ctx context.Context, db *sql.DB, embedding string, limit int) ([]struct {
-	ID         int
-	Content    string
-	Metadata   string
-	Similarity float64
-}, error) {
-	rows, err := db.QueryContext(ctx, `
-		SELECT id, content, metadata, 0.0 as similarity
-		FROM document_chunks
-		WHERE source = 'legal'
-		ORDER BY id
-		LIMIT $1
-	`, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
-	var results []struct {
-		ID         int
-		Content    string
-		Metadata   string
-		Similarity float64
-	}
-
-	for rows.Next() {
-		var r struct {
-			ID         int
-			Content    string
-			Metadata   string
-			Similarity float64
-		}
-		err := rows.Scan(&r.ID, &r.Content, &r.Metadata, &r.Similarity)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, r)
-	}
-
-	return results, rows.Err()
-}
 
 // ========== CHAT SESSIONS ==========
 

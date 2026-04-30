@@ -36,7 +36,8 @@ const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage/HistoryPage'));
-
+const AILegalChatPage = lazy(() => import('./pages/AILegalChatPage'));
+ 
 // Loading fallback component
 const PageLoadingFallback = () => (
   <div className="flex h-screen items-center justify-center" role="status" aria-live="polite">
@@ -180,6 +181,13 @@ function App() {
               <ProtectedRoute>
                 <Suspense fallback={<PageLoadingFallback />}>
                   <AppLayout><HistoryPage /></AppLayout>
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/ai-legal/chat" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <AppLayout><AILegalChatPage /></AppLayout>
                 </Suspense>
               </ProtectedRoute>
             } />

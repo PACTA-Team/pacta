@@ -8,12 +8,13 @@ import { NotificationsTab } from "./SettingsPage/NotificationsTab";
 import { AISection } from "./SettingsPage/AISection";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabType = "email" | "notifications" | "ai";
+type TabType = "email" | "notifications" | "ai" | "legal";
 
 const TABS_CONFIG: Array<{id: TabType; labelKey: string; icon: string}> = [
   { id: "email", labelKey: "tabs.email", icon: "✉️" },
   { id: "notifications", labelKey: "tabs.notifications", icon: "🔔" },
-  { id: "ai", labelKey: "aiSettings.title", icon: "🤖" }
+  { id: "ai", labelKey: "aiSettings.title", icon: "🤖" },
+  { id: "legal", labelKey: "legalSettings.title", icon: "⚖️" }
 ];
 
 export default function SettingsPage() {
@@ -38,6 +39,8 @@ export default function SettingsPage() {
         return <NotificationsTab />;
       case "ai":
         return isAdmin ? <AISection /> : <div>AI configuration is only available to admins.</div>;
+      case "legal":
+        return isAdmin ? <LegalSection /> : <div>Legal AI configuration is only available to admins.</div>;
       default:
         return <EmailSection />;
     }
