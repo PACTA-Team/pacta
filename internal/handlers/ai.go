@@ -203,7 +203,7 @@ func (h *Handler) HandleAI(w http.ResponseWriter, r *http.Request) {
 		h.HandleLegalChat(w, r)
     case path == "/legal/validate" && r.Method == http.MethodPost:
         h.HandleValidateContract(w, r)
-    case strings.HasPrefix(path, "/legal/documents/") && strings.HasSuffix(path, "/reindex") && r.Method == http.MethodPost:
+	case strings.HasPrefix(path, "/legal/documents/") && strings.HasSuffix(path, "/reindex") && r.Method == http.MethodPost:
         // Extract document ID from path
         idStr := strings.TrimPrefix(path, "/legal/documents/")
         idStr = strings.TrimSuffix(idStr, "/reindex")
@@ -218,6 +218,20 @@ func (h *Handler) HandleAI(w http.ResponseWriter, r *http.Request) {
             return
         }
         h.HandleReindexLegalDocument(w, r, id)
+    case strings.HasPrefix(path, "/legal/documents/") && r.Method == http.MethodDelete:
+        // DELETE /api/ai/legal/documents/{id}
+        idStr := strings.TrimPrefix(path, "/legal/documents/")
+        idStr = strings.Trim(idStr, "/")
+        if idStr == "" {
+            h.Error(w, http.StatusBadRequest, "Document ID required")
+            return
+        }
+        id, err := strconv.Atoi(idStr)
+        if err != nil || id <= 0 {
+            h.Error(w, http.StatusBadRequest, "Invalid document ID")
+            return
+        }
+        h.HandleDeleteLegalDocument(w, r, id)
     case path == "/legal/suggest-clauses" && r.Method == http.MethodGet:
         h.HandleSuggestClauses(w, r)
     case path == "/legal/chat/history" && r.Method == http.MethodGet:
@@ -1272,6 +1286,54 @@ func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Requ
 		"status":      "reindexed",
 		"document_id": id,
 	})
+}
+
+// HandleDeleteLegalDocument soft-deletes a legal document (admin only)
+func (h *Handler) HandleDeleteLegalDocument(w http.ResponseWriter, r *http.Request, id int) {
+	// Admin check
+	if roleLevel(h.getUserRole(r)) < 4 {
+		h.Error(w, http.StatusForbidden, "Admin role required")
+		return
+	}
+	ctx := r.Context()
+
+	// Get document to know chunk count and company
+	docRow, err := db.GetLegalDocument(ctx, h.DB, int64(id))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.Error(w, http.StatusNotFound, "Document not found")
+			return
+		}
+		h.Error(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	// Soft delete
+	if err := db.DeleteLegalDocument(ctx, h.DB, int64(id)); err != nil {
+		h.Error(w, http.StatusInternalServerError, "Failed to delete: "+err.Error())
+		return
+	}
+
+	// Get company ID for vector DB
+	companyID := h.GetCompanyID(r)
+	if companyID == 0 {
+		companyID = 1
+	}
+	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	if err != nil {
+		// Log but don't fail — document is already soft-deleted
+		log.Printf("[DeleteLegalDoc] warning: failed to get vector DB for company %d: %v", companyID, err)
+	} else {
+		// Delete all chunks for this document from the vector DB
+		for i := 0; i < docRow.ChunkCount; i++ {
+			chunkID := fmt.Sprintf("legal_%d_chunk_%d", id, i)
+			if err := vectorDB.DeleteDocument(chunkID); err != nil {
+				log.Printf("[DeleteLegalDoc] warning: failed to delete chunk %s: %v", chunkID, err)
+			}
+		}
+	}
+
+	h.success(w, http.StatusNoContent, nil)
 }
 
 // HandleSuggestClauses returns suggested clauses based on contract type
