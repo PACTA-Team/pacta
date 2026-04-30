@@ -41,7 +41,7 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 			content TEXT NOT NULL,
 			content_hash TEXT NOT NULL,
 			language TEXT DEFAULT 'es',
-			jurisdiction TEXT DEFAULT 'Cuba',
+			jurisdiction TEXT DEFAULT 'cuba',
 			effective_date DATE,
 			publication_date DATE,
 			gaceta_number TEXT,
@@ -78,16 +78,6 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 		if _, err := db.Exec(stmt); err != nil {
 			t.Fatalf("failed to create table: %v\nstmt: %s", err, stmt)
 		}
-	}
-
-	return db
-}
-
-func TestCreateLegalDocument(t *testing.T) {
-
-	// Run migrations
-	if err := Migrate(db); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	return db
@@ -159,25 +149,7 @@ func TestGetLegalDocument(t *testing.T) {
 	}
 
 	// Retrieve it
-	doc, err := GetLegalDocument(ctx, db, created.ID)
-	if err != nil {
-		t.Fatalf("GetLegalDocument failed: %v", err)
-	}
-
-	if doc.ID != created.ID {
-		t.Errorf("ID mismatch: %d vs %d", doc.ID, created.ID)
-	}
-	if doc.Title != "Ley de Prueba" {
-		t.Errorf("Title mismatch: %s", doc.Title)
-	}
-}
-	created, err := CreateLegalDocument(ctx, db, arg)
-	if err != nil {
-		t.Fatalf("Setup failed: %v", err)
-	}
-
-	// Retrieve it
-	doc, err := GetLegalDocument(ctx, db, created.ID)
+	doc, err := GetLegalDocument(ctx, db, int64(created.ID))
 	if err != nil {
 		t.Fatalf("GetLegalDocument failed: %v", err)
 	}
@@ -249,34 +221,6 @@ func TestListLegalDocuments(t *testing.T) {
 	}
 }
 
-	for _, d := range docs {
-		_, err := CreateLegalDocument(ctx, db, d)
-		if err != nil {
-			t.Fatalf("Failed to create doc: %v", err)
-		}
-	}
-
-	// List all
-	listed, err := ListLegalDocuments(ctx, db, "")
-	if err != nil {
-		t.Fatalf("ListLegalDocuments failed: %v", err)
-	}
-
-	if len(listed) < 2 {
-		t.Errorf("Expected at least 2 docs, got %d", len(listed))
-	}
-
-	// List by jurisdiction
-	cubaDocs, err := ListLegalDocuments(ctx, db, "Cuba")
-	if err != nil {
-		t.Fatalf("List by jurisdiction failed: %v", err)
-	}
-
-	if len(cubaDocs) < 2 {
-		t.Errorf("Expected at least 2 Cuba docs, got %d", len(cubaDocs))
-	}
-}
-
 func TestUpdateLegalDocumentIndexedAt(t *testing.T) {
 	db := setupLegalTestDB(t)
 	defer db.Close()
@@ -298,35 +242,13 @@ func TestUpdateLegalDocumentIndexedAt(t *testing.T) {
 	doc, _ := CreateLegalDocument(ctx, db, arg)
 
 	// Update indexed_at
-	err := UpdateLegalDocumentIndexedAt(ctx, db, doc.ID, 10)
+	err := UpdateLegalDocumentIndexedAt(ctx, db, int64(doc.ID), 10)
 	if err != nil {
 		t.Fatalf("UpdateLegalDocumentIndexedAt failed: %v", err)
 	}
 
 	// Verify
-	updated, err := GetLegalDocument(ctx, db, doc.ID)
-	if err != nil {
-		t.Fatalf("Get updated doc failed: %v", err)
-	}
-
-	if updated.ChunkCount != 10 {
-		t.Errorf("Expected chunk count 10, got %d", updated.ChunkCount)
-	}
-	if updated.IndexedAt == nil {
-		t.Error("Expected indexed_at to be set")
-	}
-}
-
-	doc, _ := CreateLegalDocument(ctx, db, arg)
-
-	// Update indexed_at
-	err := UpdateLegalDocumentIndexedAt(ctx, db, doc.ID, 10)
-	if err != nil {
-		t.Fatalf("UpdateLegalDocumentIndexedAt failed: %v", err)
-	}
-
-	// Verify
-	updated, err := GetLegalDocument(ctx, db, doc.ID)
+	updated, err := GetLegalDocument(ctx, db, int64(doc.ID))
 	if err != nil {
 		t.Fatalf("Get updated doc failed: %v", err)
 	}
@@ -360,30 +282,15 @@ func TestDeleteLegalDocument(t *testing.T) {
 	doc, _ := CreateLegalDocument(ctx, db, arg)
 
 	// Delete
-	err := DeleteLegalDocument(ctx, db, doc.ID)
+	err := DeleteLegalDocument(ctx, db, int64(doc.ID))
 	if err != nil {
 		t.Fatalf("DeleteLegalDocument failed: %v", err)
 	}
 
 	// Verify soft delete (deleted_at is set)
-	deleted, err := GetLegalDocument(ctx, db, doc.ID)
-	if err == nil && deleted.ID != 0 {
-		t.Error("Expected document to be soft-deleted (deleted_at should be set)")
-	}
-}
-
-	doc, _ := CreateLegalDocument(ctx, db, arg)
-
-	// Delete
-	err := DeleteLegalDocument(ctx, db, doc.ID)
-	if err != nil {
-		t.Fatalf("DeleteLegalDocument failed: %v", err)
-	}
-
-	// Verify soft delete (deleted_at is set)
-	deleted, err := GetLegalDocument(ctx, db, doc.ID)
-	if err == nil && deleted.ID != 0 {
-		t.Error("Expected document to be soft-deleted (deleted_at should be set)")
+	_, err = GetLegalDocument(ctx, db, int64(doc.ID))
+	if err == nil {
+		t.Error("Expected document to be soft-deleted (should return error)")
 	}
 }
 
@@ -417,18 +324,6 @@ func TestGetLegalDocumentChunkCount(t *testing.T) {
 	}
 }
 
-	doc, _ := CreateLegalDocument(ctx, db, arg)
-
-	// Initially 0 chunks
-	count, err := GetLegalDocumentChunkCount(ctx, db, doc.ID)
-	if err != nil {
-		t.Fatalf("GetLegalDocumentChunkCount failed: %v", err)
-	}
-	if count != 0 {
-		t.Errorf("Expected 0 chunks, got %d", count)
-	}
-}
-
 func TestGetAILegalEnabled(t *testing.T) {
 	db := setupLegalTestDB(t)
 	defer db.Close()
@@ -440,27 +335,6 @@ func TestGetAILegalEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAILegalEnabled failed: %v", err)
 	}
-	if enabled {
-		t.Error("Expected disabled by default")
-	}
-
-	// Insert setting via direct DB
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO system_settings (key, value, created_at, updated_at)
-		VALUES ('ai_legal_enabled', 'true', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to insert setting: %v", err)
-	}
-
-	enabled, err = GetAILegalEnabled(ctx, db)
-	if err != nil {
-		t.Fatalf("GetAILegalEnabled after insert failed: %v", err)
-	}
-	if !enabled {
-		t.Error("Expected enabled after setting true")
-	}
-}
 	if enabled {
 		t.Error("Expected disabled by default")
 	}
@@ -518,29 +392,6 @@ func TestSetAILegalEnabled(t *testing.T) {
 	}
 }
 
-	enabled, err := GetAILegalEnabled(ctx, db)
-	if err != nil {
-		t.Fatalf("GetAILegalEnabled after set failed: %v", err)
-	}
-	if !enabled {
-		t.Error("Expected enabled after setting")
-	}
-
-	// Disable
-	err = SetAILegalEnabled(ctx, db, false)
-	if err != nil {
-		t.Fatalf("SetAILegalEnabled(false) failed: %v", err)
-	}
-
-	enabled, err = GetAILegalEnabled(ctx, db)
-	if err != nil {
-		t.Fatalf("GetAILegalEnabled after disable failed: %v", err)
-	}
-	if enabled {
-		t.Error("Expected disabled after setting false")
-	}
-}
-
 func TestCreateLegalChatMessage(t *testing.T) {
 	db := setupLegalTestDB(t)
 	defer db.Close()
@@ -555,22 +406,6 @@ func TestCreateLegalChatMessage(t *testing.T) {
 		Content:     "¿Qué es un contrato?",
 		CreatedAt:   now,
 	}
-
-	msg, err := CreateLegalChatMessage(ctx, db, arg)
-	if err != nil {
-		t.Fatalf("CreateLegalChatMessage failed: %v", err)
-	}
-
-	if msg.ID == 0 {
-		t.Error("Expected non-zero ID")
-	}
-	if msg.UserID != 1 {
-		t.Errorf("Expected user_id 1, got %d", msg.UserID)
-	}
-	if msg.Content != arg.Content {
-		t.Errorf("Content mismatch")
-	}
-}
 
 	msg, err := CreateLegalChatMessage(ctx, db, arg)
 	if err != nil {
@@ -639,6 +474,38 @@ func TestListLegalChatMessages(t *testing.T) {
 	}
 }
 
+func TestListLegalChatSessions(t *testing.T) {
+	db := setupLegalTestDB(t)
+	defer db.Close()
+
+	ctx := context.Background()
+	now := time.Now()
+
+	// Insert messages for two different sessions by same user
+	messages := []CreateLegalChatMessageParams{
+		{
+			UserID:      1,
+			SessionID:   "session-1",
+			MessageType: "user",
+			Content:     "Question 1",
+			CreatedAt:   now,
+		},
+		{
+			UserID:      1,
+			SessionID:   "session-1",
+			MessageType: "assistant",
+			Content:     "Answer 1",
+			CreatedAt:   now.Add(1 * time.Second),
+		},
+		{
+			UserID:      1,
+			SessionID:   "session-2",
+			MessageType: "user",
+			Content:     "Question 2",
+			CreatedAt:   now.Add(2 * time.Second),
+		},
+	}
+
 	for _, m := range messages {
 		_, err := CreateLegalChatMessage(ctx, db, m)
 		if err != nil {
@@ -646,21 +513,24 @@ func TestListLegalChatMessages(t *testing.T) {
 		}
 	}
 
-	// List
-	listed, err := ListLegalChatMessages(ctx, db, "session-456")
+	// List sessions
+	sessions, err := ListLegalChatSessions(ctx, db, 1)
 	if err != nil {
-		t.Fatalf("ListLegalChatMessages failed: %v", err)
+		t.Fatalf("ListLegalChatSessions failed: %v", err)
 	}
 
-	if len(listed) != 2 {
-		t.Errorf("Expected 2 messages, got %d", len(listed))
+	if len(sessions) != 2 {
+		t.Errorf("Expected 2 sessions, got %d", len(sessions))
 	}
 
-	// Verify order (ASC by created_at)
-	if listed[0].Content != "Question 1" {
-		t.Error("First message should be user question")
+	// Verify sessions are ordered by last_message DESC (session-2 should be first)
+	if sessions[0].SessionID != "session-2" {
+		t.Errorf("Expected first session to be session-2, got %s", sessions[0].SessionID)
 	}
-	if listed[1].Content != "Answer 1" {
-		t.Error("Second message should be assistant answer")
+	if sessions[0].MessageCount != 1 {
+		t.Errorf("Expected session-2 to have 1 message, got %d", sessions[0].MessageCount)
+	}
+	if sessions[1].MessageCount != 2 {
+		t.Errorf("Expected session-1 to have 2 messages, got %d", sessions[1].MessageCount)
 	}
 }

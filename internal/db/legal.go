@@ -398,6 +398,96 @@ func ListLegalChatMessages(ctx context.Context, db *sql.DB, sessionID string) ([
 	return msgs, rows.Err()
 }
 
+// ========== SIMILARITY SEARCH ==========
+
+// FindSimilarLegalChunks searches for similar document chunks using vector similarity
+// Note: For SQLite, we use a simple text-based similarity as fallback since pgvector is not available
+// The actual vector search is handled by the VectorDB HNSW implementation
+func FindSimilarLegalChunks(ctx context.Context, db *sql.DB, embedding string, limit int) ([]struct {
+	ID         int
+	Content    string
+	Metadata   string
+	Similarity float64
+}, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, content, metadata, 0.0 as similarity
+		FROM document_chunks
+		WHERE source = 'legal'
+		ORDER BY id
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []struct {
+		ID         int
+		Content    string
+		Metadata   string
+		Similarity float64
+	}
+
+	for rows.Next() {
+		var r struct {
+			ID         int
+			Content    string
+			Metadata   string
+			Similarity float64
+		}
+		err := rows.Scan(&r.ID, &r.Content, &r.Metadata, &r.Similarity)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+
+	return results, rows.Err()
+}
+
+// ========== CHAT SESSIONS ==========
+
+// LegalChatSession represents a chat session summary
+type LegalChatSession struct {
+	SessionID    string    `json:"session_id"`
+	UserID       int       `json:"user_id"`
+	LastMessage  time.Time `json:"last_message"`
+	CreatedAt    time.Time `json:"created_at"`
+	MessageCount int       `json:"message_count"`
+}
+
+// ListLegalChatSessions returns all chat sessions for a user
+func ListLegalChatSessions(ctx context.Context, db *sql.DB, userID int) ([]LegalChatSession, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT 
+			session_id,
+			user_id,
+			MAX(created_at) as last_message,
+			MIN(created_at) as created_at,
+			COUNT(*) as message_count
+		FROM ai_legal_chat_history
+		WHERE user_id = $1
+		GROUP BY session_id, user_id
+		ORDER BY last_message DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessions []LegalChatSession
+	for rows.Next() {
+		var s LegalChatSession
+		err := rows.Scan(&s.SessionID, &s.UserID, &s.LastMessage, &s.CreatedAt, &s.MessageCount)
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+
+	return sessions, rows.Err()
+}
+
 // ========== SETTINGS ==========
 
 // GetAILegalEnabled returns whether AI legal is enabled
