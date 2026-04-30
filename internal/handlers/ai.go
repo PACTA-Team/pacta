@@ -97,14 +97,14 @@ func (h *Handler) isRAGLocalConfigured() bool {
 }
 
 // getRAGConfig retrieves RAG configuration from system settings
-func (h *Handler) getRAGConfig() (mode, localModel, embeddingModel, hybridStrategy string, hybridRerank bool, err error) {
+func (h *Handler) getRAGConfig() (mode, localMode, localModel, embeddingModel, hybridStrategy string, hybridRerank bool, err error) {
 	rows, err := h.DB.Query(`
 		SELECT key, value FROM system_settings
-		WHERE key IN ('rag_mode', 'local_model', 'embedding_model', 'hybrid_strategy', 'hybrid_rerank')
+		WHERE key IN ('rag_mode', 'local_model', 'embedding_model', 'hybrid_strategy', 'hybrid_rerank', 'local_mode')
 		  AND deleted_at IS NULL
 	`)
 	if err != nil {
-		return "", "", "", "", false, err
+		return "", "", "", "", "", false, err
 	}
 	defer rows.Close()
 	
@@ -526,7 +526,7 @@ func (h *Handler) HandleRAGHybrid(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Get RAG configuration
-	mode, localModel, embeddingModel, hybridStrategy, hybridRerank, err := h.getRAGConfig()
+	mode, localMode, localModel, embeddingModel, hybridStrategy, hybridRerank, err := h.getRAGConfig()
 	if err != nil {
 		log.Printf("[RAG Hybrid] Failed to get config: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to get RAG configuration")
@@ -546,7 +546,7 @@ func (h *Handler) HandleRAGHybrid(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Create orchestrator
-		orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
+	orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
 	orchestrator.VectorDB = vectorDB
 	orchestrator.HybridRerank = hybridRerank
 	
@@ -633,7 +633,7 @@ func (h *Handler) HandleRAGStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Get RAG config
-	mode, localModel, embeddingModel, hybridStrategy, hybridRerank, err := h.getRAGConfig()
+	mode, localMode, localModel, embeddingModel, hybridStrategy, hybridRerank, err := h.getRAGConfig()
 	if err != nil {
 		log.Printf("[RAG Status] Failed to get config: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to get RAG configuration")
@@ -649,7 +649,7 @@ func (h *Handler) HandleRAGStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Create orchestrator for health check
-		orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
+	orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
 	orchestrator.VectorDB = vectorDB
 	
 	// Get AI config for external status

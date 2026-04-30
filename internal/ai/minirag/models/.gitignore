@@ -1,0 +1,10 @@
+# Model files (large binaries, not committed)
+*.gguf
+*.bin
+*.safetensors
+*.pth
+*.ckpt
+
+# Keep directory but ignore contents
+models/*
+!models/.gitkeep

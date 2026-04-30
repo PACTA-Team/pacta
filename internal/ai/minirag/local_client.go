@@ -1,7 +1,9 @@
 package minirag
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -99,22 +101,6 @@ func NewOllamaClient(endpoint, model string) *OllamaClient {
 	}
 	if model == "" {
 		model = "qwen2.5-0.5b-instruct" // Default: lightest model satisfying <500MB binary size constraint
-	}
-	return &OllamaClient{
-		Endpoint: endpoint,
-		Model:    model,
-		Timeout:  120 * time.Second,
-		client:   &http.Client{Timeout: 120 * time.Second},
-	}
-}
-
-// NewOllamaClient creates a client for Ollama fallback
-func NewOllamaClient(endpoint, model string) *OllamaClient {
-	if endpoint == "" {
-		endpoint = "http://localhost:11434"
-	}
-	if model == "" {
-		model = "qwen2.5-0.5b-instruct" // Default: lightest model satisfying <500MB constraint
 	}
 	return &OllamaClient{
 		Endpoint: endpoint,
@@ -222,55 +208,6 @@ func NewLocalClient(mode, modelPath, ollamaEndpoint string) *LocalClient {
 		// Fallback: try Ollama
 		c.ollama = NewOllamaClient(ollamaEndpoint, "")
 	}
-
-	return c
-}
-
-	// Initialize based on mode
-	switch mode {
-	case "cgo":
-		// CGo + llama.cpp with Qwen2.5-0.5B-Instruct embedded
-		if modelPath == "" {
-			modelPath = "qwen2.5-0.5b-instruct-q4_0.gguf"
-		}
-		c.inference = NewCgoLLMInference(modelPath)
-	case "ollama":
-		// Ollama HTTP API
-		c.ollama = NewOllamaClient(ollamaEndpoint, "")
-	default:
-		// Fallback: try Ollama
-		c.ollama = NewOllamaClient(ollamaEndpoint, "")
-	}
-
-	return c
-}
-
-// NewLocalClient creates a new local LLM client.
-// - If modelPath is provided and CGo is enabled, it tries llama.cpp first.
-// - Ollama HTTP client is always set up as fallback.
-// - Production recommendation: use Ollama only (set modelPath="").
-func NewLocalClient(modelPath, ollamaEndpoint string) *LocalClient {
-	c := &LocalClient{
-		modelPath: modelPath,
-		useCGo:   false,
-	}
-
-	// Try CGo inference if model path provided and CGo is available
-	// (cgoLLMInference will be nil if CGO_ENABLED=0)
-	if modelPath != "" {
-		// Normalize: if just a filename, prepend models directory
-		normPath := modelPath
-		if !strings.ContainsAny(normPath, "/\\") {
-			normPath = filepath.Join("internal", "ai", "minirag", "models", normPath)
-		}
-		c.inference = NewCgoLLMInference(normPath)
-		if c.inference != nil {
-			c.useCGo = true
-		}
-	}
-
-	// Always setup Ollama as fallback (production path)
-	c.ollama = NewOllamaClient(ollamaEndpoint, "")
 
 	return c
 }

@@ -48,19 +48,6 @@ func NewOrchestrator(mode, localMode, strategy, localModel, embeddingModel strin
 	return o
 }
 
-	// Initialize local components if mode is not external
-	if mode != "external" {
-		o.LocalClient = minirag.NewLocalClient(localMode, localModel, "")
-		if localMode == "cgo" {
-			o.Embedder = minirag.NewEmbeddingClient("", embeddingModel)
-		} else {
-			o.Embedder = minirag.NewEmbeddingClient("", embeddingModel)
-		}
-	}
-
-	return o
-}
-
 // Query executes a query based on the configured mode and strategy
 func (o *Orchestrator) Query(ctx context.Context, prompt, context string) (string, error) {
 	switch o.Mode {

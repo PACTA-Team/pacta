@@ -1,11 +1,14 @@
 package minirag
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // PDFParser handles PDF document parsing
