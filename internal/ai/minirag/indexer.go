@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/PACTA-Team/pacta/internal/ai"
 )
 
 // Indexer handles automatic indexing of contracts into the vector database

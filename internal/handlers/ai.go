@@ -1,3 +1,5 @@
+package handlers
+
 import (
 	"context"
 	"database/sql"
