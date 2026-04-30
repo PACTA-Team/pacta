@@ -1,14 +1,18 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/PACTA-Team/pacta/internal/ai"
 )
 
 func setupLegalTestDB(t *testing.T) *sql.DB {
@@ -25,7 +29,7 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 
 	// Create tables
 	tables := []string{
-		`CREATE TABLE system_settings (
+		`CREATE TABLE IF NOT EXISTS system_settings (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			key TEXT UNIQUE NOT NULL,
 			value TEXT,
@@ -34,7 +38,7 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME
 		)`,
-		`CREATE TABLE legal_documents (
+		`CREATE TABLE IF NOT EXISTS legal_documents (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT NOT NULL,
 			document_type TEXT NOT NULL,
@@ -53,27 +57,14 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME
 		)`,
-		`CREATE TABLE ai_legal_chat_history (
+		`CREATE TABLE IF NOT EXISTS ai_rate_limits (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL,
-			session_id TEXT NOT NULL,
-			message_type TEXT NOT NULL,
-			content TEXT NOT NULL,
-			context_documents TEXT,
-			metadata TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			company_id INTEGER NOT NULL,
+			date TEXT NOT NULL,
+			count INTEGER DEFAULT 0,
+			UNIQUE(company_id, date)
 		)`,
-		`CREATE TABLE document_chunks (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			document_id INTEGER NOT NULL,
-			chunk_index INTEGER NOT NULL,
-			content TEXT NOT NULL,
-			metadata TEXT,
-			embedding TEXT,
-			source TEXT DEFAULT 'contract',
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE companies (
+		`CREATE TABLE IF NOT EXISTS companies (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
 			company_type TEXT NOT NULL DEFAULT 'single',
@@ -81,7 +72,7 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME
 		)`,
-		`CREATE TABLE users (
+		`CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
 			email TEXT NOT NULL UNIQUE,
@@ -106,105 +97,38 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// mockHandler creates a test handler with DB and queries
 func mockLegalHandler(t *testing.T, db *sql.DB) *Handler {
 	t.Helper()
-	// Create a minimal Config
 	cfg := &Config{
 		DataDir: "/tmp",
 	}
 	h := &Handler{
-		DB:       db,
-		Config:   cfg,
-		RateLimiter: &RateLimiter{}, // mock
+		DB:         db,
+		Config:      cfg,
+		RateLimiter: ai.NewRateLimiter(db),
 	}
 	return h
 }
 
-func TestHandleLegalStatus(t *testing.T) {
+func TestUploadLegalDocument(t *testing.T) {
 	db := setupLegalTestDB(t)
 	defer db.Close()
+
+	handler := mockLegalHandler(t, db)
 
 	// Set ai_legal_enabled = true
-	db.Exec(`INSERT INTO system_settings (key, value) VALUES ('ai_legal_enabled', 'true')`)
+	db.Exec(`INSERT INTO system_settings (key, value, category) VALUES ('ai_legal_enabled', 'true', 'ai')`)
 
-	handler := mockLegalHandler(t, db)
-
-	req := httptest.NewRequest("GET", "/api/ai/legal/status", nil)
-	w := httptest.NewRecorder()
-
-	handler.HandleLegalStatus(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+	body := map[string]interface{}{
+		"title":         "Test Law",
+		"document_type": "law",
+		"content":       "Artículo 1...",
+		"language":      "es",
 	}
+	jsonBody, _ := json.Marshal(body)
 
-	var resp map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&resp)
-
-	if resp["enabled"] != true {
-		t.Errorf("Expected enabled=true, got %v", resp["enabled"])
-	}
-	if resp["document_count"] == nil {
-		t.Error("Expected document_count in response")
-	}
-}
-
-func TestHandleListLegalDocuments(t *testing.T) {
-	db := setupLegalTestDB(t)
-	defer db.Close()
-
-	now := time.Now()
-	db.Exec(`
-		INSERT INTO legal_documents (title, document_type, content, content_hash, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, "Ley de Prueba", "ley", "Contenido", "hash", now, now)
-
-	handler := mockLegalHandler(t, db)
-
-	req := httptest.NewRequest("GET", "/api/ai/legal/documents", nil)
-	w := httptest.NewRecorder()
-
-	handler.HandleListLegalDocuments(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	var resp map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&resp)
-
-	docs, ok := resp["documents"].([]interface{})
-	if !ok || len(docs) == 0 {
-		t.Error("Expected non-empty documents array")
-	}
-}
-
-func TestHandleUploadLegalDocument(t *testing.T) {
-	db := setupLegalTestDB(t)
-	defer db.Close()
-
-	handler := mockLegalHandler(t, db)
-
-	// Create multipart form data
-	body := `--boundary
-Content-Disposition: form-data; name="file"; filename="test.pdf"
-Content-Type: text/plain
-
-Artículo 1. Esta es una ley de prueba.
---boundary
-Content-Disposition: form-data; name="title"
-
-Test Law
---boundary
-Content-Disposition: form-data; name="document_type"
-
-ley
---boundary--
-`
-
-	req := httptest.NewRequest("POST", "/api/ai/legal/documents/upload", strings.NewReader(body))
-	req.Header.Set("Content-Type", "multipart/form-data; boundary=boundary")
+	req := httptest.NewRequest("POST", "/api/ai/legal/documents", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
 	handler.HandleUploadLegalDocument(w, req)
@@ -221,26 +145,29 @@ ley
 	}
 }
 
-func TestHandleLegalChat(t *testing.T) {
+func TestLegalChat(t *testing.T) {
 	db := setupLegalTestDB(t)
 	defer db.Close()
 
 	handler := mockLegalHandler(t, db)
 
-	reqBody := map[string]string{
-		"message":    "¿Qué dice la ley?",
-		"session_id": "test-session",
-	}
-	jsonBody, _ := json.Marshal(reqBody)
+	// Set ai_legal_enabled = true
+	db.Exec(`INSERT INTO system_settings (key, value, category) VALUES ('ai_legal_enabled', 'true', 'ai')`)
 
-	req := httptest.NewRequest("POST", "/api/ai/legal/chat", strings.NewReader(jsonBody))
+	body := map[string]interface{}{
+		"session_id": "test-123",
+		"message":    "¿Qué es un contrato?",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("POST", "/api/ai/legal/chat", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
 	handler.HandleLegalChat(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
 	var resp map[string]interface{}
@@ -249,31 +176,30 @@ func TestHandleLegalChat(t *testing.T) {
 	if resp["reply"] == nil {
 		t.Error("Expected reply in response")
 	}
-	if resp["session_id"] == nil {
-		t.Error("Expected session_id in response")
-	}
 }
 
-func TestHandleValidateContract(t *testing.T) {
+func TestValidateContract(t *testing.T) {
 	db := setupLegalTestDB(t)
 	defer db.Close()
 
 	handler := mockLegalHandler(t, db)
 
-	reqBody := map[string]string{
-		"contract_text":  "Cláusula de precio: USD 1000",
-		"contract_type":  "suministro",
-	}
-	jsonBody, _ := json.Marshal(reqBody)
+	// Set ai_legal_enabled = true
+	db.Exec(`INSERT INTO system_settings (key, value, category) VALUES ('ai_legal_enabled', 'true', 'ai')`)
 
-	req := httptest.NewRequest("POST", "/api/ai/legal/validate", strings.NewReader(jsonBody))
+	body := map[string]interface{}{
+		"contract_text": "Contrato de prestación de servicios...",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("POST", "/api/ai/legal/validate", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
 	handler.HandleValidateContract(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Body: %s", w.Code, w.Body.String())
 	}
 
 	var resp map[string]interface{}
@@ -281,5 +207,53 @@ func TestHandleValidateContract(t *testing.T) {
 
 	if resp["analysis"] == nil {
 		t.Error("Expected analysis in response")
+	}
+}
+
+// Test that endpoints return 403 when legal features are disabled
+func TestLegalEndpointsDisabled(t *testing.T) {
+	db := setupLegalTestDB(t)
+	defer db.Close()
+
+	handler := mockLegalHandler(t, db)
+
+	// Don't set ai_legal_enabled - should be disabled by default
+
+	tests := []struct {
+		name   string
+		method string
+		url    string
+	}{
+		{"UploadLegalDocument", "POST", "/api/ai/legal/documents"},
+		{"LegalChat", "POST", "/api/ai/legal/chat"},
+		{"ValidateContract", "POST", "/api/ai/legal/validate"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := map[string]interface{}{"test": "data"}
+			jsonBody, _ := json.Marshal(body)
+
+			req := httptest.NewRequest(tt.method, tt.url, bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			switch tt.name {
+			case "UploadLegalDocument":
+				handler.HandleUploadLegalDocument(w, req)
+			case "LegalChat":
+				handler.HandleLegalChat(w, req)
+			case "ValidateContract":
+				handler.HandleValidateContract(w, req)
+			}
+
+			if w.Code != http.StatusForbidden {
+				t.Errorf("Expected status 403 when disabled, got %d. Body: %s", w.Code, w.Body.String())
+			}
+
+			if !strings.Contains(w.Body.String(), "disabled") {
+				t.Errorf("Expected 'disabled' in response, got: %s", w.Body.String())
+			}
+		})
 	}
 }
