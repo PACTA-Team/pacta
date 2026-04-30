@@ -132,6 +132,10 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Post("/generate-contract", h.HandleAIGenerateContract)
 			r.Post("/review-contract", h.HandleAIReviewContract)
 			r.Post("/test", h.HandleAITestConnection)
+			r.Post("/rag/local", h.HandleRAGLocal)
+			r.Post("/rag/hybrid", h.HandleRAGHybrid)
+			r.Post("/rag/index", h.HandleRAGIndex)
+			r.Get("/rag/status", h.HandleRAGStatus)
 		})
 
 		// Viewer+ (read-only)

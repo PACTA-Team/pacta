@@ -71,13 +71,16 @@ func (o *Orchestrator) queryLocal(ctx context.Context, prompt, context string) (
 
 // queryExternal queries using only the external LLM API
 func (o *Orchestrator) queryExternal(ctx context.Context, prompt, context string) (string, error) {
-	// Build full prompt
-	fullPrompt := ai.BuildFullPrompt(prompt, context)
+	// Build system prompt
+	systemPrompt := ai.SystemPromptLegal
+	if context != "" {
+		systemPrompt = context + "\n\n" + systemPrompt
+	}
 
 	// Create external client
 	client := ai.NewLLMClient(o.ExternalLLM, o.ExternalKey, o.ExternalModel, o.ExternalEndpoint)
 
-	return client.Generate(ctx, prompt, context)
+	return client.Generate(ctx, prompt, systemPrompt)
 }
 
 // queryHybrid queries using both local and external systems

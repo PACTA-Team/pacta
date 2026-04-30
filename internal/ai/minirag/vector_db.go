@@ -131,7 +131,7 @@ func (db *VectorDB) Search(query []float32, k int) []SearchResult {
 			continue
 		}
 		node := db.index.nodes[nodeID]
-		score := cosineSimilarity(normQuery, node.vector)
+		score := CosineSimilarity(normQuery, node.vector)
 
 		// Find metadata (simplified: would need bidirectional mapping in production)
 		var meta DocumentMeta
@@ -247,7 +247,7 @@ func (hi *hnswIndex) search(query []float32, k int) []int {
 		}
 		distances = append(distances, distPair{
 			id:   candID,
-			dist: cosineSimilarity(query, hi.nodes[candID].vector),
+			dist: CosineSimilarity(query, hi.nodes[candID].vector),
 		})
 	}
 
@@ -350,8 +350,8 @@ func normalizeVector(v []float32) []float32 {
 	return result
 }
 
-// cosineSimilarity calculates cosine similarity between two vectors
-func cosineSimilarity(a, b []float32) float32 {
+// CosineSimilarity calculates cosine similarity between two vectors
+func CosineSimilarity(a, b []float32) float32 {
 	if len(a) != len(b) {
 		return 0
 	}

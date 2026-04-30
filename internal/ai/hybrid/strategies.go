@@ -142,7 +142,7 @@ func (r *Rerank) RerankResults(results []minirag.SearchResult) ([]minirag.Search
 			continue // Keep original score if embedding fails
 		}
 
-		semanticScore := cosineSimilarity(queryEmb, contentEmb)
+		semanticScore := minirag.CosineSimilarity(queryEmb, contentEmb)
 		// Weighted combination: 60% semantic, 40% original
 		reranked[i].Score = 0.6*semanticScore + 0.4*reranked[i].Score
 	}
@@ -262,7 +262,7 @@ func (sr *SemanticRerank) RerankByQuery(query string, results []minirag.SearchRe
 	for i := range reranked {
 		contentEmb, err := sr.embedder.GenerateEmbedding(reranked[i].Content)
 		if err == nil {
-			reranked[i].Score = cosineSimilarity(queryEmb, contentEmb)
+			reranked[i].Score = minirag.CosineSimilarity(queryEmb, contentEmb)
 		}
 	}
 
