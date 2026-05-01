@@ -62,10 +62,10 @@ type hnswIndex struct {
 }
 
 type hnswNode struct {
-	id       int
-	vector   []float32
-	neighbors []int
-	level    int
+	id            int
+	vector        []float32
+	neighbors     map[int][]int // key: layer, value: neighbor IDs at that layer
+	level         int
 }
 
 // NewVectorDB creates a new vector database with the given dimension and path
@@ -314,10 +314,10 @@ func (hi *hnswIndex) insert(vector []float32) int {
 	level := hi.randomLevel()
 
 	node := &hnswNode{
-		id:       nodeID,
-		vector:   vector,
-		neighbors: make([]int, 0, hi.m),
-		level:    level,
+		id:        nodeID,
+		vector:    vector,
+		neighbors:  make(map[int][]int),
+		level:     level,
 	}
 
 	if hi.entryPoint < 0 {
@@ -326,26 +326,26 @@ func (hi *hnswIndex) insert(vector []float32) int {
 		return nodeID
 	}
 
-	// Find nearest neighbors
-	candidates := hi.searchLayer(vector, hi.entryPoint, hi.ef, level)
+	// Find nearest neighbors at layer 0 (all nodes exist at layer 0)
+	candidates := hi.searchLayer(vector, hi.entryPoint, hi.ef, 0)
 
-	// Connect to selected neighbors
+	// Connect to selected neighbors at layer 0
 	for _, candID := range candidates {
 		if candID < 0 || candID >= len(hi.nodes) {
 			continue
 		}
-		node.neighbors = append(node.neighbors, candID)
-		// Add reverse connection (simplified)
+		node.neighbors[0] = append(node.neighbors[0], candID)
+		// Add reverse connection at layer 0
 		candNode := hi.nodes[candID]
-		if len(candNode.neighbors) < hi.m {
-			candNode.neighbors = append(candNode.neighbors, nodeID)
+		if len(candNode.neighbors[0]) < hi.m {
+			candNode.neighbors[0] = append(candNode.neighbors[0], nodeID)
 		}
 	}
 
 	hi.nodes = append(hi.nodes, node)
 
-	// Update entry point if new node is higher level
-	if level > hi.nodes[hi.entryPoint].level {
+	// Update entry point if new node has higher level
+	if hi.entryPoint >= 0 && level > hi.nodes[hi.entryPoint].level {
 		hi.entryPoint = nodeID
 	}
 
@@ -485,8 +485,9 @@ func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, layer 
 
 		// Early termination: if current is worse than worst in results, stop
 		if len(results) >= ef {
+			// Find worst (lowest similarity) in results
 			worstInResults := results[0].sim
-			for _, r := range results {
+			for _, r := range results[1:] {
 				if r.sim < worstInResults {
 					worstInResults = r.sim
 				}
@@ -498,8 +499,8 @@ func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, layer 
 
 		currNode := hi.nodes[curr.id]
 
-		// Explore neighbors at this layer
-		for _, neighborID := range currNode.neighbors {
+		// Explore neighbors at this specific layer
+		for _, neighborID := range currNode.neighbors[layer] {
 			if neighborID < 0 || neighborID >= len(hi.nodes) {
 				continue
 			}
@@ -509,11 +510,6 @@ func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, layer 
 			visited[neighborID] = true
 
 			neighborNode := hi.nodes[neighborID]
-
-			// Only consider neighbors that exist at or above the current layer
-			if neighborNode.level < layer {
-				continue
-			}
 
 			neighborSim := CosineSimilarity(query, neighborNode.vector)
 
@@ -598,10 +594,10 @@ func (db *VectorDB) save() error {
 
 	// Serialize HNSW nodes
 	type nodeJSON struct {
-		ID       int     `json:"id"`
-		Vector   []float32 `json:"vector"`
-		Neighbors []int   `json:"neighbors"`
-		Level    int     `json:"level"`
+		ID       int                  `json:"id"`
+		Vector   []float32           `json:"vector"`
+		Neighbors map[string][]int    `json:"neighbors"`
+		Level    int                  `json:"level"`
 	}
 	type indexJSON struct {
 		Nodes      []nodeJSON `json:"nodes"`
@@ -616,10 +612,15 @@ func (db *VectorDB) save() error {
 		if n == nil {
 			continue
 		}
+		// Convert map[int][]int to map[string][]int for JSON serialization
+		neighborsJSON := make(map[string][]int)
+		for layer, neighs := range n.neighbors {
+			neighborsJSON[strconv.Itoa(layer)] = neighs
+		}
 		nodesJSON = append(nodesJSON, nodeJSON{
 			ID:       n.id,
 			Vector:   n.vector,
-			Neighbors: n.neighbors,
+			Neighbors: neighborsJSON,
 			Level:    n.level,
 		})
 	}
@@ -735,14 +736,22 @@ func (db *VectorDB) load() error {
 							}
 						}
 					}
-					if v, ok := nMap["neighbors"].([]interface{}); ok {
-						n.neighbors = make([]int, 0, len(v))
-						for _, val := range v {
-							if f, ok := val.(float64); ok {
-								n.neighbors = append(n.neighbors, int(f))
+			if v, ok := nMap["neighbors"].(map[string]interface{}); ok {
+					n.neighbors = make(map[int][]int)
+					for layerStr, neighsRaw := range v {
+						if layer, err := strconv.Atoi(layerStr); err == nil {
+							if neighsSlice, ok := neighsRaw.([]interface{}); ok {
+								neighbors := make([]int, 0, len(neighsSlice))
+								for _, val := range neighsSlice {
+									if f, ok := val.(float64); ok {
+										neighbors = append(neighbors, int(f))
+									}
+								}
+								n.neighbors[layer] = neighbors
 							}
 						}
 					}
+				}
 					if v, ok := nMap["level"].(float64); ok {
 						n.level = int(v)
 					}
