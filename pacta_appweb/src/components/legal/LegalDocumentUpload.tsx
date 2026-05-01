@@ -9,16 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Upload, Loader2 } from "lucide-react";
-
-const DOCUMENT_TYPES = [
-  { value: "law", label: "Ley" },
-  { value: "decree", label: "Decreto" },
-  { value: "decree_law", label: "Decreto-Ley" },
-  { value: "code", label: "Código" },
-  { value: "contract_template", label: "Modelo de Contrato" },
-  { value: "jurisprudence", label: "Jurisprudencia" },
-  { value: "resolution", label: "Resolución" },
-];
+import { DOCUMENT_TYPES } from "@/lib/legal-utils";
 
 interface LegalDocumentUploadProps {
   onSuccess?: () => void;
@@ -28,6 +19,8 @@ export function LegalDocumentUpload({ onSuccess }: LegalDocumentUploadProps) {
   const { t } = useTranslation("settings");
   const [title, setTitle] = useState("");
   const [documentType, setDocumentType] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState("");
+  const [tags, setTags] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -57,10 +50,29 @@ export function LegalDocumentUpload({ onSuccess }: LegalDocumentUploadProps) {
       formData.append("title", title);
       formData.append("document_type", documentType);
       formData.append("jurisdiction", "Cuba");
+      if (effectiveDate) {
+        formData.append("effective_date", effectiveDate);
+      }
+      if (tags) {
+        formData.append("tags", JSON.stringify(tags.split(',').map(t => t.trim()).filter(Boolean)));
+      }
 
-      await api.post('/api/ai/legal/documents/upload', formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      // Don't set Content-Type header - browser will set it with boundary for FormData
+      await api.post('/api/ai/legal/documents/upload', formData);
+      
+      toast.success(t('legalSettings.uploadSuccess') || "Document uploaded successfully");
+      setTitle("");
+      setDocumentType("");
+      setEffectiveDate("");
+      setTags("");
+      setFile(null);
+      onSuccess?.();
+    } catch (err: any) {
+      toast.error(err.message || t('legalSettings.uploadError') || "Upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
       
       toast.success(t('legalSettings.uploadSuccess') || "Document uploaded successfully");
       setTitle("");
@@ -100,6 +112,24 @@ export function LegalDocumentUpload({ onSuccess }: LegalDocumentUploadProps) {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t('legalSettings.effectiveDate') || "Effective Date"}</Label>
+        <Input
+          type="date"
+          value={effectiveDate}
+          onChange={(e) => setEffectiveDate(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t('legalSettings.tags') || "Tags (comma-separated)"}</Label>
+        <Input
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder={t('legalSettings.tagsPlaceholder') || "e.g., inversión, extranjera"}
+        />
       </div>
 
       <div className="space-y-2">

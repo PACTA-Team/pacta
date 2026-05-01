@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Trash2, ReIndex, Eye } from "lucide-react";
+import { getDocTypeLabel } from "@/lib/legal-utils";
 
 interface LegalDocument {
   id: number;
@@ -64,19 +65,6 @@ export function LegalDocumentList() {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('es-ES');
-  };
-
-  const getDocTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      'law': 'Ley',
-      'decree': 'Decreto',
-      'decree_law': 'Decreto-Ley',
-      'code': 'Código',
-      'contract_template': 'Modelo',
-      'jurisprudence': 'Jurisprudencia',
-      'resolution': 'Resolución'
-    };
-    return types[type] || type;
   };
 
   if (loading) {
