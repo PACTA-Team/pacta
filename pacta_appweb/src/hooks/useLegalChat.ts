@@ -12,11 +12,48 @@ interface UseLegalChatReturn {
   clearMessages: () => void;
 }
 
+const STORAGE_KEY_PREFIX = "legal-chat-";
+
 export function useLegalChat(initialSessionId?: string): UseLegalChatReturn {
-  const [messages, setMessages] = useState<Array<{ role: string; content: string; sources?: any[] }>>([]);
+  // Load session ID from localStorage or use initial
+  const [sessionId, setSessionId] = useState(() => {
+    const stored = initialSessionId || localStorage.getItem("legal-chat-session-id");
+    if (stored) return stored;
+    const newId = `legal-${Date.now()}`;
+    localStorage.setItem("legal-chat-session-id", newId);
+    return newId;
+  });
+
+  // Load messages from localStorage on mount
+  const [messages, setMessages] = useState<Array<{ role: string; content: string; sources?: any[] }>>(() => {
+    try {
+      const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}${sessionId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.error("Failed to load chat history:", e);
+    }
+    return [];
+  });
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState(initialSessionId || `legal-${Date.now()}`);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${sessionId}`, JSON.stringify(messages));
+    } catch (e) {
+      console.error("Failed to save chat history:", e);
+    }
+  }, [messages, sessionId]);
+
+  // Save session ID to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("legal-chat-session-id", sessionId);
+  }, [sessionId]);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim()) return;
@@ -53,7 +90,8 @@ export function useLegalChat(initialSessionId?: string): UseLegalChatReturn {
 
   const clearMessages = useCallback(() => {
     setMessages([]);
-    setSessionId(`legal-${Date.now()}`);
+    const newSessionId = `legal-${Date.now()}`;
+    setSessionId(newSessionId);
   }, []);
 
   return {

@@ -15,13 +15,32 @@
     "saveError": "Failed to save Legal AI settings",
     "loadError": "Failed to load Legal AI settings",
     "uploadSuccess": "Document uploaded successfully",
+    "uploadError": "Failed to upload document",
+    "reindexSuccess": "Document reindexed successfully",
+    "reindexError": "Failed to reindex document",
+    "deleteSuccess": "Document deleted successfully",
+    "deleteError": "Failed to delete document",
+    "documentTitle": "Title",
+    "titlePlaceholder": "e.g., Foreign Investment Law",
+    "documentType": "Document Type",
+    "selectType": "Select type...",
+    "effectiveDate": "Effective Date",
+    "tags": "Tags (comma-separated)",
+    "tagsPlaceholder": "e.g., investment, foreign",
+    "file": "File (PDF)",
+    "errors": {
+      "required_fields": "All fields are required",
+      "file_too_large": "File too large (max 50MB)",
+      "upload_failed": "Upload failed"
+    },
     "table": {
       "title": "Legal Documents",
       "type": "Type",
       "chunks": "Chunks",
       "indexed": "Indexed",
       "created": "Created",
-      "actions": "Actions"
+      "actions": "Actions",
+      "confirmDelete": "Are you sure you want to delete this document?"
     }
   },
   "chat": {
@@ -33,7 +52,8 @@
     "thinking": "Thinking...",
     "noResponse": "No response received from AI",
     "error": "An error occurred while processing your request",
-    "disclaimer": "AI-generated content may contain inaccuracies. Always verify with a legal professional."
+    "disclaimer": "AI-generated content may contain inaccuracies. Always verify with a legal professional.",
+    "sessionTitle": "Legal Chat"
   },
   "validation": {
     "title": "Document Validation",

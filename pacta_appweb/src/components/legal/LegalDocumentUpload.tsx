@@ -73,20 +73,8 @@ export function LegalDocumentUpload({ onSuccess }: LegalDocumentUploadProps) {
       setLoading(false);
     }
   };
-      
-      toast.success(t('legalSettings.uploadSuccess') || "Document uploaded successfully");
-      setTitle("");
-      setDocumentType("");
-      setFile(null);
-      onSuccess?.();
-    } catch (err: any) {
-      toast.error(err.message || t('legalSettings.uploadError') || "Upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
+   
+   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label>{t('legalSettings.documentTitle') || "Title"}</Label>

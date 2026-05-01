@@ -9,6 +9,7 @@ import { ChatMessage } from "./ChatMessage";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 import { Send, Loader2, Trash2 } from "lucide-react";
+import { useLegalChat } from "@/hooks/useLegalChat";
 
 interface ChatPanelProps {
   sessionId: string;
@@ -16,9 +17,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ sessionId }: ChatPanelProps) {
   const { t } = useTranslation("legal");
-  const [messages, setMessages] = useState<Array<{role: string; content: string; sources?: any[]}>>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { messages, input, loading, setInput, sendMessage, clearMessages } = useLegalChat(sessionId);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,30 +28,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-
-    const userMessage = input.trim();
-    setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
-    setLoading(true);
-
-    try {
-      const res = await api.post<{ session_id: string; answer: string; sources?: any[] }>('/api/ai/legal/chat', {
-        message: userMessage,
-        session_id: sessionId,
-      });
-
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: res.answer || t('chat.noResponse') || "No response",
-        sources: res.sources
-      }]);
-    } catch (err: any) {
-      toast.error(err.message || t('chat.error') || "Error sending message");
-      // Remove the user message on error
-      setMessages(prev => prev.filter((_, i) => i !== prev.length - 1));
-    } finally {
-      setLoading(false);
-    }
+    await sendMessage();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -60,10 +36,6 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
       e.preventDefault();
       handleSend();
     }
-  };
-
-  const handleClear = () => {
-    setMessages([]);
   };
 
   return (
@@ -113,7 +85,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
             <Send className="h-4 w-4" />
           </Button>
           {messages.length > 0 && (
-            <Button variant="outline" onClick={handleClear} disabled={loading}>
+            <Button variant="outline" onClick={clearMessages} disabled={loading}>
               <Trash2 className="h-4 w-4" />
             </Button>
           )}

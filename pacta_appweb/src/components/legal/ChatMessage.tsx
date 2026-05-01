@@ -2,6 +2,7 @@
 
 import { MessageSquare, User } from "lucide-react";
 import { SourceCitation } from "./SourceCitation";
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -37,12 +38,14 @@ export function ChatMessage({ role, content, sources }: ChatMessageProps) {
             ? "bg-indigo-600 text-white"
             : "bg-white border border-slate-200 text-slate-900"
         }`}>
-          <p className="text-sm whitespace-pre-wrap">{content}</p>
+          <div className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-1">
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
         </div>
 
         {/* Sources for assistant messages */}
         {!isUser && sources && sources.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 w-full">
             <SourceCitation sources={sources} />
           </div>
         )}
