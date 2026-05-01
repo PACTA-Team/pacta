@@ -880,12 +880,12 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 	// Determine request type: multipart or JSON
 	contentType := r.Header.Get("Content-Type")
 	var (
-		title       string
-		docType     string
+		title        string
+		docType      string
 		jurisdiction string
-		content     string
-		contentHash string
-		err         error
+		content      string
+		contentHash  string
+		language     string
 	)
 
 	if strings.HasPrefix(contentType, "application/json") {
@@ -904,6 +904,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 		title = req.Title
 		docType = req.DocumentType
 		content = req.Content
+		language = req.Language
 		if req.Jurisdiction == "" {
 			jurisdiction = "Cuba"
 		} else {
@@ -975,9 +976,30 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 			h.Error(w, http.StatusBadRequest, "title and document_type are required")
 			return
 		}
-		// Generate hash
+	// Generate hash
 		contentHash = fmt.Sprintf("%x", []byte(content)[:16])
 	}
+
+	// Create legal document in database
+	companyID := h.getCompanyID(r)
+	userID := h.getUserID(r)
+	now := time.Now()
+
+	doc, err := db.CreateLegalDocument(ctx, h.DB, db.CreateLegalDocumentParams{
+		Title:         title,
+		DocumentType:   docType,
+		Content:        content,
+		ContentHash:    contentHash,
+		Language:       language,
+		Jurisdiction:   jurisdiction,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+		CompanyID:      companyID,
+		UploadedBy:     userID,
+		IsIndexed:      false,
+		Tags:           []string{},
+		ChunkCount:      0,
+	})
 	if err != nil {
 		log.Printf("[Legal Upload] Create failed: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to save document")
@@ -985,7 +1007,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Index the document asynchronously
-	go func() {
+	go func(doc db.LegalDocumentRow) {
 		// Get vector DB
 		vectorDB, err := h.getOrCreateVectorDB(companyID)
 		if err != nil {
@@ -1021,7 +1043,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 		} else {
 			log.Printf("[Legal Index] Successfully indexed document %d with RAG", doc.ID)
 		}
-	}()
+	}(doc)
 
 	h.success(w, http.StatusCreated, map[string]interface{}{
 		"id":             doc.ID,
