@@ -14,6 +14,7 @@ interface LegalStats {
   document_count: number;
   embedding_model: string;
   status: string;
+  last_update?: string;
 }
 
 export function LegalStats() {
@@ -94,7 +95,7 @@ export function LegalStats() {
             <span className="text-sm font-medium">{t('legalSettings.lastUpdate')}</span>
           </div>
           <span className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString('es-ES')}
+            {stats.last_update ? new Date(stats.last_update).toLocaleDateString('es-ES') : '-'}
           </span>
         </div>
       </CardContent>

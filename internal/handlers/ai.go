@@ -802,12 +802,28 @@ func (h *Handler) HandleLegalStatus(w http.ResponseWriter, r *http.Request) {
 		embeddingModel = "all-minilm-l6-v2" // default
 	}
 
+	// Get last update (most recent indexed_at)
+	var lastUpdate sql.NullTime
+	err = h.DB.QueryRowContext(ctx, `
+		SELECT MAX(indexed_at) FROM legal_documents WHERE deleted_at IS NULL
+	`).Scan(&lastUpdate)
+	if err != nil {
+		log.Printf("[Legal Status] Failed to get last_update: %v", err)
+	}
+
+	// Format last_update for JSON response
+	lastUpdateValue := ""
+	if lastUpdate.Valid {
+		lastUpdateValue = lastUpdate.Time.Format(time.RFC3339)
+	}
+
 	response := map[string]interface{}{
 		"enabled":           enabled,
 		"integration":       integrationEnabled,
 		"document_count":    docCount,
 		"embedding_model":   embeddingModel,
 		"status":            "operational",
+		"last_update":       lastUpdateValue,
 	}
 
 	h.success(w, http.StatusOK, response)
@@ -981,7 +997,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Create legal document in database
-	companyID := h.getCompanyID(r)
+	companyID := h.GetCompanyID(r)
 	userID := h.getUserID(r)
 	now := time.Now()
 
