@@ -296,11 +296,10 @@ func (db *VectorDB) DeleteDocument(id string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	// Clean up nodeToDoc mapping
+	// Clean up all nodeToDoc mappings for this document
 	for nodeID, docID := range db.nodeToDoc {
 		if docID == id {
 			delete(db.nodeToDoc, nodeID)
-			break
 		}
 	}
 
@@ -355,28 +354,32 @@ func (hi *hnswIndex) insert(vector []float32) int {
 	}
 
 	for layer := startLayer; layer >= 0; layer-- {
-		// Search for neighbors at this layer
+			// Search for neighbors at this layer
 		ef := hi.ef
-		if layer == 0 {
-			ef = hi.ef
-		}
 		candidates := hi.searchLayer(vector, ep, ef, layer)
 
+		// Select only best M neighbors (searchLayer returns sorted results)
+		selected := candidates
+		if len(selected) > hi.m {
+			selected = selected[:hi.m]
+		}
+
 		// Connect node to selected neighbors at this layer
-		node.neighbors[layer] = make([]int, 0, len(candidates))
-		for _, candID := range candidates {
+		node.neighbors[layer] = make([]int, 0, len(selected))
+		for _, candID := range selected {
 			if candID < 0 || candID >= len(hi.nodes) {
 				continue
 			}
 			node.neighbors[layer] = append(node.neighbors[layer], candID)
 
-			// Add reverse connection
+			// Add reverse connection and prune to M
 			candNode := hi.nodes[candID]
 			if candNode.neighbors == nil {
 				candNode.neighbors = make(map[int][]int)
 			}
-			if len(candNode.neighbors[layer]) < hi.m {
-				candNode.neighbors[layer] = append(candNode.neighbors[layer], nodeID)
+			candNode.neighbors[layer] = append(candNode.neighbors[layer], nodeID)
+			if len(candNode.neighbors[layer]) > hi.m {
+				candNode.neighbors[layer] = candNode.neighbors[layer][:hi.m]
 			}
 		}
 
