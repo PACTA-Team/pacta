@@ -27,7 +27,7 @@ func setupTestDB(t *testing.T) *sql.DB {
         t.Fatalf("failed to open test db: %v", err)
     }
 
-    // Create legal_documents table
+    // Create legal_documents table with complete schema
     _, err = database.Exec(`
         CREATE TABLE IF NOT EXISTS legal_documents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,7 +46,14 @@ func setupTestDB(t *testing.T) *sql.DB {
             indexed_at TEXT,
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now')),
-            deleted_at TEXT
+            deleted_at TEXT,
+            company_id INTEGER NOT NULL DEFAULT 1,
+            uploaded_by INTEGER NOT NULL,
+            storage_path TEXT NOT NULL,
+            mime_type TEXT,
+            size_bytes INTEGER,
+            chunk_config TEXT,
+            is_indexed BOOLEAN DEFAULT 0
         )
     `)
     if err != nil {
@@ -70,7 +77,7 @@ func setupTestDB(t *testing.T) *sql.DB {
         t.Fatalf("failed to create ai_legal_chat_history table: %v", err)
     }
 
-    // Insert a test legal document
+    // Insert a test legal document with all required fields
     doc := &models.LegalDocument{
         ID:            1,
         Title:         "Ley de Contratos",
@@ -81,11 +88,26 @@ func setupTestDB(t *testing.T) *sql.DB {
         Jurisdiction:  "Cuba",
         CreatedAt:     time.Now(),
         UpdatedAt:     time.Now(),
+        CompanyID:     1,
+        UploadedBy:    1,
+        StoragePath:   "data/legal_corpus/1/test123.pdf",
+        MimeType:      "application/pdf",
+        SizeBytes:     1024,
+        ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
+        IsIndexed:     false,
     }
     _, err = database.Exec(`
-        INSERT INTO legal_documents (id, title, document_type, content, content_hash, language, jurisdiction, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, doc.ID, doc.Title, doc.DocumentType, doc.Content, doc.ContentHash, doc.Language, doc.Jurisdiction, doc.CreatedAt, doc.UpdatedAt)
+        INSERT INTO legal_documents (
+            id, title, document_type, content, content_hash,
+            language, jurisdiction, created_at, updated_at,
+            company_id, uploaded_by, storage_path, mime_type,
+            size_bytes, chunk_config, is_indexed
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, doc.ID, doc.Title, doc.DocumentType, doc.Content, doc.ContentHash,
+       doc.Language, doc.Jurisdiction, doc.CreatedAt, doc.UpdatedAt,
+       doc.CompanyID, doc.UploadedBy, doc.StoragePath, doc.MimeType,
+       doc.SizeBytes, doc.ChunkConfig, doc.IsIndexed)
     if err != nil {
         t.Fatalf("failed to insert test legal document: %v", err)
     }
@@ -144,15 +166,15 @@ func TestChatService_Integration(t *testing.T) {
 
     // Process a message
     msg := legal.ChatMessage{
-        SessionID: "test-session",
+        SessionID: "sess-test-" + fmt.Sprintf("%d", time.Now().UnixNano()),
         UserID:    1,
         Content:   "¿Qué dice el artículo 1?",
     }
-    answer, err := svc.ProcessMessage(context.Background(), msg)
+    resp, err := svc.ProcessMessage(context.Background(), msg)
     if err != nil {
         t.Fatalf("ProcessMessage failed: %v", err)
     }
-    if answer == "" {
+    if resp.Answer == "" {
         t.Error("expected non-empty answer")
     }
 

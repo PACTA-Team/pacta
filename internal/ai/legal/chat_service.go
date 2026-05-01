@@ -57,7 +57,7 @@ func NewChatService(db *sql.DB, vectorDB *minirag.VectorDB, embedder *minirag.Em
 }
 
 // ProcessMessage procesa un mensaje del usuario y devuelve una respuesta
-func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (string, error) {
+func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (ChatResponse, error) {
 	// 1. Guardar mensaje del usuario
 	_, err := db.CreateLegalChatMessage(ctx, s.db, db.CreateLegalChatMessageParams{
 		UserID:      int64(msg.UserID),
@@ -67,7 +67,7 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (stri
 		CreatedAt:   time.Now(),
 	})
 	if err != nil {
-		return "", fmt.Errorf("guardar mensaje usuario: %w", err)
+		return ChatResponse{}, fmt.Errorf("guardar mensaje usuario: %w", err)
 	}
 
 	// 2. Buscar documentos legales relevantes (RAG)
@@ -108,7 +108,7 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (stri
 	// 4. Obtener respuesta del LLM
 	answer, err := s.llm.Generate(ctx, msg.Content, systemPrompt)
 	if err != nil {
-		return "", fmt.Errorf("generación LLM: %w", err)
+		return ChatResponse{}, fmt.Errorf("generación LLM: %w", err)
 	}
 
 	// 5. Guardar respuesta del asistente
@@ -132,7 +132,11 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (stri
 		fmt.Printf("[WARN] No se pudo guardar mensaje asistente: %v\n", err)
 	}
 
-	return answer, nil
+	return ChatResponse{
+		Answer:      answer,
+		Sources:     contextDocs,
+		ContextUsed: len(contextDocs) > 0,
+	}, nil
 }
 
 // searchContext busca documentos legales relevantes para la consulta usando RAG

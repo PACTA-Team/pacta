@@ -27,14 +27,14 @@ export function useLegalChat(initialSessionId?: string): UseLegalChatReturn {
     setLoading(true);
 
     try {
-      const res = await api.post<{ session_id: string; reply: string; sources?: any[] }>('/api/ai/legal/chat', {
+      const res = await api.post<{ session_id: string; answer: string; sources?: any[] }>('/api/ai/legal/chat', {
         message: userMessage,
         session_id: sessionId,
       });
 
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: res.reply || "No response", 
+        content: res.answer || "No response", 
         sources: res.sources 
       }]);
 

@@ -55,7 +55,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to open test db: %v", err)
 	}
 
-	// Create legal_documents table
+	// Create legal_documents table (complete schema)
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS legal_documents (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,7 +74,14 @@ func setupTestDB(t *testing.T) *sql.DB {
 			indexed_at TEXT,
 			created_at TEXT DEFAULT (datetime('now')),
 			updated_at TEXT DEFAULT (datetime('now')),
-			deleted_at TEXT
+			deleted_at TEXT,
+			company_id INTEGER NOT NULL DEFAULT 1,
+			uploaded_by INTEGER NOT NULL,
+			storage_path TEXT NOT NULL,
+			mime_type TEXT,
+			size_bytes INTEGER,
+			chunk_config TEXT,
+			is_indexed BOOLEAN DEFAULT 0
 		)
 	`)
 	if err != nil {
@@ -93,12 +100,26 @@ func setupTestDB(t *testing.T) *sql.DB {
 		ContentHash:  "test123",
 		Language:     "es",
 		Jurisdiction: "Cuba",
+		CompanyID:    1,
+		UploadedBy:   1,
+		StoragePath:  "data/legal_corpus/1/test123.pdf",
+		MimeType:     "application/pdf",
+		SizeBytes:    1024,
+		ChunkConfig:  `{"size":1000,"overlap":200,"strategy":"structured"}`,
+		IsIndexed:    false,
 	}
 
 	_, err = db.Exec(`
-		INSERT INTO legal_documents (id, title, document_type, content, content_hash, language, jurisdiction)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, doc.ID, doc.Title, doc.DocumentType, doc.Content, doc.ContentHash, doc.Language, doc.Jurisdiction)
+		INSERT INTO legal_documents (
+			id, title, document_type, content, content_hash,
+			language, jurisdiction, company_id, uploaded_by,
+			storage_path, mime_type, size_bytes, chunk_config, is_indexed
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`,
+		doc.ID, doc.Title, doc.DocumentType, doc.Content, doc.ContentHash,
+		doc.Language, doc.Jurisdiction, doc.CompanyID, doc.UploadedBy,
+		doc.StoragePath, doc.MimeType, doc.SizeBytes, doc.ChunkConfig, doc.IsIndexed)
 	if err != nil {
 		t.Fatalf("failed to insert test document: %v", err)
 	}

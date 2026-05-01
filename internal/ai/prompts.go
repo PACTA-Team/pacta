@@ -62,6 +62,32 @@ func BuildReviewPrompt(contractText string) string {
 	return strings.ReplaceAll(ReviewContractPromptTemplate, "{{.ContractText}}", contractText)
 }
 
+// ValidationPromptTemplate is the template for contract validation (Cuban law)
+const ValidationPromptTemplate = `Analiza el siguiente contrato identificando posibles incumplimientos o riesgos bajo la ley cubana. Responde SOLO con un objeto JSON con esta estructura exacta:
+
+{
+  "risks": [
+    {"clause": "<nombre de la cláusula>", "risk": "high|medium|low", "suggestion": "<recomendación específica>"}
+  ],
+  "missing_clauses": ["<nombre cláusula faltante>", ...],
+  "overall_risk": "high|medium|low"
+}
+
+Reglas:
+- Máximo 5 riesgos.
+- Incluye solo cláusulas que sean claramente problemáticas.
+- Para cada riesgo, proporciona una sugerencia concreta de corrección.
+- Si no faltan cláusulas, "missing_clauses": [].
+- No incluyas texto adicional fuera del JSON.
+
+Contrato:
+{{.ContractText}}`
+
+// BuildValidationPrompt builds the full prompt for contract validation
+func BuildValidationPrompt(contractText string, context []string) string {
+	return strings.ReplaceAll(ValidationPromptTemplate, "{{.ContractText}}", contractText)
+}
+
 // SystemPromptCubanLegalExpert returns the system prompt for the Cuban legal expert
 func SystemPromptCubanLegalExpert() string {
 	return `Eres un experto legal especializado en el derecho cubano, particularmente en contratos y leyes comerciales. Tu objetivo es ayudar a los usuarios a entender y analizar contratos a la luz de la legislación cubana vigente.
@@ -114,12 +140,20 @@ Mantén un tono profesional y educado.`
 
 // LegalValidationPrompt returns prompt for contract validation
 func LegalValidationPrompt() string {
-	return `Analiza el siguiente contrato identificando posibles incumplimientos o riesgos bajo la ley cubana. Señala específicamente:
+	return `Analiza el siguiente contrato identificando posibles incumplimientos o riesgos bajo la ley cubana. Responde SOLO con un objeto JSON con esta estructura exacta:
 
-1. Cláusulas potencialmente nulas o anulables
-2. Omisiones de requisitos formales cubanos
-3. Conflictos con normas imperativas
-4. Riesgos de ejecución en Cuba
+{
+  "risks": [
+    {"clause": "<nombre de la cláusula>", "risk": "high|medium|low", "suggestion": "<recomendación específica>"}
+  ],
+  "missing_clauses": ["<nombre cláusula faltante>", ...],
+  "overall_risk": "high|medium|low"
+}
 
-Sé conciso y enfócate en los 3-5 puntos más críticos.`
+Reglas:
+- Máximo 5 riesgos.
+- Incluye solo cláusulas que sean claramente problemáticas.
+- Para cada riesgo, proporciona una sugerencia concreta de corrección.
+- Si no faltan cláusulas, "missing_clauses": [].
+- No incluyas texto adicional fuera del JSON.`
 }

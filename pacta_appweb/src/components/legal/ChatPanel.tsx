@@ -16,7 +16,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ sessionId }: ChatPanelProps) {
   const { t } = useTranslation("legal");
-  const [messages, setMessages] = useState<Array<{role: string; content: string}>>([]);
+  const [messages, setMessages] = useState<Array<{role: string; content: string; sources?: any[]}>>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -36,12 +36,16 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
     setLoading(true);
 
     try {
-      const res = await api.post<{ session_id: string; reply: string }>('/api/ai/legal/chat', {
+      const res = await api.post<{ session_id: string; answer: string; sources?: any[] }>('/api/ai/legal/chat', {
         message: userMessage,
         session_id: sessionId,
       });
 
-      setMessages(prev => [...prev, { role: "assistant", content: res.reply || t('chat.noResponse') || "No response" }]);
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: res.answer || t('chat.noResponse') || "No response",
+        sources: res.sources
+      }]);
     } catch (err: any) {
       toast.error(err.message || t('chat.error') || "Error sending message");
       // Remove the user message on error
@@ -81,6 +85,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
               key={idx}
               role={msg.role}
               content={msg.content}
+              sources={msg.sources}
             />
           ))}
 

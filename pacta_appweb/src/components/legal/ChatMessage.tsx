@@ -1,13 +1,22 @@
 "use client";
 
 import { MessageSquare, User } from "lucide-react";
+import { SourceCitation } from "./SourceCitation";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
+  sources?: Array<{
+    document_id: number;
+    title: string;
+    document_type: string;
+    relevance: number;
+    content_snippet?: string;
+    chunk_title?: string;
+  }>;
 }
 
-export function ChatMessage({ role, content }: ChatMessageProps) {
+export function ChatMessage({ role, content, sources }: ChatMessageProps) {
   const isUser = role === "user";
 
   return (
@@ -30,6 +39,13 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
         }`}>
           <p className="text-sm whitespace-pre-wrap">{content}</p>
         </div>
+
+        {/* Sources for assistant messages */}
+        {!isUser && sources && sources.length > 0 && (
+          <div className="mt-2">
+            <SourceCitation sources={sources} />
+          </div>
+        )}
       </div>
     </div>
   );

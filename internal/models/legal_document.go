@@ -22,6 +22,14 @@ type LegalDocument struct {
 	IndexedAt       *time.Time `json:"indexed_at,omitempty" db:"indexed_at"`
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt       *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+	CompanyID       int        `json:"company_id" db:"company_id"`
+	UploadedBy      int        `json:"uploaded_by" db:"uploaded_by"`
+	StoragePath     string     `json:"storage_path" db:"storage_path"`
+	MimeType        string     `json:"mime_type,omitempty" db:"mime_type"`
+	SizeBytes       int        `json:"size_bytes,omitempty" db:"size_bytes"`
+	ChunkConfig     string     `json:"chunk_config,omitempty" db:"chunk_config"`
+	IsIndexed       bool       `json:"is_indexed" db:"is_indexed"`
 }
 
 func (ld *LegalDocument) GetTagsJSON() (string, error) {

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, ExternalLink } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 interface SourceCitationProps {
   sources?: Array<{
@@ -12,6 +11,8 @@ interface SourceCitationProps {
     title: string;
     document_type: string;
     relevance: number;
+    content_snippet?: string;
+    chunk_title?: string;
   }>;
 }
 
@@ -46,40 +47,36 @@ export function SourceCitation({ sources }: SourceCitationProps) {
       <p className="text-xs font-medium text-muted-foreground">
         Fuentes consultadas:
       </p>
-      <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
         {displaySources.map((source, idx) => (
-          <Card key={idx} className="border-slate-200/50">
-            <CardContent className="p-3 flex items-start justify-between">
-              <div className="flex-1 space-y-1">
+          <HoverCard key={idx} openDelay={200} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <Badge 
+                variant="outline" 
+                className="cursor-pointer hover:bg-slate-100 px-2 py-1 text-xs"
+              >
+                {source.title} ({(source.relevance * 100).toFixed(0)}%)
+              </Badge>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80 max-h-64 overflow-y-auto">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="secondary" className="text-xs">
                     {getDocTypeLabel(source.document_type)}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     Relevancia: {(source.relevance * 100).toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-sm font-medium">{source.title}</p>
+                <h4 className="text-sm font-medium leading-tight">
+                  {source.chunk_title || source.title}
+                </h4>
+                <p className="text-xs text-muted-foreground line-clamp-8">
+                  {source.content_snippet || "No hay snippet disponible."}
+                </p>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => window.open(`/api/ai/legal/documents/${source.document_id}/preview`, '_blank')}
-                  title="Ver documento"
-                >
-                  <Eye className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardContent>
-            {/* Relevance bar */}
-            <div className="h-1 bg-slate-100">
-              <div 
-                className={`h-full ${getRelevanceColor(source.relevance)}`}
-                style={{ width: `${source.relevance * 100}%` }}
-              />
-            </div>
-          </Card>
+            </HoverCardContent>
+          </HoverCard>
         ))}
       </div>
 

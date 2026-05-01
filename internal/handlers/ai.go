@@ -232,6 +232,21 @@ func (h *Handler) HandleAI(w http.ResponseWriter, r *http.Request) {
             return
         }
         h.HandleDeleteLegalDocument(w, r, id)
+    case strings.HasPrefix(path, "/legal/documents/") && strings.HasSuffix(path, "/preview") && r.Method == http.MethodGet:
+        // GET /api/ai/legal/documents/{id}/preview
+        idStr := strings.TrimPrefix(path, "/legal/documents/")
+        idStr = strings.TrimSuffix(idStr, "/preview")
+        idStr = strings.Trim(idStr, "/")
+        if idStr == "" {
+            h.Error(w, http.StatusBadRequest, "Document ID required")
+            return
+        }
+        id, err := strconv.Atoi(idStr)
+        if err != nil || id <= 0 {
+            h.Error(w, http.StatusBadRequest, "Invalid document ID")
+            return
+        }
+        h.HandlePreviewLegalDocument(w, r, id)
     case path == "/legal/suggest-clauses" && r.Method == http.MethodGet:
         h.HandleSuggestClauses(w, r)
     case path == "/legal/chat/history" && r.Method == http.MethodGet:
@@ -842,6 +857,12 @@ func (h *Handler) HandleListLegalDocuments(w http.ResponseWriter, r *http.Reques
 
 // HandleUploadLegalDocument uploads a new legal document for indexing
 func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Request) {
+	// Admin check
+	if roleLevel(h.getUserRole(r)) < 4 {
+		h.Error(w, http.StatusForbidden, "Admin role required")
+		return
+	}
+
 	ctx := r.Context()
 
 	// Check if legal AI is enabled
@@ -915,6 +936,17 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 		contentBytes, err := io.ReadAll(file)
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "Failed to read file")
+			return
+		}
+
+		// Validate magic bytes to prevent disguised uploads
+		if len(contentBytes) < 8 {
+			h.Error(w, http.StatusBadRequest, "File too short")
+			return
+		}
+		magic := string(contentBytes[:8])
+		if !strings.HasPrefix(magic, "%PDF-") {
+			h.Error(w, http.StatusBadRequest, "Only PDF files are supported (invalid magic bytes)")
 			return
 		}
 
@@ -1069,7 +1101,7 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 			// Fallback: return a simple response for testing/disabled AI
 			h.success(w, http.StatusOK, map[string]interface{}{
 				"session_id": req.SessionID,
-				"reply":      "Respuesta de experto legal no disponible (sin configuración de IA).",
+				"answer":      "Respuesta de experto legal no disponible (sin configuración de IA).",
 			})
 			return
 		}
@@ -1086,12 +1118,12 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 			provider, apiKey, model, endpoint, err := h.getAIConfig()
 			if err != nil {
 				log.Printf("[Legal Chat] Failed to get AI config: %v", err)
-				// Fallback: return a simple response
-				h.success(w, http.StatusOK, map[string]interface{}{
-					"session_id": req.SessionID,
-					"reply":      "Respuesta de experto legal no disponible (sin configuración de IA).",
-				})
-				return
+			// Fallback: return a simple response
+			h.success(w, http.StatusOK, map[string]interface{}{
+				"session_id": req.SessionID,
+				"answer":      "Respuesta de experto legal no disponible (sin configuración de IA).",
+			})
+			return
 			}
 			llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
 		}
@@ -1101,7 +1133,7 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 	chatSvc := legal.NewChatService(h.DB, vectorDB, embedder, llmClient)
 
 	// Process message
-	response, err := chatSvc.ProcessMessage(ctx, legal.ChatMessage{
+	resp, err := chatSvc.ProcessMessage(ctx, legal.ChatMessage{
 		SessionID: req.SessionID,
 		UserID:    userID,
 		Content:   req.Message,
@@ -1114,7 +1146,8 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 
 	h.success(w, http.StatusOK, map[string]interface{}{
 		"session_id": req.SessionID,
-		"reply":      response,
+		"answer":      resp.Answer,
+		"sources":     resp.Sources,
 	})
 }
 
@@ -1206,19 +1239,46 @@ func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Parse answer into structured response (simplified)
-	// In full implementation, would parse JSON with risks, missing_clauses, overall_risk
-	response := map[string]interface{}{
-		"contract_type": req.ContractType,
-		"analysis":      answer,
-		"status":        "completed",
+	// Parse structured JSON response from LLM
+	type validationResponse struct {
+		Risks []struct {
+			Clause     string `json:"clause"`
+			Risk       string `json:"risk"`
+			Suggestion string `json:"suggestion"`
+		} `json:"risks"`
+		MissingClauses []string `json:"missing_clauses"`
+		OverallRisk    string  `json:"overall_risk"`
 	}
 
-	h.success(w, http.StatusOK, response)
+	var parsed validationResponse
+	if err := json.Unmarshal([]byte(answer), &parsed); err != nil {
+		// Fallback: return analysis as plain text for backwards compatibility
+		log.Printf("[Legal Validate] JSON parse failed, using fallback: %v", err)
+		h.success(w, http.StatusOK, map[string]interface{}{
+			"contract_type": req.ContractType,
+			"analysis":      answer,
+			"status":        "completed",
+		})
+		return
+	}
+
+	h.success(w, http.StatusOK, map[string]interface{}{
+		"contract_type":   req.ContractType,
+		"risks":           parsed.Risks,
+		"missing_clauses": parsed.MissingClauses,
+		"overall_risk":    parsed.OverallRisk,
+		"status":         "completed",
+	})
 }
 
 // HandleReindexLegalDocument re-indexes a legal document into the vector database
 func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Request, id int) {
+	// Admin check
+	if roleLevel(h.getUserRole(r)) < 4 {
+		h.Error(w, http.StatusForbidden, "Admin role required")
+		return
+	}
+
 	ctx := r.Context()
 
 	// Retrieve the legal document from the database
@@ -1431,5 +1491,36 @@ func (h *Handler) HandleLegalChatHistory(w http.ResponseWriter, r *http.Request)
 	h.success(w, http.StatusOK, map[string]interface{}{
 		"session_id": sessionID,
 		"messages":   out,
+	})
+}
+
+// HandlePreviewLegalDocument returns a preview of a legal document (admin only)
+func (h *Handler) HandlePreviewLegalDocument(w http.ResponseWriter, r *http.Request, id int) {
+	// Admin check
+	if roleLevel(h.getUserRole(r)) < 4 {
+		h.Error(w, http.StatusForbidden, "Admin role required")
+		return
+	}
+	ctx := r.Context()
+	doc, err := db.GetLegalDocument(ctx, h.DB, int64(id))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			h.Error(w, http.StatusNotFound, "Document not found")
+		} else {
+			h.Error(w, http.StatusInternalServerError, "Database error")
+		}
+		return
+	}
+	// Truncate content for preview
+	preview := doc.Content
+	const maxPreviewLen = 5000
+	if len(preview) > maxPreviewLen {
+		preview = preview[:maxPreviewLen] + "..."
+	}
+	h.success(w, http.StatusOK, map[string]interface{}{
+		"id":             doc.ID,
+		"title":          doc.Title,
+		"preview":        preview,
+		"document_type":  doc.DocumentType,
 	})
 }

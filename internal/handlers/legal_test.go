@@ -51,8 +51,16 @@ func setupLegalTestDB(t *testing.T) *sql.DB {
 			effective_date DATE,
 			publication_date DATE,
 			gaceta_number TEXT,
+			reference_number TEXT,
 			tags TEXT,
 			chunk_count INTEGER DEFAULT 0,
+			chunk_config TEXT,
+			is_indexed BOOLEAN DEFAULT 0,
+			mime_type TEXT,
+			size_bytes INTEGER,
+			storage_path TEXT NOT NULL,
+			company_id INTEGER NOT NULL DEFAULT 1,
+			uploaded_by INTEGER NOT NULL,
 			indexed_at DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -184,8 +192,8 @@ func TestLegalChat(t *testing.T) {
 	var resp map[string]interface{}
 	json.NewDecoder(w.Body).Decode(&resp)
 
-	if resp["reply"] == nil {
-		t.Error("Expected reply in response")
+	if resp["answer"] == nil {
+		t.Error("Expected answer in response")
 	}
 }
 
