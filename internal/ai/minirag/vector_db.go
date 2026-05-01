@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -353,20 +354,52 @@ func (hi *hnswIndex) insert(vector []float32) int {
 
 // search finds the k nearest neighbors to the query vector
 func (hi *hnswIndex) search(query []float32, k int) []int {
-	if hi.entryPoint < 0 {
+	if hi.entryPoint < 0 || len(hi.nodes) == 0 {
 		return nil
 	}
 
-	candidates := hi.searchLayer(query, hi.entryPoint, hi.ef, hi.nodes[hi.entryPoint].level)
+	// Start at entry point
+	ep := hi.entryPoint
+	epNode := hi.nodes[ep]
 
-	// Sort by distance and return top k
+	// Traverse from top layer down to layer 1 (skip layer 0 in loop)
+	currentLevel := epNode.level
+
+	for layer := currentLevel; layer > 0; layer-- {
+		// Greedy search at this layer with ef=1 to find best entry point
+		candidates := hi.searchLayer(query, ep, 1, layer)
+
+		// Update entry point to the closest node found at this layer
+		if len(candidates) > 0 {
+			bestID := candidates[0]
+			bestDist := CosineSimilarity(query, hi.nodes[bestID].vector)
+
+			for _, candID := range candidates[1:] {
+				if candID < 0 || candID >= len(hi.nodes) {
+					continue
+				}
+				dist := CosineSimilarity(query, hi.nodes[candID].vector)
+				if dist > bestDist {
+					bestDist = dist
+					bestID = candID
+				}
+			}
+
+			ep = bestID
+		}
+	}
+
+	// Final search at layer 0 with ef=hi.ef to get k nearest neighbors
+	finalCandidates := hi.searchLayer(query, ep, hi.ef, 0)
+
+	// Sort by similarity (descending) and return top k
 	type distPair struct {
 		id   int
 		dist float32
 	}
 
-	distances := make([]distPair, 0, len(candidates))
-	for _, candID := range candidates {
+	distances := make([]distPair, 0, len(finalCandidates))
+	for _, candID := range finalCandidates {
 		if candID < 0 || candID >= len(hi.nodes) {
 			continue
 		}
@@ -376,14 +409,10 @@ func (hi *hnswIndex) search(query []float32, k int) []int {
 		})
 	}
 
-	// Sort by distance (descending for similarity)
-	for i := 0; i < len(distances); i++ {
-		for j := i + 1; j < len(distances); j++ {
-			if distances[j].dist > distances[i].dist {
-				distances[i], distances[j] = distances[j], distances[i]
-			}
-		}
-	}
+	// Sort by similarity (descending)
+	sort.Slice(distances, func(i, j int) bool {
+		return distances[i].dist > distances[j].dist
+	})
 
 	result := make([]int, 0, k)
 	for i := 0; i < len(distances) && i < k; i++ {
@@ -393,53 +422,120 @@ func (hi *hnswIndex) search(query []float32, k int) []int {
 	return result
 }
 
-// searchLayer searches at a specific level
-func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, level int) []int {
+// searchLayer searches at a specific layer using greedy search
+func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, layer int) []int {
+	if entryPoint < 0 || entryPoint >= len(hi.nodes) {
+		return nil
+	}
+
 	visited := make(map[int]bool)
-	candidates := []int{entryPoint}
+
+	// Track candidates and results with their similarity scores
+	type nodeWithSim struct {
+		id  int
+		sim float32
+	}
+
+	// Start with entry point
+	epSim := CosineSimilarity(query, hi.nodes[entryPoint].vector)
+	candidates := []nodeWithSim{{id: entryPoint, sim: epSim}}
 	visited[entryPoint] = true
 
-	for len(candidates) > 0 {
-		// Get current candidate
-		currID := candidates[0]
-		candidates = candidates[1:]
+	// Results tracking - keep ef best (highest similarity)
+	results := []nodeWithSim{{id: entryPoint, sim: epSim}}
 
-		if currID < 0 || currID >= len(hi.nodes) {
-			continue
+	// Find candidate with highest similarity
+	findBestCandidate := func(cands []nodeWithSim) (nodeWithSim, []nodeWithSim) {
+		if len(cands) == 0 {
+			return nodeWithSim{}, cands
+		}
+		bestIdx := 0
+		for i := 1; i < len(cands); i++ {
+			if cands[i].sim > cands[bestIdx].sim {
+				bestIdx = i
+			}
+		}
+		best := cands[bestIdx]
+		cands[bestIdx] = cands[len(cands)-1]
+		cands = cands[:len(cands)-1]
+		return best, cands
+	}
+
+	// Insert into results, keeping only ef best
+	insertResult := func(res []nodeWithSim, item nodeWithSim) []nodeWithSim {
+		res = append(res, item)
+		if len(res) > ef {
+			// Find and remove worst (lowest similarity)
+			worstIdx := 0
+			for i := 1; i < len(res); i++ {
+				if res[i].sim < res[worstIdx].sim {
+					worstIdx = i
+				}
+			}
+			res[worstIdx] = res[len(res)-1]
+			res = res[:len(res)-1]
+		}
+		return res
+	}
+
+	for len(candidates) > 0 {
+		// Get candidate with highest similarity
+		var curr nodeWithSim
+		curr, candidates = findBestCandidate(candidates)
+
+		// Early termination: if current is worse than worst in results, stop
+		if len(results) >= ef {
+			worstInResults := results[0].sim
+			for _, r := range results {
+				if r.sim < worstInResults {
+					worstInResults = r.sim
+				}
+			}
+			if curr.sim < worstInResults {
+				break
+			}
 		}
 
-		currNode := hi.nodes[currID]
+		currNode := hi.nodes[curr.id]
 
-		// Check neighbors at this level
+		// Explore neighbors at this layer
 		for _, neighborID := range currNode.neighbors {
 			if neighborID < 0 || neighborID >= len(hi.nodes) {
 				continue
 			}
+			if visited[neighborID] {
+				continue
+			}
+			visited[neighborID] = true
 
 			neighborNode := hi.nodes[neighborID]
 
-			// Check level
-			if neighborNode.level < level {
+			// Only consider neighbors that exist at or above the current layer
+			if neighborNode.level < layer {
 				continue
 			}
 
-			if !visited[neighborID] {
-				visited[neighborID] = true
-				candidates = append(candidates, neighborID)
-			}
-		}
+			neighborSim := CosineSimilarity(query, neighborNode.vector)
 
-		if len(candidates) > ef*2 {
-			candidates = candidates[:ef*2]
+			// Add to candidates
+			candidates = append(candidates, nodeWithSim{id: neighborID, sim: neighborSim})
+
+			// Add to results
+			results = insertResult(results, nodeWithSim{id: neighborID, sim: neighborSim})
 		}
 	}
 
-	result := make([]int, 0, len(visited))
-	for id := range visited {
-		result = append(result, id)
+	// Sort results by similarity (descending)
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].sim > results[j].sim
+	})
+
+	resultIDs := make([]int, 0, len(results))
+	for _, r := range results {
+		resultIDs = append(resultIDs, r.id)
 	}
 
-	return result
+	return resultIDs
 }
 
 // randomLevel generates a random level for HNSW
