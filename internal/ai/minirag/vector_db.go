@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -295,6 +296,14 @@ func (db *VectorDB) DeleteDocument(id string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
+	// Clean up nodeToDoc mapping
+	for nodeID, docID := range db.nodeToDoc {
+		if docID == id {
+			delete(db.nodeToDoc, nodeID)
+			break
+		}
+	}
+
 	delete(db.metadata, id)
 	db.save()
 	return nil
@@ -326,19 +335,54 @@ func (hi *hnswIndex) insert(vector []float32) int {
 		return nodeID
 	}
 
-	// Find nearest neighbors at layer 0 (all nodes exist at layer 0)
-	candidates := hi.searchLayer(vector, hi.entryPoint, hi.ef, 0)
+	// Traverse from top layer down to node's level
+	ep := hi.entryPoint
+	epNode := hi.nodes[ep]
+	currentLevel := epNode.level
 
-	// Connect to selected neighbors at layer 0
-	for _, candID := range candidates {
-		if candID < 0 || candID >= len(hi.nodes) {
-			continue
+	for layer := currentLevel; layer > level; layer-- {
+		// Greedy search at this layer to find best entry point
+		candidates := hi.searchLayer(vector, ep, 1, layer)
+		if len(candidates) > 0 {
+			ep = candidates[0]
 		}
-		node.neighbors[0] = append(node.neighbors[0], candID)
-		// Add reverse connection at layer 0
-		candNode := hi.nodes[candID]
-		if len(candNode.neighbors[0]) < hi.m {
-			candNode.neighbors[0] = append(candNode.neighbors[0], nodeID)
+	}
+
+	// For each layer from min(level, currentLevel) down to 0, search and connect
+	startLayer := level
+	if currentLevel < startLayer {
+		startLayer = currentLevel
+	}
+
+	for layer := startLayer; layer >= 0; layer-- {
+		// Search for neighbors at this layer
+		ef := hi.ef
+		if layer == 0 {
+			ef = hi.ef
+		}
+		candidates := hi.searchLayer(vector, ep, ef, layer)
+
+		// Connect node to selected neighbors at this layer
+		node.neighbors[layer] = make([]int, 0, len(candidates))
+		for _, candID := range candidates {
+			if candID < 0 || candID >= len(hi.nodes) {
+				continue
+			}
+			node.neighbors[layer] = append(node.neighbors[layer], candID)
+
+			// Add reverse connection
+			candNode := hi.nodes[candID]
+			if candNode.neighbors == nil {
+				candNode.neighbors = make(map[int][]int)
+			}
+			if len(candNode.neighbors[layer]) < hi.m {
+				candNode.neighbors[layer] = append(candNode.neighbors[layer], nodeID)
+			}
+		}
+
+		// Update entry point for next lower layer
+		if len(candidates) > 0 {
+			ep = candidates[0]
 		}
 	}
 
@@ -500,7 +544,11 @@ func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, layer 
 		currNode := hi.nodes[curr.id]
 
 		// Explore neighbors at this specific layer
-		for _, neighborID := range currNode.neighbors[layer] {
+		neighs, ok := currNode.neighbors[layer]
+		if !ok {
+			continue
+		}
+		for _, neighborID := range neighs {
 			if neighborID < 0 || neighborID >= len(hi.nodes) {
 				continue
 			}
@@ -534,18 +582,13 @@ func (hi *hnswIndex) searchLayer(query []float32, entryPoint int, ef int, layer 
 	return resultIDs
 }
 
-// randomLevel generates a random level for HNSW
+// randomLevel generates a random level for HNSW using exponential distribution
 func (hi *hnswIndex) randomLevel() int {
 	level := 0
-	for level < 16 && (level == 0 || hashInt(level) < 0.25) {
+	for level < 16 && rand.Float32() < 0.25 {
 		level++
 	}
 	return level
-}
-
-func hashInt(seed int) float32 {
-	h := seed*2654435761 + 12345
-	return float32(h&0x7fffffff) / float32(0x7fffffff)
 }
 
 // normalizeVector normalizes a vector to unit length
