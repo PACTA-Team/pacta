@@ -27,7 +27,7 @@ func (rl *RateLimiter) Allow(companyID int) (remaining int, ok bool) {
 	today := time.Now().UTC().Format("2006-01-02")
 
 	// Use the underlying DB to start a transaction (sqlc Queries doesn't expose Begin)
-	tx, err := rl.queries.DB().Begin()
+	tx, err := db.GetDB(rl.queries).Begin()
 	if err != nil {
 		return 0, false
 	}
