@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,33 +12,37 @@ import (
 	"time"
 
 	"github.com/wneessen/go-mail"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/email"
 	"github.com/PACTA-Team/pacta/internal/models"
 	"github.com/PACTA-Team/pacta/internal/config"
 )
 
 type ContractExpiryWorker struct {
-	config  *config.Service
-	logger  *log.Logger
-	ticker  *time.Ticker
-	running bool
-	mu      sync.RWMutex
+	config   *config.Service
+	Queries  *db.Queries
+	logger   *log.Logger
+	ticker   *time.Ticker
+	running  bool
+	mu       sync.RWMutex
 }
 
-func NewContractExpiryWorker(cfg *config.Service) *ContractExpiryWorker {
+func NewContractExpiryWorker(cfg *config.Service, queries *db.Queries) *ContractExpiryWorker {
 	return &ContractExpiryWorker{
-		config:  cfg,
-		logger:  log.New(os.Stdout, "[email-worker] ", log.LstdFlags),
-		ticker:  nil,
-		running: false,
+		config:   cfg,
+		Queries:  queries,
+		logger:   log.New(os.Stdout, "[email-worker] ", log.LstdFlags),
+		ticker:   nil,
+		running:  false,
 	}
 }
 
 // checkEmailEnabled checks if global email notifications are enabled
 func (w *ContractExpiryWorker) checkEmailEnabled() bool {
-	var enabled string
-	err := w.config.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'email_notifications_enabled'").Scan(&enabled)
-	if err != nil || enabled == "false" {
+	ctx := context.Background()
+	value, err := w.Queries.GetSettingValue(ctx, "email_notifications_enabled")
+	if err != nil || value == "false" {
 		w.logger.Printf("[worker] email_notifications disabled in settings")
 		return false
 	}
@@ -45,9 +51,9 @@ func (w *ContractExpiryWorker) checkEmailEnabled() bool {
 
 // checkContractExpiryEnabled checks if contract expiry notifications are enabled
 func (w *ContractExpiryWorker) checkContractExpiryEnabled() bool {
-	var enabled string
-	err := w.config.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'email_contract_expiry_enabled'").Scan(&enabled)
-	if err != nil || enabled == "false" {
+	ctx := context.Background()
+	value, err := w.Queries.GetSettingValue(ctx, "email_contract_expiry_enabled")
+	if err != nil || value == "false" {
 		w.logger.Printf("[worker] contract_expiry notifications disabled in settings")
 		return false
 	}
@@ -103,23 +109,39 @@ func (w *ContractExpiryWorker) run() {
 }
 
 func (w *ContractExpiryWorker) loadSettings() (*models.ContractExpirySettings, error) {
-	var s models.ContractExpirySettings
-	err := w.config.DB.QueryRow(`
-		SELECT id, enabled, frequency_hours, thresholds_days, updated_by, updated_at
-		FROM contract_expiry_notification_settings
-		WHERE id = 1
-	`).Scan(&s.ID, &s.Enabled, &s.FrequencyHours, &s.ThresholdsDays, &s.UpdatedBy, &s.UpdatedAt)
-
-	if err == sql.ErrNoRows {
-		// Should not happen (migration inserts singleton), but default
-		return &models.ContractExpirySettings{
-			ID:              1,
-			Enabled:         true,
-			FrequencyHours:  6,
-			ThresholdsDays:  models.IntArray{30, 14, 7, 1},
-		}, nil
+	ctx := context.Background()
+	row, err := w.Queries.GetContractExpirySettings(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Should not happen (migration inserts singleton), but fallback to default
+			return &models.ContractExpirySettings{
+				ID:              1,
+				Enabled:         true,
+				FrequencyHours:  6,
+				ThresholdsDays:  models.IntArray{30, 14, 7, 1},
+			}, nil
+		}
+		return nil, err
 	}
-	return &s, err
+	s := &models.ContractExpirySettings{
+		ID:             row.ID,
+		Enabled:        row.Enabled,
+		FrequencyHours: int(row.FrequencyHours),
+		UpdatedAt:      row.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}
+	// Unmarshal thresholds_days JSON
+	if row.ThresholdsDays != "" {
+		var days []int
+		if err := json.Unmarshal([]byte(row.ThresholdsDays), &days); err != nil {
+			return nil, fmt.Errorf("parsing thresholds_days: %w", err)
+		}
+		s.ThresholdsDays = models.IntArray(days)
+	}
+	if row.UpdatedBy.Valid {
+		v := row.UpdatedBy.Int64
+		s.UpdatedBy = &v
+	}
+	return s, nil
 }
 
 // contractInfo holds the data needed for sending notification
@@ -135,44 +157,25 @@ type contractInfo struct {
 }
 
 func (w *ContractExpiryWorker) queryExpiringContracts(thresholdDays int) ([]contractInfo, error) {
-	rows, err := w.config.DB.Query(`
-		SELECT c.id, c.contract_number, c.title, c.end_date, c.created_by,
-		       cl.name AS client_name, co.name AS company_name, cl.company_id
-		FROM contracts c
-		JOIN clients cl ON c.client_id = cl.id
-		JOIN companies co ON cl.company_id = co.id
-		WHERE c.end_date BETWEEN DATE('now', ? || ' days') AND DATE('now', ? || ' days')
-		  AND c.status = 'active'
-		  AND c.deleted_at IS NULL
-		  AND NOT EXISTS (
-		      SELECT 1 FROM contract_expiry_notification_log l
-		      WHERE l.contract_id = c.id AND l.threshold_days = ?
-		  )
-		ORDER BY c.end_date ASC
-		LIMIT 1000
-	`, thresholdDays, thresholdDays, thresholdDays)
+	ctx := context.Background()
+	rows, err := w.Queries.ListExpiringContracts(ctx, thresholdDays, thresholdDays, thresholdDays)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
 	var contracts []contractInfo
-	for rows.Next() {
-		var c contractInfo
-		var expiryDateStr string
-		err := rows.Scan(&c.ID, &c.ContractNumber, &c.Name, &expiryDateStr, &c.CreatedBy,
-			&c.ClientName, &c.CompanyName, &c.CompanyID)
-		if err != nil {
-			return nil, err
-		}
-		// Parse expiry date from "2006-01-02" format
-		c.ExpiryDate, err = time.Parse("2006-01-02", expiryDateStr)
-		if err != nil {
-			return nil, fmt.Errorf("parsing expiry date %s: %w", expiryDateStr, err)
-		}
-		contracts = append(contracts, c)
+	for _, row := range rows {
+		contracts = append(contracts, contractInfo{
+			ID:             row.ID,
+			ContractNumber: row.ContractNumber,
+			Name:           row.Title,
+			ExpiryDate:     row.EndDate,
+			CreatedBy:      row.CreatedBy,
+			ClientName:     row.ClientName,
+			CompanyName:    row.CompanyName,
+			CompanyID:      row.CompanyID,
+		})
 	}
-	return contracts, rows.Err()
+	return contracts, nil
 }
 
 func (w *ContractExpiryWorker) processContract(ctx context.Context, contract contractInfo, thresholdDays int) error {
@@ -232,7 +235,7 @@ func (w *ContractExpiryWorker) sendContractExpiryEmail(
 	recipients []string,
 	adminEmail string,
 ) error {
-	cfg, err := email.GetSMTPConfig(w.config.DB)
+	cfg, err := email.GetSMTPConfig(ctx, w.Queries)
 	if err != nil {
 		return fmt.Errorf("failed to get SMTP config: %w", err)
 	}
@@ -252,7 +255,7 @@ func (w *ContractExpiryWorker) sendContractExpiryEmail(
 	msg.Subject(subject)
 	msg.SetBodyString(mail.TypeTextHTML, html)
 
-	return email.SendEmail(ctx, msg, w.config.DB)
+	return email.SendEmail(ctx, msg, w.config.Queries)
 }
 
 func buildEmailHTML(contract contractInfo, daysLeft int, adminEmail string) string {
@@ -276,21 +279,17 @@ func (w *ContractExpiryWorker) logSend(
 		msg := err.Error()
 		errMsg = &msg
 	}
-
-	_, dbErr := w.config.DB.Exec(`
-		INSERT INTO contract_expiry_notification_log
-			(contract_id, threshold_days, sent_to_user, sent_to_admin, sent_at, delivery_status, error_message, channel)
-		VALUES (?, ?, ?, ?, NOW(), ?, ?, ?)
-		ON CONFLICT (contract_id, threshold_days)
-		DO UPDATE SET
-			sent_to_user = excluded.sent_to_user,
-			sent_to_admin = excluded.sent_to_admin,
-			sent_at = excluded.sent_at,
-			delivery_status = excluded.delivery_status,
-			error_message = excluded.error_message,
-			channel = excluded.channel
-	`, contractID, threshold, sentToUser, sentToAdmin, status, errMsg, channel)
-
+	ctx := context.Background()
+	_, dbErr := w.Queries.UpsertNotificationLog(ctx, db.UpsertNotificationLogParams{
+		ContractID:      contractID,
+		ThresholdDays:   threshold,
+		SentToUser:      sentToUser,
+		SentToAdmin:     sentToAdmin,
+		SentAt:          time.Now(),
+		DeliveryStatus:  status,
+		ErrorMessage:    errMsg,
+		Channel:         channel,
+	})
 	if dbErr != nil {
 		w.logger.Printf("ERROR logging notification for contract %d: %v", contractID, dbErr)
 	} else {

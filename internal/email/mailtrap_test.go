@@ -11,7 +11,7 @@ import (
 
 func TestGetSMTPConfig(t *testing.T) {
 	// Test with nil DB (uses default values)
-	cfg, err := GetSMTPConfig(nil)
+	cfg, err := GetSMTPConfig(context.Background(), nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "smtp.mailtrap.io", cfg.Host)
@@ -30,7 +30,7 @@ func TestGetSMTPConfig_WithEnv(t *testing.T) {
 	defer os.Unsetenv("MAILTRAP_SMTP_PASS")
 	defer os.Unsetenv("MAILTRAP_SMTP_HOST")
 
-	cfg, err := GetSMTPConfig(nil)
+	cfg, err := GetSMTPConfig(context.Background(), nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "smtp.env.com", cfg.Host)

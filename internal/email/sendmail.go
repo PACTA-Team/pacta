@@ -3,23 +3,22 @@ package email
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/wneessen/go-mail"
 
+	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/reports"
 )
 
-// IsSMTPEnabled checks if SMTP is enabled in settings
-func IsSMTPEnabled(db *sql.DB) bool {
-	if db == nil {
+// IsSMTPEnabled checks if SMTP is enabled in settings using sqlc
+func IsSMTPEnabled(queries *db.Queries) bool {
+	if queries == nil {
 		return true // default to enabled if no DB
 	}
-	var enabled string
-	err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'smtp_enabled'").Scan(&enabled)
+	enabled, err := queries.GetBoolSetting(context.Background(), "smtp_enabled")
 	if err != nil || enabled == "false" {
 		return false
 	}
@@ -27,8 +26,8 @@ func IsSMTPEnabled(db *sql.DB) bool {
 }
 
 // SendEmail sends an email using Mailtrap SMTP configuration
-func SendEmail(ctx context.Context, msg *mail.Msg, db *sql.DB) error {
-	cfg, err := GetSMTPConfig(db)
+func SendEmail(ctx context.Context, msg *mail.Msg, queries *db.Queries) error {
+	cfg, err := GetSMTPConfig(ctx, queries)
 	if err != nil {
 		return fmt.Errorf("failed to get SMTP config: %w", err)
 	}
@@ -38,8 +37,8 @@ func SendEmail(ctx context.Context, msg *mail.Msg, db *sql.DB) error {
 }
 
 // SendVerificationCode sends a verification code email to the user
-func SendVerificationCode(ctx context.Context, to, code, lang string, db *sql.DB) error {
-	cfg, err := GetSMTPConfig(db)
+func SendVerificationCode(ctx context.Context, to, code, lang string, queries *db.Queries) error {
+	cfg, err := GetSMTPConfig(ctx, queries)
 	if err != nil {
 		log.Printf("[email] ERROR getting SMTP config: %v", err)
 		cfg = SMTPConfig{
@@ -64,7 +63,7 @@ func SendVerificationCode(ctx context.Context, to, code, lang string, db *sql.DB
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := SendEmail(ctx, msg, db); err != nil {
+	if err := SendEmail(ctx, msg, queries); err != nil {
 		log.Printf("[email] ERROR sending verification code to %s: %v", to, err)
 		return err
 	}
@@ -74,8 +73,8 @@ func SendVerificationCode(ctx context.Context, to, code, lang string, db *sql.DB
 }
 
 // SendAdminNotification sends a notification email to an admin
-func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail, companyName, lang string, db *sql.DB) error {
-	cfg, err := GetSMTPConfig(db)
+func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail, companyName, lang string, queries *db.Queries) error {
+	cfg, err := GetSMTPConfig(ctx, queries)
 	if err != nil {
 		log.Printf("[email] ERROR getting SMTP config: %v", err)
 		cfg = SMTPConfig{
@@ -100,7 +99,7 @@ func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail,
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := SendEmail(ctx, msg, db); err != nil {
+	if err := SendEmail(ctx, msg, queries); err != nil {
 		log.Printf("[email] ERROR sending admin notification to %s: %v", adminEmail, err)
 		return err
 	}
@@ -110,8 +109,8 @@ func SendAdminNotification(ctx context.Context, adminEmail, userName, userEmail,
 }
 
 // SendReport sends a contract report email with PDF attachment
-func SendReport(ctx context.Context, to string, contracts []reports.Contract, db *sql.DB) error {
-	cfg, err := GetSMTPConfig(db)
+func SendReport(ctx context.Context, to string, contracts []reports.Contract, queries *db.Queries) error {
+	cfg, err := GetSMTPConfig(ctx, queries)
 	if err != nil {
 		return fmt.Errorf("failed to get SMTP config: %w", err)
 	}
@@ -142,7 +141,7 @@ func SendReport(ctx context.Context, to string, contracts []reports.Contract, db
 	pdfReader := bytes.NewReader(pdfBytes)
 	msg.AttachReader("reporte_contratos.pdf", pdfReader, mail.WithFileName("reporte_contratos.pdf"))
 
-	if err := SendEmail(ctx, msg, db); err != nil {
+	if err := SendEmail(ctx, msg, queries); err != nil {
 		return fmt.Errorf("failed to send report email: %w", err)
 	}
 

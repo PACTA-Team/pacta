@@ -2,61 +2,49 @@ package email
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/wneessen/go-mail"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
-// SMTPConfig holds the configuration for Mailtrap SMTP client
 type SMTPConfig struct {
-	Host string
-	Port int
-	User string
-	Pass string
-	From string
+	Host  string
+	Port  int
+	User  string
+	Pass  string
+	From  string
 }
 
-// GetSMTPConfig loads SMTP configuration from database or environment
-func GetSMTPConfig(db *sql.DB) (SMTPConfig, error) {
+// GetSMTPConfig retrieves SMTP configuration from system_settings using sqlc Queries
+func GetSMTPConfig(ctx context.Context, queries *db.Queries) (SMTPConfig, error) {
 	cfg := SMTPConfig{
 		Host: "smtp.mailtrap.io",
 		Port: 587,
 		From: "PACTA <noreply@pacta.duckdns.org>",
 	}
-
-	// Get from database
-	if db != nil {
-		if v, err := getSetting(db, "mailtrap_smtp_host"); err == nil && v != "" {
-			cfg.Host = v
-		}
-		if v, err := getSetting(db, "mailtrap_smtp_user"); err == nil && v != "" {
-			cfg.User = v
-		}
-		if v, err := getSetting(db, "mailtrap_smtp_pass"); err == nil && v != "" {
-			cfg.Pass = v
-		}
-		if v, err := getSetting(db, "email_from"); err == nil && v != "" {
-			cfg.From = v
-		}
+	// If queries is nil, return defaults
+	if queries == nil {
+		return cfg, nil
 	}
-
-	// Fallback to environment
-	if cfg.User == "" {
-		cfg.User = os.Getenv("MAILTRAP_SMTP_USER")
+	// Fetch each setting individually
+	if v, err := queries.GetSettingValue(ctx, "smtp_host"); err == nil && v != "" {
+		cfg.Host = v
 	}
-	if cfg.Pass == "" {
-		cfg.Pass = os.Getenv("MAILTRAP_SMTP_PASS")
+	if v, err := queries.GetSettingValue(ctx, "smtp_port"); err == nil && v != "" {
+		fmt.Sscanf(v, "%d", &cfg.Port)
 	}
-	if cfg.Host == "smtp.mailtrap.io" && os.Getenv("MAILTRAP_SMTP_HOST") != "" {
-		cfg.Host = os.Getenv("MAILTRAP_SMTP_HOST")
+	if v, err := queries.GetSettingValue(ctx, "smtp_username"); err == nil && v != "" {
+		cfg.User = v
 	}
-	if cfg.From == "PACTA <noreply@pacta.duckdns.org>" && os.Getenv("EMAIL_FROM") != "" {
-		cfg.From = os.Getenv("EMAIL_FROM")
+	if v, err := queries.GetSettingValue(ctx, "smtp_password"); err == nil && v != "" {
+		cfg.Pass = v
 	}
-
+	if v, err := queries.GetSettingValue(ctx, "smtp_from"); err == nil && v != "" {
+		cfg.From = v
+	}
 	return cfg, nil
 }
 
@@ -86,11 +74,4 @@ func SendWithMailtrap(ctx context.Context, msg *mail.Msg, cfg SMTPConfig) error 
 
 	log.Printf("[email] email sent via Mailtrap")
 	return nil
-}
-
-// getSetting retrieves a setting value from the system_settings table
-func getSetting(db *sql.DB, key string) (string, error) {
-	var value string
-	err := db.QueryRow("SELECT value FROM system_settings WHERE key = ?", key).Scan(&value)
-	return value, err
 }

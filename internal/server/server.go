@@ -51,10 +51,13 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	// Create DB-backed rate limiter
 	rateLimiter := ai.NewRateLimiter(database)
 
-	h := &handlers.Handler{DB: database, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
+	// Create sqlc queries wrapper
+	queries := db.New(database)
 
-	// Create a service that bundles config and DB for worker and settings handler
-	svc := &config.Service{Config: cfg, DB: database}
+	h := &handlers.Handler{Queries: queries, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
+
+	// Create a service that bundles config and Queries for worker and settings handler
+	svc := &config.Service{Config: cfg, Queries: queries}
 
 	r := chi.NewRouter()
 	r.Use(middleware.NewCORS())
@@ -110,7 +113,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
  	r.Group(func(r chi.Router) {
  		r.Use(h.AuthMiddleware)
 		r.Use(h.TenantContextMiddleware)
- 		r.Use(middleware.SessionRefresh(svc.DB))
+ 		r.Use(middleware.SessionRefresh(queries))
  		r.Use(h.CompanyMiddleware)
 
 		// User profile routes
@@ -252,7 +255,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 	r.Handle("/*", spaHandler(staticSub))
 
 	// --- Initialize contract expiry worker ---
-	expiryWorker := worker.NewContractExpiryWorker(svc)
+	expiryWorker := worker.NewContractExpiryWorker(svc, svc.Queries)
 	expiryWorker.Start()
 	defer expiryWorker.Stop()
 	// -----------------------------------------------------------------
