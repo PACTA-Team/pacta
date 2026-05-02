@@ -1,77 +1,60 @@
 package minirag
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
 // Indexer handles automatic indexing of contracts into the vector database
 type Indexer struct {
-	DB        *sql.DB
-	VectorDB  *VectorDB
+	Queries     *db.Queries
+	VectorDB   *VectorDB
 	Embedder  *EmbeddingClient
-	ChunkSize int
+	ChunkSize    int
 	ChunkOverlap int
 }
 
-// NewIndexer creates a new document indexer
-func NewIndexer(db *sql.DB, vectorDB *VectorDB, embedder *EmbeddingClient) *Indexer {
+// NewIndexer creates a new document indexer using sqlc Queries
+func NewIndexer(queries *db.Queries, vectorDB *VectorDB, embedder *EmbeddingClient) *Indexer {
 	return &Indexer{
-		DB:            db,
-		VectorDB:      vectorDB,
-		Embedder:      embedder,
-		ChunkSize:     500,
-		ChunkOverlap:  50,
+		Queries:     queries,
+		VectorDB:   vectorDB,
+		Embedder:   embedder,
+		ChunkSize:    500,
+		ChunkOverlap: 50,
 	}
 }
 
 // IndexContract indexes a single contract into the vector database
 func (idx *Indexer) IndexContract(contractID int) error {
-	// Fetch contract from database
-	query := `
-		SELECT c.id, c.title, c.type, c.object, COALESCE(c.content, ''), 
-		       cl.name as client_name, s.name as supplier_name, 
-		       c.created_at
-		FROM contracts c
-		LEFT JOIN companies cl ON c.client_id = cl.id
-		LEFT JOIN companies s ON c.supplier_id = s.id
-		WHERE c.id = ? AND c.deleted_at IS NULL
-	`
-
-	var id int
-	var title, ctype, content, createdAt string
-	var clientName, supplierName sql.NullString
-	var object []byte
-
-	err := idx.DB.QueryRow(query, contractID).Scan(
-		&id, &title, &ctype, &object, &content, &clientName, &supplierName, &createdAt,
-	)
+	// Fetch contract from database using sqlc
+	row, err := idx.Queries.GetContractForRAG(context.Background(), int64(contractID))
 	if err != nil {
 		return fmt.Errorf("failed to fetch contract: %w", err)
 	}
 
 	// Build document metadata
 	meta := DocumentMeta{
-		ID:        fmt.Sprintf("contract_%d", id),
-		Title:     title,
-		Type:      ctype,
+		ID:        fmt.Sprintf("contract_%d", contractID),
+		Title:     row.Title,
+		Type:      row.Type,
 		Source:    "contract",
-		Content:   content,
-		CreatedAt: createdAt,
+		Content:   row.Content,
+		CreatedAt: row.CreatedAt.Format("2006-01-02"),
 		ExtraFields: map[string]string{
-			"client":    nullString(clientName),
-			"supplier":  nullString(supplierName),
+			"client":    row.ClientName,
+			"supplier":  row.SupplierName,
 		},
 	}
 
 	// Combine all text for embedding
-	fullText := content
-	if len(object) > 0 {
-		fullText = string(object) + "\n" + content
+	fullText := row.Content
+	if len(row.Object) > 0 {
+		fullText = string(row.Object) + "\n" + row.Content
 	}
 
 	// Create chunks
@@ -98,30 +81,21 @@ func (idx *Indexer) IndexContract(contractID int) error {
 
 // IndexAllContracts indexes all non-deleted contracts
 func (idx *Indexer) IndexAllContracts() (int, error) {
-	// Get all contract IDs
-	rows, err := idx.DB.Query(`
-		SELECT id FROM contracts WHERE deleted_at IS NULL ORDER BY id
-	`)
+	// Get all contract IDs using sqlc
+	rows, err := idx.Queries.GetAllContractIDsForRAG(context.Background())
 	if err != nil {
 		return 0, fmt.Errorf("failed to query contracts: %w", err)
 	}
-	defer rows.Close()
 
-	var count int
-	var contractIDs []int
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
-			continue
-		}
-		contractIDs = append(contractIDs, id)
-		count++
+	var contractIDs []int64
+	for _, r := range rows {
+		contractIDs = append(contractIDs, r.ID)
 	}
 
 	// Index each contract
 	successCount := 0
 	for i, id := range contractIDs {
-		if err := idx.IndexContract(id); err != nil {
+		if err := idx.IndexContract(int(id)); err != nil {
 			fmt.Printf("Warning: failed to index contract %d: %v\n", id, err)
 			continue
 		}
@@ -142,36 +116,32 @@ func (idx *Indexer) IndexAllContracts() (int, error) {
 
 // IndexNewOrUpdatedContracts indexes only contracts modified after the last index time
 func (idx *Indexer) IndexNewOrUpdatedContracts(since time.Time) (int, error) {
-	rows, err := idx.DB.Query(`
-		SELECT id FROM contracts
-		WHERE deleted_at IS NULL
-		  AND (created_at > ? OR updated_at > ?)
-		ORDER BY id
-	`, since, since)
+	rows, err := idx.Queries.GetNewOrUpdatedContractIDs(context.Background(), since)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query new contracts: %w", err)
 	}
-	defer rows.Close()
 
-	var count int
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
-			continue
-		}
+	var contractIDs []int64
+	for _, r := range rows {
+		contractIDs = append(contractIDs, r.ID)
+	}
 
-		if err := idx.IndexContract(id); err != nil {
+	// Index each contract
+	successCount := 0
+	for _, id := range contractIDs {
+		if err := idx.IndexContract(int(id)); err != nil {
 			fmt.Printf("Warning: failed to index contract %d: %v\n", id, err)
 			continue
 		}
-		count++
+		successCount++
 	}
 
+	// Save vector DB
 	if err := idx.VectorDB.save(); err != nil {
-		return count, fmt.Errorf("failed to save vector DB: %w", err)
+		return successCount, fmt.Errorf("failed to save vector DB: %w", err)
 	}
 
-	return count, nil
+	return successCount, nil
 }
 
 // chunkText splits text into overlapping chunks
@@ -202,11 +172,11 @@ func chunkText(text string, chunkSize, overlap int) []string {
 	return chunks
 }
 
-func nullString(s sql.NullString) string {
-	if s.Valid {
-		return s.String
+func nullString(s string) string {
+	if s == "" {
+		return ""
 	}
-	return ""
+	return s
 }
 
 // embedText generates embedding for a single text using the embedder
@@ -216,7 +186,6 @@ func (i *Indexer) embedText(text string) ([]float32, error) {
 
 // ClearIndex removes all documents from the vector database
 func (idx *Indexer) ClearIndex() error {
-	// This is a simplified version - in production, you'd want to properly clear
 	idx.VectorDB = &VectorDB{
 		index:    newHNSWIndex(384, 16, 200),
 		metadata: make(map[string]DocumentMeta),
@@ -249,7 +218,7 @@ func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
 	// Add overlap between chunks using MergeChunksWithOverlap
 	chunks = MergeChunksWithOverlap(chunks, 50)
 
-	// Generate embeddings for each chunk using embedText helper
+	// Generate embeddings for each chunk
 	embeddings := make([][]float32, len(chunks))
 	for i, chunk := range chunks {
 		embedding, err := idx.embedText(chunk.Text)
@@ -259,7 +228,7 @@ func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
 		embeddings[i] = embedding
 	}
 
-	// Store in vector DB using AddLegalDocumentChunks
+	// Store in vector DB
 	legalMeta := LegalDocumentMetadata{
 		DocumentID:   doc.ID,
 		DocumentType: doc.DocumentType,
@@ -275,11 +244,11 @@ func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
 
 	// Update document chunk count and indexed timestamp
 	now := time.Now()
-	_, err = idx.DB.Exec(`
-		UPDATE legal_documents
-		SET chunk_count = ?, indexed_at = ?
-		WHERE id = ?
-	`, len(chunks), &now, doc.ID)
+	err = idx.Queries.UpdateLegalDocumentIndexed(context.Background(), db.UpdateLegalDocumentIndexedParams{
+		ID:         doc.ID,
+		ChunkCount: len(chunks),
+		IndexedAt:  &now,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to update document chunk count: %w", err)
 	}
@@ -290,7 +259,7 @@ func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
 // Search searches for similar documents in the vector database
 func (idx *Indexer) Search(queryText string, k int) ([]SearchResult, error) {
 	// Generate embedding for query
-	embedding, err := idx.Embedder.GenerateEmbedding(queryText)
+	embedding, err := idx.embedText(queryText)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
 	}

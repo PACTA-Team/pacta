@@ -2,7 +2,6 @@ package legal
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,10 +15,10 @@ import (
 
 // ChatService maneja el chat con el experto legal
 type ChatService struct {
-	db       *sql.DB
-	vectorDB *minirag.VectorDB
+	Queries   *db.Queries
+	vectorDB  *minirag.VectorDB
 	embedder *minirag.EmbeddingClient
-	llm      ai.LLM
+	llm       ai.LLM
 }
 
 // ChatMessage representa un mensaje del usuario
@@ -46,11 +45,11 @@ type SourceRef struct {
 	ContentSnippet string  `json:"content_snippet,omitempty"`
 }
 
-// NewChatService crea un nuevo servicio de chat legal
-func NewChatService(db *sql.DB, vectorDB *minirag.VectorDB, embedder *minirag.EmbeddingClient, llm ai.LLM) *ChatService {
+// NewChatService crea un nuevo servicio de chat legal usando sqlc Queries
+func NewChatService(queries *db.Queries, vectorDB *minirag.VectorDB, embedder *minirag.EmbeddingClient, llm ai.LLM) *ChatService {
 	return &ChatService{
-		db:       db,
-		vectorDB: vectorDB,
+		Queries:   queries,
+		vectorDB:  vectorDB,
 		embedder: embedder,
 		llm:      llm,
 	}
@@ -59,12 +58,20 @@ func NewChatService(db *sql.DB, vectorDB *minirag.VectorDB, embedder *minirag.Em
 // ProcessMessage procesa un mensaje del usuario y devuelve una respuesta
 func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (ChatResponse, error) {
 	// 1. Guardar mensaje del usuario
-	_, err := db.CreateLegalChatMessage(ctx, s.db, db.CreateLegalChatMessageParams{
+	contextJSON, _ := json.Marshal([]SourceRef{})
+	metadata := map[string]interface{}{
+		"sources_count": 0,
+		"timestamp":     time.Now().Format(time.RFC3339),
+	}
+	metadataJSON, _ := json.Marshal(metadata)
+
+	_, err := s.Queries.CreateLegalChatMessage(ctx, db.CreateLegalChatMessageParams{
 		UserID:      int64(msg.UserID),
 		SessionID:   msg.SessionID,
 		MessageType: "user",
 		Content:     msg.Content,
-		CreatedAt:   time.Now(),
+		ContextDocs: string(contextJSON),
+		Metadata:    string(metadataJSON),
 	})
 	if err != nil {
 		return ChatResponse{}, fmt.Errorf("guardar mensaje usuario: %w", err)
@@ -92,7 +99,7 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 				fmt.Fprintf(&sb, "  %s\n", doc.ChunkTitle)
 			}
 			if doc.ContentSnippet != "" {
-				// Truncate for safety (already truncated, but ensure)
+				// Truncate for safety
 				snippet := doc.ContentSnippet
 				if len(snippet) > 500 {
 					snippet = snippet[:500] + "..."
@@ -112,21 +119,20 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 	}
 
 	// 5. Guardar respuesta del asistente
-	contextJSON, _ := json.Marshal(contextDocs)
-	metadata := map[string]interface{}{
+	contextJSON, _ = json.Marshal(contextDocs)
+	metadata = map[string]interface{}{
 		"sources_count": len(contextDocs),
 		"timestamp":     time.Now().Format(time.RFC3339),
 	}
-	metadataJSON, _ := json.Marshal(metadata)
+	metadataJSON, _ = json.Marshal(metadata)
 
-	_, err = db.CreateLegalChatMessage(ctx, s.db, db.CreateLegalChatMessageParams{
-		UserID:          int64(msg.UserID),
-		SessionID:       msg.SessionID,
-		MessageType:     "assistant",
-		Content:         answer,
-		ContextDocuments: string(contextJSON),
-		Metadata:        string(metadataJSON),
-		CreatedAt:       time.Now(),
+	_, err = s.Queries.CreateLegalChatMessage(ctx, db.CreateLegalChatMessageParams{
+		UserID:      int64(msg.UserID),
+		SessionID:   msg.SessionID,
+		MessageType: "assistant",
+		Content:     answer,
+		ContextDocs: string(contextJSON),
+		Metadata:    string(metadataJSON),
 	})
 	if err != nil {
 		fmt.Printf("[WARN] No se pudo guardar mensaje asistente: %v\n", err)
@@ -194,5 +200,5 @@ func (s *ChatService) searchContext(ctx context.Context, query string, limit int
 // GetChatHistory recupera el historial de chat para una sesión
 func (s *ChatService) GetChatHistory(sessionID string) ([]db.LegalChatMessageRow, error) {
 	ctx := context.Background()
-	return db.ListLegalChatMessages(ctx, s.db, sessionID)
+	return db.ListLegalChatMessages(ctx, s.Queries, sessionID)
 }
