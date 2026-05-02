@@ -1435,7 +1435,6 @@ func (h *Handler) HandleDeleteLegalDocument(w http.ResponseWriter, r *http.Reque
 
 // HandleSuggestClauses returns suggested clauses based on contract type
 func (h *Handler) HandleSuggestClauses(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	contractType := r.URL.Query().Get("type")
 	if contractType == "" {
 		h.Error(w, http.StatusBadRequest, "Query parameter 'type' is required")
