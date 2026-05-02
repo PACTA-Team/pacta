@@ -78,7 +78,7 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 	}
 
 	// 3. Construir system prompt con contexto RAG
-	systemPrompt := SystemPromptCubanLegalExpert()
+	systemPrompt := ai.SystemPromptCubanLegalExpert()
 	if len(contextDocs) > 0 {
 		var sb strings.Builder
 		sb.WriteString("Documentos legales relevantes consultados:\n")
