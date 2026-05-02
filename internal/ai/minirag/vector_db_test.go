@@ -74,7 +74,7 @@ func TestVectorDB_AddLegalDocumentChunks(t *testing.T) {
 	db, err := NewVectorDB(384, tmpDir)
 	require.NoError(t, err)
 
-	chunks := []legal.Chunk{
+	chunks := []Chunk{
 		{Title: "Section 1", Text: "This is the first section content."},
 		{Title: "Section 2", Text: "This is the second section content."},
 	}
@@ -112,7 +112,7 @@ func TestVectorDB_SearchLegalDocuments_Filter(t *testing.T) {
 	db, err := NewVectorDB(384, tmpDir)
 	require.NoError(t, err)
 
-	chunks := []legal.Chunk{
+	chunks := []Chunk{
 		{Title: "Art 1", Text: "Content A",},
 		{Title: "Art 2", Text: "Content B",},
 	}
