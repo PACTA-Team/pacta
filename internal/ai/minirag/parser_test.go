@@ -1,5 +1,5 @@
 
-package legal
+package minirag
 
 import (
 	"testing"
