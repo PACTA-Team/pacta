@@ -12,10 +12,8 @@ import (
 	"github.com/PACTA-Team/pacta/internal/auth"
 )
 
-// LLMClient defines the interface for language model clients.
-type LLMClient interface {
-	Generate(ctx context.Context, prompt string, context string) (string, error)
-}
+// LLMClient is the interface for language model clients (aliased from ai.LLM).
+type LLMClient = ai.LLM
 
 type ctxKey string
 
