@@ -4,7 +4,6 @@ package minirag
 import (
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 const (
@@ -13,14 +12,6 @@ const (
 	DefaultChunkSize = 1000
 	DefaultOverlap   = 50
 )
-
-// Chunk represents a chunk of legal text with metadata.
-type Chunk struct {
-	ID       int
-	Text     string
-	Title    string // e.g., "Artículo 1", "Cláusula Única"
-	Position int    // order in document
-}
 
 // ParseByArticles is the main entry point for parsing legal documents.
 // It splits content by articles (Artículo) and clauses (Cláusula),
