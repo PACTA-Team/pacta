@@ -10,9 +10,15 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-
-	"github.com/PACTA-Team/pacta/internal/ai/legal"
 )
+
+// Chunk represents a chunk of legal text with metadata.
+type Chunk struct {
+	ID       int
+	Text     string
+	Title    string
+	Position int
+}
 
 // VectorDB represents a local vector database using HNSW for similarity search
 type VectorDB struct {
@@ -184,7 +190,7 @@ func (db *VectorDB) GetDocument(id string) (DocumentMeta, bool) {
 }
 
 // AddLegalDocumentChunks adds legal document chunks to vector DB
-func (db *VectorDB) AddLegalDocumentChunks(chunks []legal.Chunk, metadata LegalDocumentMetadata, embeddings [][]float32) error {
+func (db *VectorDB) AddLegalDocumentChunks(chunks []Chunk, metadata LegalDocumentMetadata, embeddings [][]float32) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
