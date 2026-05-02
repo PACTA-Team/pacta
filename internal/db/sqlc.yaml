@@ -7,6 +7,4 @@ sql:
       go:
         package: "db"
         out: "."
-      emit:
-        interface: true
-        # Genera interfaz Queries para poder mockear en tests y usar WithTx
+      emit_interface: true  # Genera interfaz Queries para poder mockear en tests y usar WithTx
