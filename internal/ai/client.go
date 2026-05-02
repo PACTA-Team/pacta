@@ -12,6 +12,11 @@ import (
 	"github.com/PACTA-Team/pacta/internal/ai/minirag"
 )
 
+// LLM is the minimal interface required for language model generation.
+type LLM interface {
+	Generate(ctx context.Context, prompt string, context string) (string, error)
+}
+
 // LLMClient handles communication with LLM providers
 type LLMClient struct {
 	Provider   LLMProvider
