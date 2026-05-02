@@ -43,16 +43,16 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		return err
 	}
 
+	// Create sqlc queries wrapper
+	queries := db.New(database)
+
 	// Validate AI configuration if AI is configured
-	if err := ai.ValidateStartupConfig(database, cfg.AIEncryptionKey); err != nil {
+	if err := ai.ValidateStartupConfig(queries, cfg.AIEncryptionKey); err != nil {
 		log.Fatalf("AI configuration invalid: %v", err)
 	}
 
 	// Create DB-backed rate limiter
 	rateLimiter := ai.NewRateLimiter(database)
-
-	// Create sqlc queries wrapper
-	queries := db.New(database)
 
 	h := &handlers.Handler{Queries: queries, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
 
