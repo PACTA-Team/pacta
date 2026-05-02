@@ -93,7 +93,7 @@ type CreateLegalChatMessageParams struct {
 func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumentParams) (LegalDocumentRow, error) {
 	tagsJSON, err := json.Marshal(arg.Tags)
 	if err != nil {
-		return doc, err
+		return LegalDocumentRow{}, err
 	}
 
 	row := db.QueryRowContext(ctx, `
@@ -143,7 +143,7 @@ func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumen
 	var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
 	var tagsJSONOut []byte
 
-	err := row.Scan(
+	err = row.Scan(
 		&doc.ID,
 		&doc.Title,
 		&doc.DocumentType,

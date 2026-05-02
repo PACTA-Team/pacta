@@ -27,9 +27,9 @@ import (
 // This is optional — LocalClient falls back to Ollama HTTP if CGo is not available.
 type cgoLLMInference struct {
 	modelPath string
-	model     *C.llama_model_t
-	ctx       *C.llama_context_t
-	vocab     *C.llama_vocab_t
+	model     *C.struct_llama_model
+	ctx       *C.struct_llama_context
+	vocab     *C.struct_llama_vocab
 	ready     bool
 }
 
