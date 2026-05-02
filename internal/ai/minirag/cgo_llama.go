@@ -19,6 +19,7 @@ package minirag
 */
 import "C"
 import (
+	"context"
 	"fmt"
 	"unsafe"
 )
@@ -69,7 +70,7 @@ func (l *cgoLLMInference) LoadModel() error {
 	ctxParams.n_ctx = C.uint(32768)   // Context window (Qwen2.5 supports 32K)
 	ctxParams.n_batch = C.uint(512)   // Batch size
 	ctxParams.n_threads = C.int(8)    // CPU threads
-	ctxParams.flash_attn = C.bool(true) // Enable flash attention
+	// flash_attn not set — relies on llama.cpp defaults
 
 	l.ctx = C.llama_init_from_model(l.model, ctxParams)
 	if l.ctx == nil {

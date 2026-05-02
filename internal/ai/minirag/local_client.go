@@ -166,6 +166,22 @@ func (c *OllamaClient) Generate(ctx context.Context, prompt, system string) (str
 	return result.Response, nil
 }
 
+// CheckHealth verifies Ollama is reachable and responding
+func (c *OllamaClient) CheckHealth() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.Endpoint+"/api/tags", nil)
+	if err != nil {
+		return false
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
+
 // LocalClient is the main interface for local LLM.
 // Supports 3 modes (configurable from frontend):
 //   - "cgo": CGo + llama.cpp with Qwen2.5-0.5B-Instruct embedded in binary (PREFERRED)
