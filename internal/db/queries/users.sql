@@ -95,7 +95,7 @@ UPDATE users
 SET deleted_at = CURRENT_TIMESTAMP
 WHERE id = $1 AND deleted_at IS NULL;
 
--- name: GetUserCompanyOwnership :one
+-- name: GetUserCompanyIDUnscoped :one
 SELECT company_id FROM users WHERE id = $1;
 
 -- name: ListActiveAdminEmails :many

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/wneessen/go-mail"
 
@@ -25,25 +26,37 @@ func GetSMTPConfig(ctx context.Context, queries *db.Queries) (SMTPConfig, error)
 		Port: 587,
 		From: "PACTA <noreply@pacta.duckdns.org>",
 	}
-	// If queries is nil, return defaults
-	if queries == nil {
-		return cfg, nil
+	// If queries is nil, skip DB fetch and fall back to env defaults below
+	if queries != nil {
+		// Fetch each setting individually
+		if v, err := queries.GetSettingValue(ctx, "smtp_host"); err == nil && v != "" {
+			cfg.Host = v
+		}
+		if v, err := queries.GetSettingValue(ctx, "smtp_port"); err == nil && v != "" {
+			fmt.Sscanf(v, "%d", &cfg.Port)
+		}
+		if v, err := queries.GetSettingValue(ctx, "smtp_username"); err == nil && v != "" {
+			cfg.User = v
+		}
+		if v, err := queries.GetSettingValue(ctx, "smtp_password"); err == nil && v != "" {
+			cfg.Pass = v
+		}
+		if v, err := queries.GetSettingValue(ctx, "smtp_from"); err == nil && v != "" {
+			cfg.From = v
+		}
 	}
-	// Fetch each setting individually
-	if v, err := queries.GetSettingValue(ctx, "smtp_host"); err == nil && v != "" {
-		cfg.Host = v
+	// Fallback to environment variables if still empty
+	if cfg.User == "" {
+		cfg.User = os.Getenv("MAILTRAP_SMTP_USER")
 	}
-	if v, err := queries.GetSettingValue(ctx, "smtp_port"); err == nil && v != "" {
-		fmt.Sscanf(v, "%d", &cfg.Port)
+	if cfg.Pass == "" {
+		cfg.Pass = os.Getenv("MAILTRAP_SMTP_PASS")
 	}
-	if v, err := queries.GetSettingValue(ctx, "smtp_username"); err == nil && v != "" {
-		cfg.User = v
+	if cfg.Host == "smtp.mailtrap.io" && os.Getenv("MAILTRAP_SMTP_HOST") != "" {
+		cfg.Host = os.Getenv("MAILTRAP_SMTP_HOST")
 	}
-	if v, err := queries.GetSettingValue(ctx, "smtp_password"); err == nil && v != "" {
-		cfg.Pass = v
-	}
-	if v, err := queries.GetSettingValue(ctx, "smtp_from"); err == nil && v != "" {
-		cfg.From = v
+	if cfg.From == "PACTA <noreply@pacta.duckdns.org>" && os.Getenv("EMAIL_FROM") != "" {
+		cfg.From = os.Getenv("EMAIL_FROM")
 	}
 	return cfg, nil
 }

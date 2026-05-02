@@ -2,564 +2,308 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"time"
 )
 
-// ========== TIPOS ==========
+// ========== TYPES ==========
 
-// LegalDocumentRow representa una fila de legal_documents
+// LegalDocumentRow represents a row from legal_documents
 type LegalDocumentRow struct {
-	ID              int        `json:"id"`
-	Title           string     `json:"title"`
-	DocumentType    string     `json:"document_type"`
-	Source          string     `json:"source,omitempty"`
-	Content         string     `json:"content"`
-	ContentHash     string     `json:"content_hash"`
-	Language        string     `json:"language"`
-	Jurisdiction    string     `json:"jurisdiction"`
-	EffectiveDate   *string    `json:"effective_date,omitempty"`
+	ID           int        `json:"id"`
+	Title        string     `json:"title"`
+	DocumentType string     `json:"document_type"`
+	Source       string     `json:"source,omitempty"`
+	Content      string     `json:"content"`
+	ContentHash  string     `json:"content_hash"`
+	Language     string     `json:"language"`
+	Jurisdiction string     `json:"jurisdiction"`
+	EffectiveDate *string    `json:"effective_date,omitempty"`
 	PublicationDate *string    `json:"publication_date,omitempty"`
-	GacetaNumber    string     `json:"gaceta_number,omitempty"`
-	Tags            []string   `json:"tags"`
-	ChunkCount      int        `json:"chunk_count"`
-	IndexedAt       *time.Time `json:"indexed_at,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	DeletedAt       *time.Time `json:"deleted_at,omitempty"`
-	CompanyID       int        `json:"company_id"`
-	UploadedBy      int        `json:"uploaded_by"`
-	StoragePath     string     `json:"storage_path"`
-	MimeType        string     `json:"mime_type,omitempty"`
-	SizeBytes       int        `json:"size_bytes,omitempty"`
-	ChunkConfig     string     `json:"chunk_config,omitempty"`
-	IsIndexed       bool       `json:"is_indexed"`
+	GacetaNumber string     `json:"gaceta_number,omitempty"`
+	Tags         []string   `json:"tags"`
+	ChunkCount   int        `json:"chunk_count"`
+	IndexedAt    *time.Time `json:"indexed_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
+	CompanyID    int        `json:"company_id"`
+	UploadedBy   int        `json:"uploaded_by"`
+	StoragePath  string     `json:"storage_path"`
+	MimeType     string     `json:"mime_type,omitempty"`
+	SizeBytes    int        `json:"size_bytes,omitempty"`
+	ChunkConfig  string     `json:"chunk_config,omitempty"`
+	IsIndexed    bool       `json:"is_indexed"`
 }
 
-// CreateLegalDocumentParams parámetros para crear documento legal
-type CreateLegalDocumentParams struct {
-	Title            string     `json:"title"`
-	DocumentType     string     `json:"document_type"`
-	Source           string     `json:"source,omitempty"`
-	Content          string     `json:"content"`
-	ContentHash      string     `json:"content_hash"`
-	Language         string     `json:"language"`
-	Jurisdiction     string     `json:"jurisdiction"`
-	EffectiveDate    *string    `json:"effective_date,omitempty"`
-	PublicationDate  *string    `json:"publication_date,omitempty"`
-	GacetaNumber     string     `json:"gaceta_number,omitempty"`
-	Tags             []string   `json:"tags"`
-	ChunkCount       int        `json:"chunk_count"`
-	IndexedAt        *time.Time `json:"indexed_at,omitempty"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
-	DeletedAt        *time.Time `json:"deleted_at,omitempty"`
-	CompanyID        int        `json:"company_id"`
-	UploadedBy       int        `json:"uploaded_by"`
-	StoragePath      string     `json:"storage_path"`
-	MimeType         string     `json:"mime_type,omitempty"`
-	SizeBytes        int        `json:"size_bytes,omitempty"`
-	ChunkConfig      string     `json:"chunk_config,omitempty"`
-	IsIndexed        bool       `json:"is_indexed"`
-}
-
-// LegalChatMessageRow representa una fila de ai_legal_chat_history
+// LegalChatMessageRow represents a row from ai_legal_chat_history
 type LegalChatMessageRow struct {
-	ID              int       `json:"id"`
-	UserID          int       `json:"user_id"`
-	SessionID       string    `json:"session_id"`
-	MessageType     string    `json:"message_type"`
-	Content         string    `json:"content"`
-	ContextDocs     string    `json:"context_documents,omitempty"`
-	Metadata        string    `json:"metadata,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID          int       `json:"id"`
+	UserID      int       `json:"user_id"`
+	SessionID   string    `json:"session_id"`
+	MessageType string    `json:"message_type"`
+	Content     string    `json:"content"`
+	ContextDocs string    `json:"context_documents,omitempty"`
+	Metadata    string    `json:"metadata,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-// CreateLegalChatMessageParams parámetros para crear mensaje de chat
+// CreateLegalChatMessageParams parameters for creating a chat message
 type CreateLegalChatMessageParams struct {
-	UserID          int64     `json:"user_id"`
-	SessionID       string    `json:"session_id"`
-	MessageType     string    `json:"message_type"`
-	Content         string    `json:"content"`
-	ContextDocuments string   `json:"context_documents,omitempty"`
-	Metadata        string    `json:"metadata,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
+	UserID      int64
+	SessionID   string
+	MessageType string
+	Content     string
+	ContextDocs string
+	Metadata    string
+}
+
+// LegalChatSession represents a chat session summary
+type LegalChatSession struct {
+	SessionID   string    `json:"session_id"`
+	UserID      int       `json:"user_id"`
+	LastMessage  time.Time `json:"last_message"`
+	CreatedAt   time.Time `json:"created_at"`
+	MessageCount int       `json:"message_count"`
 }
 
 // ========== LEGAL DOCUMENTS ==========
 
-// CreateLegalDocument inserta un nuevo documento legal
-func CreateLegalDocument(ctx context.Context, db *sql.DB, arg CreateLegalDocumentParams) (LegalDocumentRow, error) {
+// GetAILegalEnabled returns whether AI legal is enabled using sqlc Queries
+func GetAILegalEnabled(ctx context.Context, queries *Queries) (bool, error) {
+	val, err := queries.GetBoolSetting(ctx, "ai_legal_enabled")
+	if err != nil {
+		return false, err
+	}
+	return val == "true" || val == "1", nil
+}
+
+// SetAILegalEnabled sets the ai_legal_enabled setting using sqlc Queries
+func SetAILegalEnabled(ctx context.Context, queries *Queries, enabled bool) error {
+	val := "false"
+	if enabled {
+		val = "true"
+	}
+	return queries.SetSettingValue(ctx, SetSettingValueParams{
+		Key:   "ai_legal_enabled",
+		Value: val,
+	})
+}
+
+// AILegalIntegrationEnabled returns whether form integration is enabled
+func AILegalIntegrationEnabled(ctx context.Context, queries *Queries) (bool, error) {
+	val, err := queries.GetBoolSetting(ctx, "ai_legal_integration")
+	if err != nil {
+		return false, err
+	}
+	return val == "true" || val == "1", nil
+}
+
+// CreateLegalDocument creates a new legal document using sqlc Queries
+// Returns a LegalDocumentRow
+func CreateLegalDocument(ctx context.Context, queries *Queries, arg CreateLegalDocumentParams) (LegalDocumentRow, error) {
 	tagsJSON, err := json.Marshal(arg.Tags)
 	if err != nil {
 		return LegalDocumentRow{}, err
 	}
 
-	row := db.QueryRowContext(ctx, `
-		INSERT INTO legal_documents (
-			title, document_type, source, content, content_hash,
-			language, jurisdiction, effective_date, publication_date,
-			gaceta_number, tags, chunk_count, indexed_at,
-			created_at, updated_at, deleted_at, company_id, uploaded_by,
-			storage_path, mime_type, size_bytes, chunk_config, is_indexed
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-			$11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23
-		)
-		RETURNING id, title, document_type, source, content, content_hash,
-		          language, jurisdiction, effective_date, publication_date,
-		          gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at,
-		          deleted_at, company_id, uploaded_by, storage_path, mime_type, size_bytes,
-		          chunk_config, is_indexed
-	`,
-		arg.Title,
-		arg.DocumentType,
-		arg.Source,
-		arg.Content,
-		arg.ContentHash,
-		arg.Language,
-		arg.Jurisdiction,
-		arg.EffectiveDate,
-		arg.PublicationDate,
-		arg.GacetaNumber,
-		tagsJSON,
-		arg.ChunkCount,
-		arg.IndexedAt,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-		arg.DeletedAt,
-		arg.CompanyID,
-		arg.UploadedBy,
-		arg.StoragePath,
-		arg.MimeType,
-		arg.SizeBytes,
-		arg.ChunkConfig,
-		arg.IsIndexed,
-	)
-
-	var doc LegalDocumentRow
-	var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
-	var tagsJSONOut []byte
-
-	err = row.Scan(
-		&doc.ID,
-		&doc.Title,
-		&doc.DocumentType,
-		&doc.Source,
-		&doc.Content,
-		&doc.ContentHash,
-		&doc.Language,
-		&doc.Jurisdiction,
-		&effectiveDate,
-		&publicationDate,
-		&doc.GacetaNumber,
-		&tagsJSONOut,
-		&doc.ChunkCount,
-		&indexedAt,
-		&doc.CreatedAt,
-		&doc.UpdatedAt,
-		&deletedAt,
-		&doc.CompanyID,
-		&doc.UploadedBy,
-		&doc.StoragePath,
-		&doc.MimeType,
-		&doc.SizeBytes,
-		&doc.ChunkConfig,
-		&doc.IsIndexed,
-	)
-
+	row, err := queries.CreateLegalDocument(ctx, CreateLegalDocumentParams{
+		Title:         arg.Title,
+		DocumentType:  arg.DocumentType,
+		Source:        arg.Source,
+		Content:        arg.Content,
+		ContentHash:    arg.ContentHash,
+		Language:       arg.Language,
+		Jurisdiction:   arg.Jurisdiction,
+		EffectiveDate: arg.EffectiveDate,
+		PublicationDate: arg.PublicationDate,
+		GacetaNumber:  arg.GacetaNumber,
+		Tags:           string(tagsJSON),
+		ChunkCount:     arg.ChunkCount,
+		IndexedAt:     arg.IndexedAt,
+		CreatedAt:     arg.CreatedAt,
+		UpdatedAt:     arg.UpdatedAt,
+	})
 	if err != nil {
-		return doc, err
+		return LegalDocumentRow{}, err
 	}
 
-	// Parse dates
-	if effectiveDate.Valid {
-		ed := effectiveDate.Time.Format("2006-01-02")
-		doc.EffectiveDate = &ed
-	}
-	if publicationDate.Valid {
-		pd := publicationDate.Time.Format("2006-01-02")
-		doc.PublicationDate = &pd
-	}
-	if indexedAt.Valid {
-		ia := indexedAt.Time
-		doc.IndexedAt = &ia
-	}
-	if deletedAt.Valid {
-		da := deletedAt.Time
-		doc.DeletedAt = &da
-	}
-
-	// Parse tags
-	if len(tagsJSONOut) > 0 {
-		json.Unmarshal(tagsJSONOut, &doc.Tags)
-	}
-
-	return doc, nil
+	return legalDocumentRowFromDB(row), nil
 }
 
-// GetLegalDocument retrieves a legal document by ID
-func GetLegalDocument(ctx context.Context, db *sql.DB, id int64) (LegalDocumentRow, error) {
-	row := db.QueryRowContext(ctx, `
-		SELECT id, title, document_type, source, content, content_hash,
-		       language, jurisdiction, effective_date, publication_date,
-		       gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at,
-		       deleted_at, company_id, uploaded_by, storage_path, mime_type,
-		       size_bytes, chunk_config, is_indexed
-		FROM legal_documents
-		WHERE id = $1 AND deleted_at IS NULL
-		LIMIT 1
-	`, id)
-
-	var doc LegalDocumentRow
-	var tagsJSON []byte
-	var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
-
-	err := row.Scan(
-		&doc.ID,
-		&doc.Title,
-		&doc.DocumentType,
-		&doc.Source,
-		&doc.Content,
-		&doc.ContentHash,
-		&doc.Language,
-		&doc.Jurisdiction,
-		&effectiveDate,
-		&publicationDate,
-		&doc.GacetaNumber,
-		&tagsJSON,
-		&doc.ChunkCount,
-		&indexedAt,
-		&doc.CreatedAt,
-		&doc.UpdatedAt,
-		&deletedAt,
-		&doc.CompanyID,
-		&doc.UploadedBy,
-		&doc.StoragePath,
-		&doc.MimeType,
-		&doc.SizeBytes,
-		&doc.ChunkConfig,
-		&doc.IsIndexed,
-	)
-
+// GetLegalDocument retrieves a legal document by ID using sqlc Queries
+func GetLegalDocument(ctx context.Context, queries *Queries, id int64) (LegalDocumentRow, error) {
+	row, err := queries.GetLegalDocument(ctx, id)
 	if err != nil {
-		return doc, err
+		return LegalDocumentRow{}, err
 	}
-
-	// Parse nullable fields
-	if effectiveDate.Valid {
-		ed := effectiveDate.Time.Format("2006-01-02")
-		doc.EffectiveDate = &ed
-	}
-	if publicationDate.Valid {
-		pd := publicationDate.Time.Format("2006-01-02")
-		doc.PublicationDate = &pd
-	}
-	if indexedAt.Valid {
-		ia := indexedAt.Time
-		doc.IndexedAt = &ia
-	}
-	if deletedAt.Valid {
-		da := deletedAt.Time
-		doc.DeletedAt = &da
-	}
-
-	if len(tagsJSON) > 0 {
-		json.Unmarshal(tagsJSON, &doc.Tags)
-	}
-
-	return doc, nil
+	return legalDocumentRowFromDB(row), nil
 }
 
-// ListLegalDocuments retrieves all legal documents (optionally filtered by jurisdiction)
-func ListLegalDocuments(ctx context.Context, db *sql.DB, jurisdiction string) ([]LegalDocumentRow, error) {
-	query := `
-		SELECT id, title, document_type, source, content, content_hash,
-		       language, jurisdiction, effective_date, publication_date,
-		       gaceta_number, tags, chunk_count, indexed_at, created_at, updated_at,
-		       deleted_at, company_id, uploaded_by, storage_path, mime_type,
-		       size_bytes, chunk_config, is_indexed
-		FROM legal_documents
-		WHERE deleted_at IS NULL
-	`
-
-	args := []interface{}{}
-
-	if jurisdiction != "" {
-		query += " AND jurisdiction = $1"
-		args = append(args, jurisdiction)
-	}
-
-	query += " ORDER BY created_at DESC"
-
-	rows, err := db.QueryContext(ctx, query, args...)
+// ListLegalDocuments retrieves legal documents using sqlc Queries
+func ListLegalDocuments(ctx context.Context, queries *Queries, jurisdiction string) ([]LegalDocumentRow, error) {
+	rows, err := queries.ListLegalDocuments(ctx, jurisdiction)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var docs []LegalDocumentRow
-	for rows.Next() {
-		var doc LegalDocumentRow
-		var tagsJSON []byte
-		var effectiveDate, publicationDate, indexedAt, deletedAt sql.NullTime
-
-		err := rows.Scan(
-			&doc.ID,
-			&doc.Title,
-			&doc.DocumentType,
-			&doc.Source,
-			&doc.Content,
-			&doc.ContentHash,
-			&doc.Language,
-			&doc.Jurisdiction,
-			&effectiveDate,
-			&publicationDate,
-			&doc.GacetaNumber,
-			&tagsJSON,
-			&doc.ChunkCount,
-			&indexedAt,
-			&doc.CreatedAt,
-			&doc.UpdatedAt,
-			&deletedAt,
-			&doc.CompanyID,
-			&doc.UploadedBy,
-			&doc.StoragePath,
-			&doc.MimeType,
-			&doc.SizeBytes,
-			&doc.ChunkConfig,
-			&doc.IsIndexed,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// Parse dates
-		if effectiveDate.Valid {
-			ed := effectiveDate.Time.Format("2006-01-02")
-			doc.EffectiveDate = &ed
-		}
-		if publicationDate.Valid {
-			pd := publicationDate.Time.Format("2006-01-02")
-			doc.PublicationDate = &pd
-		}
-		if indexedAt.Valid {
-			ia := indexedAt.Time
-			doc.IndexedAt = &ia
-		}
-		if deletedAt.Valid {
-			da := deletedAt.Time
-			doc.DeletedAt = &da
-		}
-
-		// Parse tags
-		if len(tagsJSON) > 0 {
-			json.Unmarshal(tagsJSON, &doc.Tags)
-		}
-
-		docs = append(docs, doc)
+	for _, r := range rows {
+		docs = append(docs, legalDocumentRowFromDB(r))
 	}
-
-	return docs, rows.Err()
+	return docs, nil
 }
 
-// UpdateLegalDocumentIndexedAt updates the indexed_at timestamp and chunk_count
-func UpdateLegalDocumentIndexedAt(ctx context.Context, db *sql.DB, id int64, chunkCount int) error {
-	_, err := db.ExecContext(ctx, `
-		UPDATE legal_documents
-		SET indexed_at = CURRENT_TIMESTAMP, chunk_count = $2
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id, chunkCount)
-	return err
+// UpdateLegalDocumentIndexed updates the indexed_at and chunk_count
+func UpdateLegalDocumentIndexed(ctx context.Context, queries *Queries, id int64, chunkCount int) error {
+	return queries.UpdateLegalDocumentIndexed(ctx, UpdateLegalDocumentIndexedParams{
+		ID:         id,
+		ChunkCount: chunkCount,
+	})
 }
 
 // DeleteLegalDocument soft-deletes a legal document
-func DeleteLegalDocument(ctx context.Context, db *sql.DB, id int64) error {
-	_, err := db.ExecContext(ctx, `
-		UPDATE legal_documents
-		SET deleted_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND deleted_at IS NULL
-	`, id)
-	return err
+func DeleteLegalDocument(ctx context.Context, queries *Queries, id int64) error {
+	return queries.DeleteLegalDocument(ctx, id)
 }
 
+// GetLegalDocumentChunkCount returns the chunk count for a document
+func GetLegalDocumentChunkCount(ctx context.Context, queries *Queries, documentID int64) (int, error) {
+	var count int
+	err := queries.GetLegalDocumentChunkCount(ctx, documentID).Scan(&count)
+	return count, err
+}
 
+// CountLegalDocuments returns the total count of non-deleted legal documents
+func CountLegalDocuments(ctx context.Context, queries *Queries) (int, error) {
+	return queries.CountLegalDocuments(ctx)
+}
+
+// GetLastLegalDocumentIndexTime returns the most recent indexed_at time
+func GetLastLegalDocumentIndexTime(ctx context.Context, queries *Queries) (sql.NullTime, error) {
+	return queries.GetLastLegalDocumentIndexTime(ctx)
+}
 
 // ========== LEGAL CHAT ==========
 
-// CreateLegalChatMessage inserts a chat message
-func CreateLegalChatMessage(ctx context.Context, db *sql.DB, arg CreateLegalChatMessageParams) (LegalChatMessageRow, error) {
-	row := db.QueryRowContext(ctx, `
-		INSERT INTO ai_legal_chat_history (
-			user_id, session_id, message_type, content,
-			context_documents, metadata, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, user_id, session_id, message_type, content,
-		          context_documents, metadata, created_at
-	`,
-		arg.UserID,
-		arg.SessionID,
-		arg.MessageType,
-		arg.Content,
-		arg.ContextDocuments,
-		arg.Metadata,
-		arg.CreatedAt,
-	)
+// CreateLegalChatMessage inserts a chat message using sqlc Queries
+func CreateLegalChatMessage(ctx context.Context, queries *Queries, arg CreateLegalChatMessageParams) (LegalChatMessageRow, error) {
+	row, err := queries.CreateLegalChatMessage(ctx, CreateLegalChatMessageParams{
+		UserID:      arg.UserID,
+		SessionID:   arg.SessionID,
+		MessageType: arg.MessageType,
+		Content:     arg.Content,
+		ContextDocs: arg.ContextDocs,
+		Metadata:    arg.Metadata,
+	})
+	if err != nil {
+		return LegalChatMessageRow{}, err
+	}
 
-	var msg LegalChatMessageRow
-	err := row.Scan(
-		&msg.ID,
-		&msg.UserID,
-		&msg.SessionID,
-		&msg.MessageType,
-		&msg.Content,
-		&msg.ContextDocs,
-		&msg.Metadata,
-		&msg.CreatedAt,
-	)
-
-	return msg, err
+	return LegalChatMessageRow{
+		ID:          int(row.ID),
+		UserID:      int(row.UserID),
+		SessionID:   row.SessionID,
+		MessageType: row.MessageType,
+		Content:     row.Content,
+		ContextDocs: row.ContextDocuments,
+		Metadata:    row.Metadata,
+		CreatedAt:   row.CreatedAt,
+	}, nil
 }
 
-// ListLegalChatMessages returns messages for a session
-func ListLegalChatMessages(ctx context.Context, db *sql.DB, sessionID string) ([]LegalChatMessageRow, error) {
-	rows, err := db.QueryContext(ctx, `
-		SELECT id, user_id, session_id, message_type, content,
-		       context_documents, metadata, created_at
-		FROM ai_legal_chat_history
-		WHERE session_id = $1
-		ORDER BY created_at ASC
-	`, sessionID)
+// ListLegalChatMessages returns messages for a session using sqlc Queries
+func ListLegalChatMessages(ctx context.Context, queries *Queries, sessionID string) ([]LegalChatMessageRow, error) {
+	rows, err := queries.GetLegalChatHistoryBySession(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var msgs []LegalChatMessageRow
-	for rows.Next() {
-		var msg LegalChatMessageRow
-		err := rows.Scan(
-			&msg.ID,
-			&msg.UserID,
-			&msg.SessionID,
-			&msg.MessageType,
-			&msg.Content,
-			&msg.ContextDocs,
-			&msg.Metadata,
-			&msg.CreatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		msgs = append(msgs, msg)
+	for _, r := range rows {
+		msgs = append(msgs, LegalChatMessageRow{
+			ID:          int(r.ID),
+			UserID:      int(r.UserID),
+			SessionID:   r.SessionID,
+			MessageType: r.MessageType,
+			Content:     r.Content,
+			ContextDocs: r.ContextDocuments,
+			Metadata:    r.Metadata,
+			CreatedAt:   r.CreatedAt,
+		})
 	}
-
-	return msgs, rows.Err()
+	return msgs, nil
 }
 
-// ========== SIMILARITY SEARCH ==========
-
-
-
-// ========== CHAT SESSIONS ==========
-
-// LegalChatSession represents a chat session summary
-type LegalChatSession struct {
-	SessionID    string    `json:"session_id"`
-	UserID       int       `json:"user_id"`
-	LastMessage  time.Time `json:"last_message"`
-	CreatedAt    time.Time `json:"created_at"`
-	MessageCount int       `json:"message_count"`
-}
-
-// ListLegalChatSessions returns all chat sessions for a user
-func ListLegalChatSessions(ctx context.Context, db *sql.DB, userID int) ([]LegalChatSession, error) {
-	rows, err := db.QueryContext(ctx, `
-		SELECT 
-			session_id,
-			user_id,
-			MAX(created_at) as last_message,
-			MIN(created_at) as created_at,
-			COUNT(*) as message_count
-		FROM ai_legal_chat_history
-		WHERE user_id = $1
-		GROUP BY session_id, user_id
-		ORDER BY last_message DESC
-	`, userID)
+// ListLegalChatSessions returns all chat sessions for a user using sqlc Queries
+func ListLegalChatSessions(ctx context.Context, queries *Queries, userID int) ([]LegalChatSession, error) {
+	rows, err := queries.GetLegalChatSessionsByUser(ctx, int64(userID))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var sessions []LegalChatSession
-	for rows.Next() {
-		var s LegalChatSession
-		err := rows.Scan(&s.SessionID, &s.UserID, &s.LastMessage, &s.CreatedAt, &s.MessageCount)
-		if err != nil {
-			return nil, err
-		}
-		sessions = append(sessions, s)
+	for _, r := range rows {
+		sessions = append(sessions, LegalChatSession{
+			SessionID:   r.SessionID,
+			UserID:      int(r.UserID),
+			LastMessage:  r.LastMessage,
+			CreatedAt:   r.CreatedAt,
+			MessageCount: int(r.MessageCount),
+		})
 	}
-
-	return sessions, rows.Err()
+	return sessions, nil
 }
 
-// ========== SETTINGS ==========
-
-// GetAILegalEnabled returns whether AI legal is enabled
-func GetAILegalEnabled(ctx context.Context, db *sql.DB) (bool, error) {
-	row := db.QueryRowContext(ctx, `
-		SELECT value FROM system_settings
-		WHERE key = 'ai_legal_enabled' AND deleted_at IS NULL
-		LIMIT 1
-	`)
-
-	var val string
-	err := row.Scan(&val)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil // default: disabled
-		}
-		return false, err
-	}
-
-	return val == "true" || val == "1", nil
+// DeleteLegalChatSession soft-deletes a chat session
+func DeleteLegalChatSession(ctx context.Context, queries *Queries, sessionID string) error {
+	return queries.DeleteLegalChatSession(ctx, sessionID)
 }
 
-// SetAILegalEnabled sets the ai_legal_enabled setting
-func SetAILegalEnabled(ctx context.Context, db *sql.DB, enabled bool) error {
-	val := "false"
-	if enabled {
-		val = "true"
+// ========== HELPERS ==========
+
+// legalDocumentRowFromDB converts a sqlc-generated row to LegalDocumentRow
+func legalDocumentRowFromDB(row GetLegalDocumentRow) LegalDocumentRow {
+	r := LegalDocumentRow{
+		ID:           int(row.ID),
+		Title:        row.Title,
+		DocumentType: row.DocumentType,
+		Source:       row.Source,
+		Content:      row.Content,
+		ContentHash:   row.ContentHash,
+		Language:      row.Language,
+		Jurisdiction:  row.Jurisdiction,
+		ChunkCount:    int(row.ChunkCount),
+		CreatedAt:    row.CreatedAt,
+		UpdatedAt:    row.UpdatedAt,
+		CompanyID:    int(row.CompanyID),
+		UploadedBy:   int(row.UploadedBy),
+		StoragePath:  row.StoragePath,
+		MimeType:     row.MimeType,
+		SizeBytes:    int(row.SizeBytes),
+		ChunkConfig:  row.ChunkConfig,
+		IsIndexed:    row.IsIndexed,
 	}
 
-	_, err := db.ExecContext(ctx, `
-		INSERT INTO system_settings (key, value, updated_at)
-		VALUES ('ai_legal_enabled', $1, CURRENT_TIMESTAMP)
-		ON CONFLICT(key) DO UPDATE SET value = $1, updated_at = CURRENT_TIMESTAMP
-	`, val)
-
-	return err
-}
-
-// AILegalIntegrationEnabled returns whether form integration is enabled
-func AILegalIntegrationEnabled(ctx context.Context, db *sql.DB) (bool, error) {
-	row := db.QueryRowContext(ctx, `
-		SELECT value FROM system_settings
-		WHERE key = 'ai_legal_integration' AND deleted_at IS NULL
-		LIMIT 1
-	`)
-
-	var val string
-	err := row.Scan(&val)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, err
+	if row.EffectiveDate.Valid {
+		ed := row.EffectiveDate.Time.Format("2006-01-02")
+		r.EffectiveDate = &ed
+	}
+	if row.PublicationDate.Valid {
+		pd := row.PublicationDate.Time.Format("2006-01-02")
+		r.PublicationDate = &pd
+	}
+	if row.IndexedAt.Valid {
+		r.IndexedAt = &row.IndexedAt.Time
+	}
+	if row.DeletedAt.Valid {
+		r.DeletedAt = &row.DeletedAt.Time
 	}
 
-	return val == "true" || val == "1", nil
+	// Parse tags JSON
+	if len(row.Tags) > 0 && row.Tags[0] == '[' {
+		json.Unmarshal(row.Tags, &r.Tags)
+	}
+
+	return r
 }

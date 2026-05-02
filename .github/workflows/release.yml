@@ -40,10 +40,19 @@ jobs:
         working-directory: pacta_appweb
         run: npm ci && npm run build
 
-      - name: Copy frontend dist
-        run: cp -r pacta_appweb/dist cmd/pacta/dist
+       - name: Copy frontend dist
+         run: cp -r pacta_appweb/dist cmd/pacta/dist
 
-      - name: Clone llama.cpp
+       - name: Install sqlc
+         run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
+
+       - name: Generate sqlc code
+         run: sqlc generate
+
+       - name: Verify generated code up-to-date
+         run: git diff --exit-code internal/db/queries_gen.go
+
+       - name: Clone llama.cpp
         run: |
           if [ ! -d "internal/ai/minirag/llama.cpp/.git" ]; then
             rm -rf internal/ai/minirag/llama.cpp

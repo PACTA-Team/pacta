@@ -1,8 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
-	"net/http"
+	"log"
 
 	"github.com/PACTA-Team/pacta/internal/server/middleware"
 )
@@ -30,8 +31,14 @@ func (h *Handler) auditLog(r *http.Request, userID int, companyID int, action, e
 
 	ip := middleware.GetClientIP(r)
 
-	_, _ = h.DB.Exec(`
-		INSERT INTO audit_logs (user_id, action, entity_type, entity_id, previous_state, new_state, ip_address, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, userID, action, entityType, entityID, prevJSON, newJSON, ip, companyID)
+	_, _ = h.Queries.CreateAuditLog(r.Context(), db.CreateAuditLogParams{
+		UserID:      int64(userID),
+		Action:      action,
+		EntityType:  entityType,
+		EntityID:    entityID,
+		PreviousState: prevJSON,
+		NewState:    newJSON,
+		IPAddress:   ip,
+		CompanyID:   int64(companyID),
+	})
 }

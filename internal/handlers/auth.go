@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
-	"github.com/PACTA-Team/pacta/internal/models"
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 type LoginRequest struct {
@@ -50,8 +50,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if email already exists
-	var existing int
-	err := h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ? AND deleted_at IS NULL", req.Email).Scan(&existing)
+	existing, err := h.Queries.UserExists(r.Context(), req.Email)
 	if err != nil {
 		log.Printf("[register] ERROR checking email existence: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to check email")
@@ -63,8 +62,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine role: first user gets admin, others get viewer
-	var userCount int
-	err = h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&userCount)
+	userCount, err := h.Queries.CountAllUsers(r.Context())
 	if err != nil {
 		log.Printf("[register] ERROR determining role (userCount): %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to determine role")
@@ -86,10 +84,14 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert user
-	result, err := h.DB.Exec(
-		"INSERT INTO users (name, email, password_hash, role, status) VALUES (?, ?, ?, ?, ?)",
-		req.Name, req.Email, hash, role, status,
-	)
+	user, err := h.Queries.CreateUser(r.Context(), db.CreateUserParams{
+		Name:         req.Name,
+		Email:        req.Email,
+		PasswordHash: hash,
+		Role:         role,
+		Status:       status,
+		CompanyID:    0,
+	})
 	if err != nil {
 		log.Printf("[register] ERROR inserting user: %v", err)
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
@@ -99,12 +101,13 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, "failed to create user")
 		return
 	}
-	userID, _ := result.LastInsertId()
 
 	// Create pending approval entry for admin review (company_name left empty since removed from registration)
-	_, err = h.DB.Exec(`
-		INSERT INTO pending_approvals (user_id, company_name, status) 
-		VALUES (?, ?, 'pending')`, userID, "")
+	_, err = h.Queries.CreatePendingApproval(r.Context(), db.CreatePendingApprovalParams{
+		UserID:     user.ID,
+		CompanyName: "",
+		Status:      "pending",
+	})
 	if err != nil {
 		log.Printf("[register] ERROR inserting pending approval: %v", err)
 		// Continue - user was created, just log the error
@@ -112,7 +115,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	// Return pending response without creating session
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
-		"id":      userID,
+		"id":      user.ID,
 		"name":    req.Name,
 		"email":   req.Email,
 		"status":  "pending_approval",
@@ -127,7 +130,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.Authenticate(h.DB, req.Email, req.Password)
+	user, err := auth.Authenticate(h.Queries, req.Email, req.Password)
 	if err != nil {
 		// Constant-time response to prevent user enumeration
 		time.Sleep(50 * time.Millisecond)
@@ -143,7 +146,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Check if user needs setup (pending_approval or pending_activation means no setup completed)
 	if user.Status == "pending_approval" || user.Status == "pending_activation" {
 		// Create session with company_id = 0 (no company yet)
-		session, err := auth.CreateSession(h.DB, user.ID, 0)
+		session, err := auth.CreateSession(h.Queries, user.ID, 0)
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to create session")
 			return
@@ -159,8 +162,8 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		})
 
 		h.JSON(w, http.StatusOK, map[string]interface{}{
-			"user":         sanitizeUser(user),
-			"needs_setup":  true,
+			"user":        sanitizeUser(user),
+			"needs_setup": true,
 			"setup_status": user.Status,
 		})
 		return
@@ -174,20 +177,17 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Resolve user's default company
-	var companyID int
-	err = h.DB.QueryRow(`
-		SELECT company_id FROM user_companies
-		WHERE user_id = ? AND is_default = 1
-	`, user.ID).Scan(&companyID)
-	if err == sql.ErrNoRows {
-		err = h.DB.QueryRow("SELECT company_id FROM users WHERE id = ?", user.ID).Scan(&companyID)
-	}
+	companyID, err := h.Queries.GetUserCompanyID(r.Context(), user.ID)
 	if err != nil {
+		// Fallback to user's company_id from users table
+		companyID = user.CompanyID
+	}
+	if companyID == 0 {
 		h.Error(w, http.StatusForbidden, "no company assigned. Contact administrator.")
 		return
 	}
 
-	session, err := auth.CreateSession(h.DB, user.ID, companyID)
+	session, err := auth.CreateSession(h.Queries, user.ID, int(companyID))
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
@@ -210,7 +210,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session")
 	if err == nil {
-		auth.DeleteSession(h.DB, cookie.Value)
+		auth.DeleteSession(h.Queries, cookie.Value)
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
@@ -225,19 +225,23 @@ func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
-	var u models.User
-	err := h.DB.QueryRow(`
-		SELECT id, name, email, role, status, created_at, updated_at
-		FROM users WHERE id = ? AND deleted_at IS NULL
-	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt)
+	user, err := h.Queries.GetUserByID(r.Context(), int64(userID))
 	if err != nil {
 		h.Error(w, http.StatusUnauthorized, "user not found")
 		return
 	}
-	h.JSON(w, http.StatusOK, u)
+	h.JSON(w, http.StatusOK, map[string]interface{}{
+		"id":         user.ID,
+		"name":       user.Name,
+		"email":      user.Email,
+		"role":       user.Role,
+		"status":     user.Status,
+		"created_at": user.CreatedAt,
+		"updated_at": user.UpdatedAt,
+	})
 }
 
-func sanitizeUser(u *models.User) map[string]interface{} {
+func sanitizeUser(u *db.User) map[string]interface{} {
 	return map[string]interface{}{
 		"id":    u.ID,
 		"name":  u.Name,

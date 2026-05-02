@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/PACTA-Team/pacta/internal/db"
@@ -26,8 +27,7 @@ func validateTableName(table string) bool {
 }
 
 func EnforceCompanyAccess(queries *db.Queries, userID, companyID int) error {
-	var count int
-	err := queries.CountUserCompanyAccess(context.Background(), userID, companyID)
+	count, err := queries.CountUserCompanyAccess(context.Background(), userID, companyID)
 	if err != nil {
 		return err
 	}

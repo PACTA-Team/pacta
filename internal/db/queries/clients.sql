@@ -9,6 +9,13 @@ FROM clients
 WHERE id = $1 AND deleted_at IS NULL
 LIMIT 1;
 
+-- name: GetClientByIDWithCompany :one
+SELECT id, company_id, name, address, reu_code, contacts,
+       created_by, created_at, updated_at
+FROM clients
+WHERE id = $1 AND deleted_at IS NULL AND company_id = $2
+LIMIT 1;
+
 -- name: ListClientsByCompany :many
 SELECT id, name, address, reu_code, contacts
 FROM clients

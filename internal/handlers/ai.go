@@ -749,12 +749,6 @@ func (h *Handler) handleLegalEnabled(w http.ResponseWriter, r *http.Request) boo
 	}
 	return true
 }
-	if !enabled {
-		h.Error(w, http.StatusForbidden, "AI legal features are disabled")
-		return false
-	}
-	return true
-}
 
 // HandleLegalStatus returns the status of the legal AI system
 func (h *Handler) HandleLegalStatus(w http.ResponseWriter, r *http.Request) {

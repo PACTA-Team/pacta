@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -40,13 +39,7 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userID int64
-	var userName string
-	var lang string
-	err := h.DB.QueryRow(
-		"SELECT id, name, language FROM users WHERE email = ? AND status != 'locked' AND deleted_at IS NULL",
-		req.Email,
-	).Scan(&userID, &userName, &lang)
+	user, err := h.Queries.GetUserByEmail(r.Context(), req.Email)
 	if err == sql.ErrNoRows {
 		log.Printf("[password_reset] user not found for email: %s", req.Email)
 		w.WriteHeader(http.StatusAccepted)
@@ -58,29 +51,33 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, expiresAt, err := email.GenerateResetToken(userID)
+	token, expiresAt, err := email.GenerateResetToken(user.ID)
 	if err != nil {
 		log.Printf("[password_reset] error generating token: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	if err := email.SaveResetToken(h.DB, userID, token, expiresAt); err != nil {
+	if err := email.SaveResetToken(h.Queries, user.ID, token, expiresAt); err != nil {
 		log.Printf("[password_reset] error saving token: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	h.DB.Exec(
-		"INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-		userID, "password_reset_request", "user", userID, r.RemoteAddr,
-	)
+	h.Queries.CreateAuditLog(context.Background(), db.CreateAuditLogParams{
+		UserID:    user.ID,
+		Action:    "password_reset_request",
+		EntityType: "user",
+		EntityID:   user.ID,
+		IPAddress:  r.RemoteAddr,
+	})
 
 	resetLink := "http://" + r.Host + "/reset-password?token=" + token
+	lang := user.Language
 	if lang == "" {
 		lang = detectLanguageFromHeader(r.Header.Get("Accept-Language"))
 	}
-	template := email.GetPasswordResetTemplate(lang, resetLink, userName)
+	template := email.GetPasswordResetTemplate(lang, resetLink, user.Name)
 
 	msg := mail.NewMsg()
 	if err := msg.From("PACTA <noreply@pacta.duckdns.org>"); err != nil {
@@ -95,10 +92,10 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	msg.Subject(template.Subject)
 	msg.SetBodyString(mail.TypeTextHTML, template.HTML)
-	if err := email.SendEmail(context.Background(), msg, h.DB); err != nil {
+	if err := email.SendEmail(context.Background(), msg, h.Queries); err != nil {
 		log.Printf("[password_reset] error sending email to %s: %v", req.Email, err)
 	}
-	log.Printf("[password_reset] token generated for user %d", userID)
+	log.Printf("[password_reset] token generated for user %d", user.ID)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -123,7 +120,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := email.ValidateResetToken(h.DB, req.Token)
+	userID, err := email.ValidateResetToken(h.Queries, req.Token)
 	if err != nil {
 		log.Printf("[password_reset] invalid token: %v", err)
 		h.Error(w, http.StatusBadRequest, "invalid or expired token")
@@ -137,24 +134,27 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.DB.Exec(
-		"UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		string(hashedPassword), userID,
-	)
+	err = h.Queries.UpdateUserPassword(r.Context(), db.UpdateUserPasswordParams{
+		PasswordHash: string(hashedPassword),
+		ID:          userID,
+	})
 	if err != nil {
 		log.Printf("[password_reset] error updating password: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	if err := email.MarkTokenUsed(h.DB, req.Token); err != nil {
+	if err := email.MarkTokenUsed(h.Queries, req.Token); err != nil {
 		log.Printf("[password_reset] error marking token used: %v", err)
 	}
 
-	h.DB.Exec(
-		"INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_state, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-		userID, "password_reset_complete", "user", userID, "Password reset completed successfully",
-	)
+	h.Queries.CreateAuditLog(context.Background(), db.CreateAuditLogParams{
+		UserID:    int64(userID),
+		Action:    "password_reset_complete",
+		EntityType: "user",
+		EntityID:   int64(userID),
+		NewState:  "Password reset completed successfully",
+	})
 
 	log.Printf("[password_reset] password reset for user %d", userID)
 	h.JSON(w, http.StatusOK, map[string]string{"message": "password reset successful"})
@@ -172,7 +172,7 @@ func (h *Handler) ValidateResetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := email.ValidateResetToken(h.DB, token)
+	_, err := email.ValidateResetToken(h.Queries, token)
 	if err != nil {
 		log.Printf("[password_reset] invalid token validation: %v", err)
 		h.Error(w, http.StatusBadRequest, "invalid or expired token")

@@ -9,6 +9,13 @@ FROM suppliers
 WHERE id = $1 AND deleted_at IS NULL AND company_id = $2
 LIMIT 1;
 
+-- name: GetSupplierByIDWithCompany :one
+SELECT id, company_id, name, address, reu_code, contacts,
+       created_by, created_at, updated_at
+FROM suppliers
+WHERE id = $1 AND deleted_at IS NULL AND company_id = $2
+LIMIT 1;
+
 -- name: ListSuppliersByCompany :many
 SELECT id, name, address, reu_code, contacts
 FROM suppliers

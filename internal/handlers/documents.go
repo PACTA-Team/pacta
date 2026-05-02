@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -71,31 +73,42 @@ func (h *Handler) listDocuments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.DB.Query(`
-		SELECT id, entity_id, entity_type, filename, mime_type, size_bytes, created_at
-		FROM documents WHERE entity_id = ? AND entity_type = ? AND company_id = ?
-		ORDER BY created_at DESC
-	`, entityID, entityType, companyID)
+	docs, err := h.Queries.ListDocumentsByEntity(r.Context(), db.ListDocumentsByEntityParams{
+		EntityID:   int64(entityID),
+		EntityType: entityType,
+		CompanyID:  int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list documents")
 		return
 	}
-	defer rows.Close()
 
-	var docs []Document
-	for rows.Next() {
-		var d Document
-		if err := rows.Scan(&d.ID, &d.EntityID, &d.EntityType, &d.Filename,
-			&d.MimeType, &d.SizeBytes, &d.CreatedAt); err != nil {
-			h.Error(w, http.StatusInternalServerError, "failed to list documents")
-			return
-		}
-		docs = append(docs, d)
-	}
 	if docs == nil {
-		docs = []Document{}
+		docs = []db.ListDocumentsByEntityRow{}
 	}
-	h.JSON(w, http.StatusOK, docs)
+
+	// Convert to Document format
+	var result []Document
+	for _, d := range docs {
+		doc := Document{
+			ID:        int(d.ID),
+			EntityID:   int(d.EntityID),
+			EntityType: d.EntityType,
+			Filename:   d.Filename,
+			CreatedAt:  d.CreatedAt,
+		}
+		if d.MimeType.Valid {
+			s := d.MimeType.String
+			doc.MimeType = &s
+		}
+		if d.SizeBytes.Valid {
+			s := int64(d.SizeBytes.Int64)
+			doc.SizeBytes = &s
+		}
+		result = append(result, doc)
+	}
+
+	h.JSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
@@ -139,8 +152,12 @@ func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var contractExists int
-	if err := h.DB.QueryRow("SELECT COUNT(*) FROM contracts WHERE id = ? AND deleted_at IS NULL AND company_id = ?", entityID, companyID).Scan(&contractExists); err != nil {
+	// Validate that contract exists and belongs to company
+	contractExists, err := h.Queries.ContractExists(r.Context(), db.ContractExistsParams{
+		ID:        int64(entityID),
+		CompanyID: int64(companyID),
+	})
+	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to upload document")
 		return
 	}
@@ -182,21 +199,24 @@ func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserID(r)
-	result, err := h.DB.Exec(`
-		INSERT INTO documents (entity_id, entity_type, filename, storage_path, mime_type, size_bytes, uploaded_by, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, entityID, entityType, header.Filename, storagePath, mimeType, size, userID, companyID)
+	doc, err := h.Queries.CreateDocument(r.Context(), db.CreateDocumentParams{
+		EntityID:   int64(entityID),
+		EntityType: entityType,
+		Filename:   header.Filename,
+		StoragePath: storagePath,
+		MimeType:   mimeType,
+		SizeBytes:  size,
+		UploadedBy: int64(userID),
+		CompanyID:  int64(companyID),
+	})
 	if err != nil {
 		os.Remove(storagePath)
 		h.Error(w, http.StatusInternalServerError, "failed to save document")
 		return
 	}
 
-	id64, _ := result.LastInsertId()
-	id := int(id64)
-
-	h.auditLog(r, userID, companyID, "create", "document", &id, nil, map[string]interface{}{
-		"id":          id,
+	h.auditLog(r, userID, companyID, "create", "document", &doc.ID, nil, map[string]interface{}{
+		"id":          doc.ID,
 		"entity_id":   entityID,
 		"entity_type": entityType,
 		"filename":    header.Filename,
@@ -204,7 +224,7 @@ func (h *Handler) createDocument(w http.ResponseWriter, r *http.Request) {
 	})
 
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
-		"id":          id,
+		"id":          doc.ID,
 		"entity_id":   entityID,
 		"entity_type": entityType,
 		"filename":    header.Filename,
@@ -243,17 +263,19 @@ func (h *Handler) HandleDocumentByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) downloadDocument(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
-	var filename, storagePath, mimeType string
-	var sizeBytes int64
-
-	err := h.DB.QueryRow(`
-		SELECT filename, storage_path, mime_type, size_bytes
-		FROM documents WHERE id = ? AND company_id = ?
-	`, id, companyID).Scan(&filename, &storagePath, &mimeType, &sizeBytes)
+	doc, err := h.Queries.GetDocument(r.Context(), db.GetDocumentParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "document not found")
 		return
 	}
+
+	filename := doc.Filename
+	storagePath := doc.StoragePath
+	mimeType := doc.MimeType.String
+	sizeBytes := doc.SizeBytes.Int64
 
 	data, err := os.ReadFile(storagePath)
 	if err != nil {
@@ -269,24 +291,29 @@ func (h *Handler) downloadDocument(w http.ResponseWriter, r *http.Request, id in
 
 func (h *Handler) deleteDocument(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
-	var storagePath, filename string
-	err := h.DB.QueryRow("SELECT storage_path, filename FROM documents WHERE id = ? AND company_id = ?", id, companyID).Scan(&storagePath, &filename)
+	doc, err := h.Queries.GetDocument(r.Context(), db.GetDocumentParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "document not found")
 		return
 	}
 
-	_, err = h.DB.Exec("DELETE FROM documents WHERE id = ? AND company_id = ?", id, companyID)
+	err = h.Queries.DeleteDocument(r.Context(), db.DeleteDocumentParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete document")
 		return
 	}
 
-	os.Remove(storagePath)
+	os.Remove(doc.StoragePath)
 
 	h.auditLog(r, h.getUserID(r), companyID, "delete", "document", &id, map[string]interface{}{
 		"id":       id,
-		"filename": filename,
+		"filename": doc.Filename,
 	}, nil)
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})

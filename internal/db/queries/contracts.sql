@@ -55,6 +55,7 @@ LIMIT 1;
 SELECT company_id FROM suppliers
 WHERE id = $1 AND deleted_at IS NULL
 LIMIT 1;
+-- name: CountContractsByCompany :one
 SELECT COUNT(*) FROM contracts
 WHERE company_id = $1 AND deleted_at IS NULL;
 

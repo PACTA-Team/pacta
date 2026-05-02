@@ -125,7 +125,20 @@ PACTA follows a minimalist, self-contained architecture:
 | Auth         | Cookie-based sessions, bcrypt       |
 | Packaging    | GoReleaser, NFPM (.deb)             |
 
+### Database Access
+
+All database queries are type-safe via **sqlc** code generation:
+
+- SQL queries are defined in `internal/db/queries/*.sql`
+- Code generation: `sqlc generate` produces `internal/db/queries_gen.go`
+- Handlers use `*db.Queries` injected through constructor dependency injection
+- Soft-delete pattern (`deleted_at IS NULL`) is consistently applied across all entities
+- Transactions use `queries.WithTx(tx)` when the transaction-aware interface is enabled
+
+> **Developer note:** After modifying any `.sql` file, run `sqlc generate` to regenerate `queries_gen.go`, then commit both the `.sql` changes and the updated generated code.
+
 ---
+
 
 ## API Reference
 

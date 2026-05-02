@@ -19,7 +19,7 @@ ON CONFLICT(key) DO UPDATE SET
   updated_at = CURRENT_TIMESTAMP;
 
 -- name: GetAllSettings :many
-SELECT key, value, category, updated_at
+SELECT id, key, value, category, updated_by, updated_at
 FROM system_settings
 WHERE deleted_at IS NULL
 ORDER BY category, key;
@@ -36,7 +36,7 @@ LIMIT 1;
 
 -- name: UpdateSettingValue :exec
 UPDATE system_settings
-SET value = $2, updated_at = CURRENT_TIMESTAMP
+SET value = $2, updated_by = $3, updated_at = CURRENT_TIMESTAMP
 WHERE key = $1 AND deleted_at IS NULL;
 
 -- name: DeleteSetting :exec

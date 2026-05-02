@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
+	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/email"
 )
 
@@ -29,13 +29,15 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 
 	var userID int
 	var status string
-	err := h.DB.QueryRow("SELECT id, status FROM users WHERE email = ? AND deleted_at IS NULL", req.Email).Scan(&userID, &status)
+	user, err := h.Queries.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		log.Printf("[handlers/registration] ERROR: user lookup failed for %s: %v", req.Email, err)
 		time.Sleep(30 * time.Millisecond)
 		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
+	userID = int(user.ID)
+	status = user.Status
 
 	if status != "pending_email" {
 		log.Printf("[handlers/registration] ERROR: user %d status not pending: %s", userID, status)
@@ -46,14 +48,15 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 
 	var codeHash string
 	var expiresAt time.Time
-	err = h.DB.QueryRow(`
-		SELECT code_hash, expires_at FROM registration_codes
-		WHERE user_id = ? ORDER BY created_at DESC LIMIT 1
-	`, userID).Scan(&codeHash, &expiresAt)
+	var attempts int
+	code, err := h.Queries.GetLatestRegistrationCodeForUser(r.Context(), userID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "verification failed")
 		return
 	}
+	codeHash = code.CodeHash
+	expiresAt = code.ExpiresAt
+	attempts = code.Attempts
 
 	if time.Now().After(expiresAt) {
 		log.Printf("[handlers/registration] ERROR: verification code expired for user %d", userID)
@@ -63,7 +66,8 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var attempts int
-	h.DB.QueryRow("SELECT attempts FROM registration_codes WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", userID).Scan(&attempts)
+	row := h.Queries.GetLatestRegistrationCodeForUser(r.Context(), userID)
+	attempts = row.Attempts
 	if attempts >= 5 {
 		log.Printf("[handlers/registration] ERROR: too many attempts for user %d", userID)
 		time.Sleep(30 * time.Millisecond)
@@ -72,30 +76,46 @@ func (h *Handler) HandleVerifyCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !auth.CheckPassword(req.Code, codeHash) {
-		h.DB.Exec("UPDATE registration_codes SET attempts = attempts + 1 WHERE user_id = ? ORDER BY created_at DESC LIMIT 1", userID)
+		h.Queries.IncrementRegistrationAttempts(r.Context(), userID)
 		log.Printf("[handlers/registration] ERROR: invalid verification code for user %d", userID)
 		time.Sleep(30 * time.Millisecond)
 		h.Error(w, http.StatusUnauthorized, "Invalid verification code or account not approved.")
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE users SET status = 'active' WHERE id = ?", userID)
+	err = h.Queries.UpdateUserStatus(r.Context(), db.UpdateUserStatusParams{
+		Status: "active",
+		ID:     userID,
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "verification failed")
 		return
 	}
 
 	var companyID int
-	err = h.DB.QueryRow("SELECT id FROM companies LIMIT 1").Scan(&companyID)
-	if err == sql.ErrNoRows {
-		result, _ := h.DB.Exec("INSERT INTO companies (name, company_type) VALUES (?, ?)", "Default Company", "client")
-		id64, _ := result.LastInsertId()
-		companyID = int(id64)
+	company, err := h.Queries.GetCompanyByID(r.Context(), 1)
+	if err != nil {
+		_, err = h.Queries.CreateCompany(r.Context(), db.CreateCompanyParams{
+			Name:      "Default Company",
+			CompanyType: "client",
+			CreatedBy:  0,
+		})
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "failed to create company")
+			return
+		}
+		companyID = int(company.ID)
+	} else {
+		companyID = int(company.ID)
 	}
 
-	h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)", userID, companyID)
+	h.Queries.CreateUserCompany(r.Context(), db.CreateUserCompanyParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+		IsDefault:  true,
+	})
 
-	session, err := auth.CreateSession(h.DB, userID, companyID)
+	session, err := auth.CreateSession(h.Queries, userID, companyID)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create session")
 		return
@@ -121,8 +141,8 @@ func generateCode() (string, error) {
 	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
-func sendAdminNotifications(ctx context.Context, db *sql.DB, userName, userEmail, companyName, lang string) error {
-	rows, err := db.Query("SELECT email FROM users WHERE role = 'admin' AND status = 'active' AND deleted_at IS NULL")
+func sendAdminNotifications(ctx context.Context, queries *db.Queries, userName, userEmail, companyName, lang string) error {
+	rows, err := queries.ListAdminEmails(ctx)
 	if err != nil {
 		return err
 	}
@@ -133,7 +153,7 @@ func sendAdminNotifications(ctx context.Context, db *sql.DB, userName, userEmail
 		if err := rows.Scan(&adminEmail); err != nil {
 			continue
 		}
-		email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName, lang, db)
+		email.SendAdminNotification(ctx, adminEmail, userName, userEmail, companyName, lang, queries)
 	}
 	return nil
 }

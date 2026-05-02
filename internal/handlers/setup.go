@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"unicode"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 type SetupRequest struct {
@@ -50,8 +52,7 @@ type SetupParty struct {
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 func (h *Handler) HandleSetupStatus(w http.ResponseWriter, r *http.Request) {
-	var count int
-	err := h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&count)
+	count, err := h.Queries.CountAllUsers(r.Context())
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to check setup status")
 		return
@@ -60,8 +61,7 @@ func (h *Handler) HandleSetupStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
-	var count int
-	err := h.DB.QueryRow("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL").Scan(&count)
+	count, err := h.Queries.CountAllUsers(r.Context())
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to check setup status")
 		return
@@ -106,14 +106,6 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Begin transaction
-	tx, err := h.DB.Begin()
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
-		return
-	}
-	defer tx.Rollback()
-
 	// Determine company type
 	companyType := "single"
 	if req.CompanyMode == "multi" {
@@ -121,15 +113,18 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create parent/single company
-	companyResult, err := tx.Exec(
-		"INSERT INTO companies (name, address, tax_id, company_type) VALUES (?, ?, ?, ?)",
-		req.Company.Name, req.Company.Address, req.Company.TaxID, companyType,
-	)
+	company, err := h.Queries.CreateCompany(r.Context(), db.CreateCompanyParams{
+		Name:      req.Company.Name,
+		Address:   req.Company.Address,
+		TaxID:    req.Company.TaxID,
+		CompanyType: companyType,
+		CreatedBy: 0, // No user yet
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	companyID, _ := companyResult.LastInsertId()
+	companyID := int(company.ID)
 
 	// Create admin user
 	hash, err := auth.HashPassword(req.Admin.Password)
@@ -137,10 +132,15 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	adminResult, err := tx.Exec(
-		"INSERT INTO users (name, email, password_hash, role, company_id) VALUES (?, ?, ?, 'admin', ?)",
-		req.Admin.Name, req.Admin.Email, hash, companyID,
-	)
+
+	admin, err := h.Queries.CreateUser(r.Context(), db.CreateUserParams{
+		Name:        req.Admin.Name,
+		Email:       req.Admin.Email,
+		PasswordHash: hash,
+		Role:        "admin",
+		Status:      "active",
+		CompanyID:   int64(companyID),
+	})
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			h.Error(w, http.StatusConflict, "a user with this email already exists")
@@ -149,36 +149,42 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	adminID, _ := adminResult.LastInsertId()
+	adminID := int(admin.ID)
 
 	// Link admin to company
-	_, err = tx.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)", adminID, companyID)
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
-		return
-	}
+	_ = h.Queries.CreateUserCompany(r.Context(), db.CreateUserCompanyParams{
+		UserID:    int64(adminID),
+		CompanyID: int64(companyID),
+		IsDefault:  true,
+	})
 
 	// Create default client
-	clientResult, err := tx.Exec(
-		"INSERT INTO clients (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
-		req.Client.Name, req.Client.Address, req.Client.REUCode, req.Client.Contacts, adminID, companyID,
-	)
+	_, err = h.Queries.CreateClient(r.Context(), db.CreateClientParams{
+		Name:      req.Client.Name,
+		Address:   req.Client.Address,
+		REUCode:  req.Client.REUCode,
+		Contacts:  req.Client.Contacts,
+		CreatedBy: int64(adminID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	_ = clientResult
 
 	// Create default supplier
-	supplierResult, err := tx.Exec(
-		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
-		req.Supplier.Name, req.Supplier.Address, req.Supplier.REUCode, req.Supplier.Contacts, adminID, companyID,
-	)
+	_, err = h.Queries.CreateSupplier(r.Context(), db.CreateSupplierParams{
+		Name:      req.Supplier.Name,
+		Address:   req.Supplier.Address,
+		REUCode:  req.Supplier.REUCode,
+		Contacts:  req.Supplier.Contacts,
+		CreatedBy: int64(adminID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 		return
 	}
-	_ = supplierResult
 
 	// Create subsidiaries if provided
 	for _, sub := range req.Subsidiaries {
@@ -186,36 +192,43 @@ func (h *Handler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		subResult, err := tx.Exec(
-			"INSERT INTO companies (name, address, tax_id, company_type, parent_id) VALUES (?, ?, ?, 'subsidiary', ?)",
-			sub.Name, sub.Address, sub.TaxID, companyID,
-		)
+		subCompany, err := h.Queries.CreateCompany(r.Context(), db.CreateCompanyParams{
+			Name:       sub.Name,
+			Address:    sub.Address,
+			TaxID:     sub.TaxID,
+			CompanyType: "subsidiary",
+			ParentID:   sql.NullInt64{Int64: int64(companyID), Valid: true},
+			CreatedBy:  int64(adminID),
+		})
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
 			return
 		}
-		subID, _ := subResult.LastInsertId()
+		subID := int(subCompany.ID)
 
 		// Create subsidiary's default client
 		if strings.TrimSpace(sub.Client.Name) != "" {
-			tx.Exec(
-				"INSERT INTO clients (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
-				sub.Client.Name, sub.Client.Address, sub.Client.REUCode, sub.Client.Contacts, adminID, subID,
-			)
+			h.Queries.CreateClient(r.Context(), db.CreateClientParams{
+				Name:      sub.Client.Name,
+				Address:   sub.Client.Address,
+				REUCode:  sub.Client.REUCode,
+				Contacts:  sub.Client.Contacts,
+				CreatedBy: int64(adminID),
+				CompanyID: int64(subID),
+			})
 		}
 
 		// Create subsidiary's default supplier
 		if strings.TrimSpace(sub.Supplier.Name) != "" {
-			tx.Exec(
-				"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
-				sub.Supplier.Name, sub.Supplier.Address, sub.Supplier.REUCode, sub.Supplier.Contacts, adminID, subID,
-			)
+			h.Queries.CreateSupplier(r.Context(), db.CreateSupplierParams{
+				Name:      sub.Supplier.Name,
+				Address:   sub.Supplier.Address,
+				REUCode:  sub.Supplier.REUCode,
+				Contacts:  sub.Supplier.Contacts,
+				CreatedBy: int64(adminID),
+				CompanyID: int64(subID),
+			})
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		h.Error(w, http.StatusInternalServerError, "setup failed. Please restart the application")
-		return
 	}
 
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
@@ -295,13 +308,12 @@ func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user already completed setup
-	var existingCompanyID *int
-	err := h.DB.QueryRow("SELECT company_id FROM users WHERE id = ?", userID).Scan(&existingCompanyID)
+	user, err := h.Queries.GetUserByID(r.Context(), int64(userID))
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to check user status")
 		return
 	}
-	if existingCompanyID != nil && *existingCompanyID > 0 {
+	if user.CompanyID.Valid && user.CompanyID.Int64 > 0 {
 		h.Error(w, http.StatusConflict, "setup already completed")
 		return
 	}
@@ -333,23 +345,23 @@ func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		result, err := h.DB.Exec(
-			"INSERT INTO companies (name, address, tax_id, phone, email, company_type) VALUES (?, ?, ?, ?, ?, 'single')",
-			req.CompanyName, req.CompanyAddress, req.CompanyTaxID, req.CompanyPhone, req.CompanyEmail,
-		)
+		company, err := h.Queries.CreateCompany(r.Context(), db.CreateCompanyParams{
+			Name:       req.CompanyName,
+			Address:    req.CompanyAddress,
+			TaxID:     req.CompanyTaxID,
+			CompanyType: "single",
+			CreatedBy:  int64(userID),
+		})
 		if err != nil {
 			log.Printf("[user-setup] ERROR creating company: %v", err)
 			h.Error(w, http.StatusInternalServerError, "failed to create company")
 			return
 		}
-
-		id, _ := result.LastInsertId()
-		idInt := int(id)
+		idInt := int(company.ID)
 		companyID = &idInt
 	} else {
 		// Verify company exists
-		var count int
-		err := h.DB.QueryRow("SELECT COUNT(*) FROM companies WHERE id = ? AND deleted_at IS NULL", *companyID).Scan(&count)
+		count, err := h.Queries.CompanyExists(r.Context(), *companyID)
 		if err != nil || count == 0 {
 			h.Error(w, http.StatusNotFound, "company not found")
 			return
@@ -357,10 +369,14 @@ func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update user with company, role
-	_, err = h.DB.Exec(
-		"UPDATE users SET company_id = ?, role = ?, setup_completed = 1, status = 'pending_activation', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		companyID, req.RoleAtCompany, userID,
-	)
+	err = h.Queries.UpdateUser(r.Context(), db.UpdateUserParams{
+		Name:      user.Name,
+		Email:     user.Email,
+		Role:      req.RoleAtCompany,
+		Status:    "pending_activation",
+		CompanyID: sql.NullInt64{Int64: int64(*companyID), Valid: true},
+		ID:        int64(userID),
+	})
 	if err != nil {
 		log.Printf("[user-setup] ERROR updating user: %v", err)
 		h.Error(w, http.StatusInternalServerError, "failed to update user")
@@ -368,34 +384,41 @@ func (h *Handler) HandleUserSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Link user to company
-	h.DB.Exec(
-		"INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)",
-		userID, *companyID,
-	)
+	h.Queries.CreateUserCompany(r.Context(), db.CreateUserCompanyParams{
+		UserID:    int64(userID),
+		CompanyID: int64(*companyID),
+		IsDefault:  true,
+	})
 
 	// Insert authorized signers
 	for _, signer := range req.AuthorizedSigners {
 		if strings.TrimSpace(signer.Name) != "" {
-			h.DB.Exec(
-				"INSERT INTO authorized_signers (company_id, name, position, email) VALUES (?, ?, ?, ?)",
-				companyID, signer.Name, signer.Position, signer.Email,
-			)
+			h.Queries.CreateSigner(r.Context(), db.CreateSignerParams{
+				CompanyID:   int64(*companyID),
+				CompanyType: "client",
+				FirstName:   signer.Name,
+				LastName:    "",
+				Position:    signer.Position,
+				Email:       signer.Email,
+				CreatedBy:   int64(userID),
+			})
 		}
 	}
 
 	// Always record in pending_activations when user completes setup (unconditional)
-	h.DB.Exec(`
-		INSERT INTO pending_activations (user_id, company_id, company_name, role_at_company, status) 
-		VALUES (?, ?, ?, ?, 'pending_activation')`,
-		userID, companyID, req.CompanyName, req.RoleAtCompany,
-	)
+	h.Queries.CreatePendingActivation(r.Context(), db.CreatePendingActivationParams{
+		UserID:       int64(userID),
+		CompanyID:    int64(*companyID),
+		CompanyName:  req.CompanyName,
+		RoleAtCompany: req.RoleAtCompany,
+	})
 
 	// Send setup completion notification to admins
 	go sendSetupCompletedNotification(userID, req.CompanyName)
 
 	h.JSON(w, http.StatusOK, map[string]interface{}{
-		"success":    true,
-		"message":  "Setup completed. Your account is pending activation.",
+		"success": true,
+		"message": "Setup completed. Your account is pending activation.",
 		"company": map[string]interface{}{
 			"id": *companyID,
 		},

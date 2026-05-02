@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -32,22 +34,34 @@ func (h *Handler) HandleNotificationSettings(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *Handler) getNotificationSettings(w http.ResponseWriter, r *http.Request, userID, companyID int) {
-	var s NotificationSettings
-	err := h.DB.QueryRow(`
-		SELECT id, user_id, company_id, enabled, thresholds, recipients, created_at, updated_at
-		FROM notification_settings WHERE user_id = ? AND company_id = ?
-	`, userID, companyID).Scan(&s.ID, &s.UserID, &s.CompanyID, &s.Enabled, &s.Thresholds, &s.Recipients, &s.CreatedAt, &s.UpdatedAt)
-
+	settings, err := h.Queries.GetNotificationSettings(r.Context(), db.GetNotificationSettingsParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
-		// Return defaults if no settings exist
-		h.JSON(w, http.StatusOK, map[string]interface{}{
-			"enabled":    true,
-			"thresholds": []int{7, 14, 30},
-			"recipients": []string{},
-		})
+		if err == sql.ErrNoRows {
+			// Return defaults if no settings exist
+			h.JSON(w, http.StatusOK, map[string]interface{}{
+				"enabled":    true,
+				"thresholds": []int{7, 14, 30},
+				"recipients": []string{},
+			})
+			return
+		}
+		h.Error(w, http.StatusInternalServerError, "failed to get settings")
 		return
 	}
 
+	s := NotificationSettings{
+		ID:        int(settings.ID),
+		UserID:    int(settings.UserID),
+		CompanyID: int(settings.CompanyID),
+		Enabled:   settings.Enabled,
+		Thresholds: settings.Thresholds,
+		Recipients: settings.Recipients,
+		CreatedAt: settings.CreatedAt,
+		UpdatedAt: settings.UpdatedAt,
+	}
 	h.JSON(w, http.StatusOK, s)
 }
 
@@ -81,16 +95,13 @@ func (h *Handler) updateNotificationSettings(w http.ResponseWriter, r *http.Requ
 		enabled = *req.Enabled
 	}
 
-	_, err := h.DB.Exec(`
-		INSERT INTO notification_settings (user_id, company_id, enabled, thresholds, recipients)
-		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(user_id, company_id) DO UPDATE SET
-			enabled = excluded.enabled,
-			thresholds = excluded.thresholds,
-			recipients = excluded.recipients,
-			updated_at = CURRENT_TIMESTAMP
-	`, userID, companyID, enabled, thresholds, recipients)
-
+	err := h.Queries.UpsertNotificationSettings(r.Context(), db.UpsertNotificationSettingsParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+		Enabled:   enabled,
+		Thresholds: thresholds,
+		Recipients: recipients,
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update settings")
 		return

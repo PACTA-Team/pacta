@@ -37,8 +37,8 @@ jobs:
       - name: Tidy
         run: go mod tidy
 
-      - name: Install sqlc
-        run: go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.46.0
+       - name: Install sqlc
+         run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
 
       - name: Generate sqlc queries
         run: |

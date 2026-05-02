@@ -36,6 +36,14 @@ UPDATE legal_documents
 SET deleted_at = CURRENT_TIMESTAMP
 WHERE id = $1 AND deleted_at IS NULL;
 
+-- name: CountLegalDocuments :one
+SELECT COUNT(*) FROM legal_documents
+WHERE deleted_at IS NULL;
+
+-- name: GetLastLegalDocumentIndexTime :one
+SELECT MAX(indexed_at) FROM legal_documents
+WHERE deleted_at IS NULL;
+
 -- name: GetLegalDocumentChunkCount :one
 SELECT COUNT(*) FROM document_chunks
 WHERE document_id = $1 AND source = 'legal';

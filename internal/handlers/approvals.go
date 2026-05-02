@@ -46,13 +46,7 @@ func (h *Handler) HandlePendingApprovals(w http.ResponseWriter, r *http.Request)
 
 // listPendingActivations handles GET for pending activations
 func (h *Handler) listPendingActivations(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`
-		SELECT pa.id, pa.user_id, u.name, u.email, pa.company_name, pa.company_id, pa.role_at_company, pa.status, pa.created_at
-		FROM pending_activations pa
-		JOIN users u ON u.id = pa.user_id
-		WHERE pa.status = 'pending_activation' AND u.deleted_at IS NULL
-		ORDER BY pa.created_at DESC
-	`)
+	rows, err := h.Queries.ListPendingActivations(r.Context())
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list pending activations")
 		return
@@ -73,13 +67,7 @@ func (h *Handler) listPendingActivations(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) listPendingApprovals(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`
-		SELECT pa.id, pa.user_id, u.name, u.email, pa.company_name, pa.company_id, pa.requested_role, pa.status, pa.created_at
-		FROM pending_approvals pa
-		JOIN users u ON u.id = pa.user_id
-		WHERE pa.status = 'pending' AND u.deleted_at IS NULL
-		ORDER BY pa.created_at DESC
-	`)
+	rows, err := h.Queries.ListPendingApprovals(r.Context())
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list approvals")
 		return
@@ -128,24 +116,28 @@ func (h *Handler) approveOrReject(w http.ResponseWriter, r *http.Request) {
 
 	var userID int
 	var companyName string
-	err := h.DB.QueryRow("SELECT user_id, company_name FROM pending_approvals WHERE id = ? AND status = 'pending'", req.ApprovalID).Scan(&userID, &companyName)
+	row, err := h.Queries.GetPendingApprovalUser(r.Context(), req.ApprovalID)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "approval not found")
 		return
 	}
+	userID = int(row.UserID)
+	companyName = row.CompanyName
 
 	if req.Action == "approve" {
 		companyID := 0
 		if req.CompanyID != nil && *req.CompanyID > 0 {
 			companyID = *req.CompanyID
 		} else {
-			result, err := h.DB.Exec("INSERT INTO companies (name, company_type) VALUES (?, ?)", companyName, "client")
+			company, err := h.Queries.CreateCompanySimple(r.Context(), db.CreateCompanySimpleParams{
+				Name:        companyName,
+				CompanyType: "client",
+			})
 			if err != nil {
 				h.Error(w, http.StatusInternalServerError, "failed to create company")
 				return
 			}
-			id64, _ := result.LastInsertId()
-			companyID = int(id64)
+			companyID = int(company.ID)
 		}
 
 		// Default role is viewer if not specified
@@ -155,25 +147,45 @@ func (h *Handler) approveOrReject(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Activate user and set their role
-		_, err = h.DB.Exec("UPDATE users SET status = 'active', role = ? WHERE id = ?", role, userID)
+		_, err = h.Queries.UpdateUserStatusAndRole(r.Context(), db.UpdateUserStatusAndRoleParams{
+			Status: role,
+			ID:     int64(userID),
+			Role:   role,
+		})
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to activate user")
 			return
 		}
 
-		h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)", userID, companyID)
+		h.Queries.CreateUserCompany(r.Context(), db.CreateUserCompanyParams{
+			UserID:    int64(userID),
+			CompanyID: int64(companyID),
+			IsDefault: 1,
+		})
 
-		h.DB.Exec("UPDATE pending_approvals SET status = 'approved', reviewed_by = ?, reviewed_at = ?, company_id = ?, notes = ? WHERE id = ?",
-			adminID, time.Now(), companyID, req.Notes, req.ApprovalID)
+		h.Queries.ApprovePendingApproval(r.Context(), db.ApprovePendingApprovalParams{
+			ID:         int64(req.ApprovalID),
+			ReviewedBy: int64(adminID),
+			ReviewedAt: time.Now(),
+			CompanyID:  int64(companyID),
+			Notes:      sql.NullString{String: req.Notes, Valid: req.Notes != ""},
+		})
 
 		h.JSON(w, http.StatusOK, map[string]string{"status": "approved"})
 		return
 	}
 
 	if req.Action == "reject" {
-		h.DB.Exec("UPDATE users SET status = 'inactive' WHERE id = ?", userID)
-		h.DB.Exec("UPDATE pending_approvals SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, notes = ? WHERE id = ?",
-			adminID, time.Now(), req.Notes, req.ApprovalID)
+		h.Queries.UpdateUserStatus(r.Context(), db.UpdateUserStatusParams{
+			Status: "inactive",
+			ID:     int64(userID),
+		})
+		h.Queries.RejectPendingApproval(r.Context(), db.RejectPendingApprovalParams{
+			ID:         int64(req.ApprovalID),
+			ReviewedBy: int64(adminID),
+			ReviewedAt: time.Now(),
+			Notes:      sql.NullString{String: req.Notes, Valid: req.Notes != ""},
+		})
 
 		h.JSON(w, http.StatusOK, map[string]string{"status": "rejected"})
 		return
@@ -208,13 +220,23 @@ func (h *Handler) HandleUserCompany(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var existing int
-	h.DB.QueryRow("SELECT COUNT(*) FROM user_companies WHERE user_id = ?", userID).Scan(&existing)
+	h.Queries.GetUserCompanyAccess(r.Context(), db.GetUserCompanyAccessParams{
+		UserID:    int64(userID),
+		CompanyID: int64(req.CompanyID),
+	})
 
 	var err2 error
 	if existing > 0 {
-		_, err2 = h.DB.Exec("UPDATE user_companies SET company_id = ?, is_default = 1 WHERE user_id = ?", req.CompanyID, userID)
+		_, err2 = h.Queries.UpdateUserCompany(r.Context(), db.UpdateUserCompanyParams{
+			UserID:    int64(userID),
+			CompanyID: int64(req.CompanyID),
+		})
 	} else {
-		_, err2 = h.DB.Exec("INSERT INTO user_companies (user_id, company_id, is_default) VALUES (?, ?, 1)", userID, req.CompanyID)
+		_, err2 = h.Queries.CreateUserCompany(r.Context(), db.CreateUserCompanyParams{
+			UserID:    int64(userID),
+			CompanyID: int64(req.CompanyID),
+			IsDefault: 1,
+		})
 	}
 
 	if err2 != nil {

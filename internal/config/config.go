@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/PACTA-Team/pacta/internal/db"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 

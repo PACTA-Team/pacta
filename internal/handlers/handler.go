@@ -10,6 +10,7 @@ import (
 
 	"github.com/PACTA-Team/pacta/internal/ai"
 	"github.com/PACTA-Team/pacta/internal/auth"
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 // LLMClient is the interface for language model clients (aliased from ai.LLM).
