@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PACTA-Team/pacta/internal/ai/legal"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
@@ -241,15 +240,15 @@ func (idx *Indexer) GetIndexStats() map[string]interface{} {
 
 // IndexLegalDocument indexes a legal document by chunking and embedding
 func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
-	// Parse document into chunks using legal.ParseByArticles
-	chunks := legal.ParseByArticles(doc.Content)
+	// Parse document into chunks using ParseByArticles
+	chunks := ParseByArticles(doc.Content)
 
 	if len(chunks) == 0 {
 		return fmt.Errorf("no chunks generated from document content")
 	}
 
-	// Add overlap between chunks using legal.MergeChunksWithOverlap
-	chunks = legal.MergeChunksWithOverlap(chunks, 50)
+	// Add overlap between chunks using MergeChunksWithOverlap
+	chunks = MergeChunksWithOverlap(chunks, 50)
 
 	// Generate embeddings for each chunk using embedText helper
 	embeddings := make([][]float32, len(chunks))
