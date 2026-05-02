@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/PACTA-Team/pacta/internal/ai"
+	dbqueries "github.com/PACTA-Team/pacta/internal/db"
 )
 
 // TestHandleAIGenerateContract tests the contract generation endpoint with table-driven tests.
@@ -36,9 +37,10 @@ func TestHandleAIGenerateContract(t *testing.T) {
 
 	// Base handler with mock client and rate limiter
 	mockSuccessClient := &mockLLMClient{response: "Generated contract text"}
+	queries := dbqueries.New(db)
 	h := &Handler{
 		DB:          db,
-		RateLimiter: ai.NewRateLimiter(db),
+		RateLimiter: ai.NewRateLimiter(queries),
 		LLMClient:   mockSuccessClient,
 	}
 
@@ -177,9 +179,10 @@ func TestHandleAIReviewContract(t *testing.T) {
 	)
 
 	mockClient := &mockLLMClient{response: `{"summary":"Review OK","risks":[],"missing_clauses":[],"overall_risk":"low"}`}
+	queries := dbqueries.New(db)
 	h := &Handler{
 		DB:          db,
-		RateLimiter: ai.NewRateLimiter(db),
+		RateLimiter: ai.NewRateLimiter(queries),
 		LLMClient:   mockClient,
 	}
 

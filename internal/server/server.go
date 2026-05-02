@@ -51,8 +51,8 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 		log.Fatalf("AI configuration invalid: %v", err)
 	}
 
-	// Create DB-backed rate limiter
-	rateLimiter := ai.NewRateLimiter(database)
+	// Create DB-backed rate limiter using sqlc queries
+	rateLimiter := ai.NewRateLimiter(queries)
 
 	h := &handlers.Handler{Queries: queries, DataDir: cfg.DataDir, RateLimiter: rateLimiter}
 

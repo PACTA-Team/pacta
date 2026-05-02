@@ -14,6 +14,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/PACTA-Team/pacta/internal/ai"
+	dbqueries "github.com/PACTA-Team/pacta/internal/db"
 )
 
 func setupLegalTestDB(t *testing.T) *sql.DB {
@@ -111,10 +112,11 @@ func mockLegalHandler(t *testing.T, db *sql.DB) *Handler {
 	cfg := &Config{
 		DataDir: "/tmp",
 	}
+	queries := dbqueries.New(db)
 	h := &Handler{
 		DB:         db,
 		Config:      cfg,
-		RateLimiter: ai.NewRateLimiter(db),
+		RateLimiter: ai.NewRateLimiter(queries),
 	}
 	return h
 }

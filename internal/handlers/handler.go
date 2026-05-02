@@ -29,11 +29,6 @@ type Handler struct {
 	LLMClient   LLMClient
 }
 
-// DB returns the underlying *sql.DB for compatibility during migration.
-// Prefer using Queries directly.
-func (h *Handler) DB() *sql.DB {
-	return h.Queries.db
-}
 
 func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -70,7 +65,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			h.Error(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
-		userID, err := auth.GetUserID(h.Queries.db, cookie.Value)
+		userID, err := auth.GetUserID(h.Queries, cookie.Value)
 		if err != nil {
 			h.Error(w, http.StatusUnauthorized, "session expired")
 			return
@@ -120,6 +115,12 @@ func (h *Handler) getCompanyID(r *http.Request) int {
 		return 0
 	}
 	return companyID
+}
+
+// DB returns the underlying *sql.DB from Queries.
+// This is a helper method to eliminate direct h.DB field access.
+func (h *Handler) DB() *sql.DB {
+	return h.Queries.DB()
 }
 
 // roleLevel returns the numeric permission level for a role.

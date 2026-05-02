@@ -363,3 +363,17 @@ func (q *Queries) DeleteLegalChatSession(ctx context.Context, sessionID string) 
 	_, err := q.db.ExecContext(ctx, "UPDATE ai_legal_chat_history SET deleted_at = CURRENT_TIMESTAMP WHERE session_id = ?", sessionID)
 	return err
 }
+
+// IncrementRateLimit atomically increments the daily rate limit counter for a company
+// and returns the new count.
+func (q *Queries) IncrementRateLimit(ctx context.Context, companyID int, date string) (int, error) {
+	var count int
+	err := q.db.QueryRowContext(ctx, `
+		INSERT INTO ai_rate_limits (company_id, date, count)
+		VALUES (?, ?, 1)
+		ON CONFLICT (company_id, date)
+		DO UPDATE SET count = count + 1
+		RETURNING count
+	`, companyID, date).Scan(&count)
+	return count, err
+}
