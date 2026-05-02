@@ -132,7 +132,7 @@ func (h *Handler) getRAGConfig() (mode, localMode, localModel, embeddingModel, h
 	}
 
 	// localMode: "cgo" (Qwen2.5-0.5B-Instruct EMBEDDED in binary) | "ollama" | "external"
-	localMode := settings["local_mode"]
+	localMode = settings["local_mode"]
 	if localMode == "" {
 		localMode = "cgo" // Default: embedded Qwen2.5-0.5B-Instruct
 	}
