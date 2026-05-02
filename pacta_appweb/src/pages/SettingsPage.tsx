@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { EmailSection } from "./SettingsPage/EmailSection";
 import { NotificationsTab } from "./SettingsPage/NotificationsTab";
 import { AISection } from "./SettingsPage/AISection";
+import { LegalSection } from "./SettingsPage/LegalSection";
 import { motion, AnimatePresence } from "framer-motion";
 
 type TabType = "email" | "notifications" | "ai" | "legal";

@@ -29,8 +29,10 @@ export function LegalSection() {
   const loadSettings = async () => {
     try {
       const settings = await settingsAPI.getAll();
-      setEnabled(settings.ai_legal_enabled === 'true');
-      setIntegration(settings.ai_legal_integration === 'true');
+      const enabledSetting = settings.find(s => s.key === "ai_legal_enabled");
+      const integrationSetting = settings.find(s => s.key === "ai_legal_integration");
+      setEnabled(enabledSetting?.value === 'true');
+      setIntegration(integrationSetting?.value === 'true');
     } catch (err: any) {
       toast.error(err.message || t('legalSettings.loadError'));
     }

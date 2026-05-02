@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
-import { Trash2, ReIndex, Eye } from "lucide-react";
+import { Trash2, RefreshCw, Eye } from "lucide-react";
 import { getDocTypeLabel } from "@/lib/legal-utils";
 
 interface LegalDocument {
@@ -121,7 +121,7 @@ export function LegalDocumentList() {
                       onClick={() => handleReindex(doc.id)}
                       title={t('legalSettings.reindex')}
                     >
-                      <ReIndex className="h-4 w-4" />
+                      <RefreshCw className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"

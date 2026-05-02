@@ -55,7 +55,7 @@ export function ChatPanel({ sessionId }: ChatPanelProps) {
           {messages.map((msg, idx) => (
             <ChatMessage
               key={idx}
-              role={msg.role}
+              role={msg.role as "user" | "assistant"}
               content={msg.content}
               sources={msg.sources}
             />

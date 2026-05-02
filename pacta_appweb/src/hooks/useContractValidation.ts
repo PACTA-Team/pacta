@@ -58,7 +58,9 @@ export function useContractValidation(): UseContractValidationReturn {
             contract_text: contractText,
             contract_type: contractType,
           }, {
-            signal: controller.signal,
+            headers: {
+              signal: controller.signal,
+            } as any,
           });
 
           if (!controller.signal.aborted) {

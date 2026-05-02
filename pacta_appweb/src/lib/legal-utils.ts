@@ -1,3 +1,12 @@
+export interface Source {
+  title: string;
+  document_type: string;
+  chunk_title?: string;
+  content_snippet?: string;
+  relevance?: number;
+  source?: string;
+}
+
 export const DOCUMENT_TYPES = [
   { value: "law", label: "Ley" },
   { value: "decree", label: "Decreto" },
