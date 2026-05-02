@@ -19,7 +19,7 @@ type ChatService struct {
 	db       *sql.DB
 	vectorDB *minirag.VectorDB
 	embedder *minirag.EmbeddingClient
-	llm      *ai.LLMClient
+	llm      ai.LLM
 }
 
 // ChatMessage representa un mensaje del usuario
@@ -47,7 +47,7 @@ type SourceRef struct {
 }
 
 // NewChatService crea un nuevo servicio de chat legal
-func NewChatService(db *sql.DB, vectorDB *minirag.VectorDB, embedder *minirag.EmbeddingClient, llm *ai.LLMClient) *ChatService {
+func NewChatService(db *sql.DB, vectorDB *minirag.VectorDB, embedder *minirag.EmbeddingClient, llm ai.LLM) *ChatService {
 	return &ChatService{
 		db:       db,
 		vectorDB: vectorDB,
