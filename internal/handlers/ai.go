@@ -23,16 +23,16 @@ import (
 
 // isAIConfigured checks if AI is configured in system settings
 func (h *Handler) isAIConfigured() bool {
-	var provider, apiKey string
+	ctx := context.Background()
 
 	// Check provider
-	err := h.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'ai_provider' AND deleted_at IS NULL").Scan(&provider)
+	provider, err := h.Queries.GetBoolSetting(ctx, "ai_provider")
 	if err != nil || provider == "" {
 		return false
 	}
 
 	// Check API key (encrypted)
-	err = h.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'ai_api_key' AND deleted_at IS NULL").Scan(&apiKey)
+	apiKey, err := h.Queries.GetBoolSetting(ctx, "ai_api_key")
 	if err != nil || apiKey == "" {
 		return false
 	}
@@ -42,29 +42,22 @@ func (h *Handler) isAIConfigured() bool {
 
 // getAIConfig retrieves AI configuration from system settings
 func (h *Handler) getAIConfig() (provider, apiKey, model, endpoint string, err error) {
-	rows, err := h.DB.Query(`
-		SELECT key, value FROM system_settings
-		WHERE key IN ('ai_provider', 'ai_api_key', 'ai_model', 'ai_endpoint')
-		  AND deleted_at IS NULL
-	`)
-	if err != nil {
-		return "", "", "", "", err
-	}
-	defer rows.Close()
+	ctx := context.Background()
 
-	settings := make(map[string]string)
-	for rows.Next() {
-		var key, value string
-		if err := rows.Scan(&key, &value); err != nil {
-			continue
+	keys := []string{"ai_provider", "ai_api_key", "ai_model", "ai_endpoint"}
+	settingsMap := make(map[string]string)
+	for _, key := range keys {
+		val, err := h.Queries.GetSettingValue(ctx, key)
+		if err != nil {
+			return "", "", "", "", err
 		}
-		settings[key] = value
+		settingsMap[key] = val
 	}
 
-	provider = settings["ai_provider"]
+	provider = settingsMap["ai_provider"]
 
 	// Decrypt API key
-	encryptedKey := settings["ai_api_key"]
+	encryptedKey := settingsMap["ai_api_key"]
 	if encryptedKey != "" {
 		apiKey, err = ai.DecryptAPIKey(encryptedKey)
 		if err != nil {
@@ -72,28 +65,34 @@ func (h *Handler) getAIConfig() (provider, apiKey, model, endpoint string, err e
 		}
 	}
 
-	model = settings["ai_model"]
-	endpoint = settings["ai_endpoint"]
+	model = settingsMap["ai_model"]
+	endpoint = settingsMap["ai_endpoint"]
 
 	return provider, apiKey, model, endpoint, nil
 }
 
 // isRAGLocalConfigured checks if local RAG is configured and ready
 func (h *Handler) isRAGLocalConfigured() bool {
-	var ragMode, localModel, embeddingModel string
+	ctx := context.Background()
 	
-	err := h.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'rag_mode' AND deleted_at IS NULL").Scan(&ragMode)
+	ragMode, err := h.Queries.GetBoolSetting(ctx, "rag_mode")
 	if err != nil || (ragMode != "local" && ragMode != "hybrid") {
 		return false
 	}
 	
-	err = h.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'local_model' AND deleted_at IS NULL").Scan(&localModel)
+	localModel, err := h.Queries.GetBoolSetting(ctx, "local_model")
 	if err != nil {
 		return false
 	}
+	if localModel == "" {
+		return false
+	}
 	
-	err = h.DB.QueryRow("SELECT value FROM system_settings WHERE key = 'embedding_model' AND deleted_at IS NULL").Scan(&embeddingModel)
+	embeddingModel, err := h.Queries.GetBoolSetting(ctx, "embedding_model")
 	if err != nil {
+		return false
+	}
+	if embeddingModel == "" {
 		return false
 	}
 	
@@ -102,53 +101,46 @@ func (h *Handler) isRAGLocalConfigured() bool {
 
 // getRAGConfig retrieves RAG configuration from system settings
 func (h *Handler) getRAGConfig() (mode, localMode, localModel, embeddingModel, hybridStrategy string, hybridRerank bool, err error) {
-	rows, err := h.DB.Query(`
-		SELECT key, value FROM system_settings
-		WHERE key IN ('rag_mode', 'local_model', 'embedding_model', 'hybrid_strategy', 'hybrid_rerank', 'local_mode')
-		  AND deleted_at IS NULL
-	`)
-	if err != nil {
-		return "", "", "", "", "", false, err
-	}
-	defer rows.Close()
-	
-	settings := make(map[string]string)
-	for rows.Next() {
-		var key, value string
-		if err := rows.Scan(&key, &value); err != nil {
-			continue
+	ctx := context.Background()
+
+	keys := []string{"rag_mode", "local_model", "embedding_model", "hybrid_strategy", "hybrid_rerank", "local_mode"}
+	settingsMap := make(map[string]string)
+	for _, key := range keys {
+		val, err := h.Queries.GetSettingValue(ctx, key)
+		if err != nil {
+			return "", "", "", "", "", false, err
 		}
-		settings[key] = value
+		settingsMap[key] = val
 	}
-	
-	mode = settings["rag_mode"]
+
+	mode = settingsMap["rag_mode"]
 	if mode == "" {
 		mode = "external"
 	}
-	
-	localModel = settings["local_model"]
+
+	localModel = settingsMap["local_model"]
 	if localModel == "" {
 		localModel = "qwen2.5-0.5b-instruct-q4_0.gguf"
 	}
 
 	// localMode: "cgo" (Qwen2.5-0.5B-Instruct EMBEDDED in binary) | "ollama" | "external"
-	localMode = settings["local_mode"]
+	localMode = settingsMap["local_mode"]
 	if localMode == "" {
 		localMode = "cgo" // Default: embedded Qwen2.5-0.5B-Instruct
 	}
-	
-	embeddingModel = settings["embedding_model"] 
+
+	embeddingModel = settingsMap["embedding_model"]
 	if embeddingModel == "" {
 		embeddingModel = "all-minilm-l6-v2"
 	}
-	
-	hybridStrategy = settings["hybrid_strategy"]
+
+	hybridStrategy = settingsMap["hybrid_strategy"]
 	if hybridStrategy == "" {
 		hybridStrategy = "local-first"
 	}
-	
-	hybridRerank = settings["hybrid_rerank"] == "true"
-	
+
+	hybridRerank = settingsMap["hybrid_rerank"] == "true"
+
 	return mode, localMode, localModel, embeddingModel, hybridStrategy, hybridRerank, nil
 }
 
@@ -321,7 +313,7 @@ func (h *Handler) HandleAIGenerateContract(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get RAG context
-	retriever := ai.NewContractRetriever(h.DB)
+	retriever := ai.NewContractRetriever(h.Queries)
 	similar, err := retriever.GetSimilarContracts(companyID, req.ContractType, req.ClientID, req.SupplierID, 3)
 	if err != nil {
 		log.Printf("[AI] RAG warning: %v", err)
@@ -533,8 +525,8 @@ func (h *Handler) HandleRAGLocal(w http.ResponseWriter, r *http.Request) {
 	
 	// Create embedding client and indexer
 	embedder := minirag.NewEmbeddingClient("", "")
-	indexer := minirag.NewIndexer(h.DB, vectorDB, embedder)
-	
+	indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
+
 	// Search for similar documents
 	results, err := indexer.Search(req.Query, req.K)
 	if err != nil {
@@ -672,9 +664,9 @@ func (h *Handler) HandleRAGIndex(w http.ResponseWriter, r *http.Request) {
 	
 	// Create embedding client
 	embedder := minirag.NewEmbeddingClient("", "")
-	
+
 	// Create indexer
-	indexer := minirag.NewIndexer(h.DB, vectorDB, embedder)
+	indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
 	
 	// Index all contracts
 	go func() {
@@ -744,12 +736,19 @@ func (h *Handler) HandleRAGStatus(w http.ResponseWriter, r *http.Request) {
 // handleLegalEnabled checks if AI legal features are enabled
 func (h *Handler) handleLegalEnabled(w http.ResponseWriter, r *http.Request) bool {
 	ctx := r.Context()
-	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+
+	enabled, err := db.GetAILegalEnabled(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal] Failed to get ai_legal_enabled: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
 		return false
 	}
+	if !enabled {
+		h.Error(w, http.StatusForbidden, "AI legal features are disabled")
+		return false
+	}
+	return true
+}
 	if !enabled {
 		h.Error(w, http.StatusForbidden, "AI legal features are disabled")
 		return false
@@ -762,7 +761,7 @@ func (h *Handler) HandleLegalStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check if legal AI is enabled
-	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+	enabled, err := db.GetAILegalEnabled(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Status] Failed to get enabled: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to get status")
@@ -770,42 +769,27 @@ func (h *Handler) HandleLegalStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get integration flag
-	integrationEnabled, err := db.AILegalIntegrationEnabled(ctx, h.DB)
+	integrationEnabled, err := db.AILegalIntegrationEnabled(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Status] Failed to get integration: %v", err)
 		integrationEnabled = false // default
 	}
 
 	// Count documents
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT COUNT(*) FROM legal_documents WHERE deleted_at IS NULL
-	`)
+	docCount, err := db.CountLegalDocuments(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Status] Count query failed: %v", err)
-		rows = nil
-	} else {
-		defer rows.Close()
-	}
-	var docCount int
-	if rows.Next() {
-		rows.Scan(&docCount)
+		docCount = 0
 	}
 
 	// Get embedding model
-	var embeddingModel string
-	err = h.DB.QueryRowContext(ctx, `
-		SELECT value FROM system_settings
-		WHERE key = 'ai_legal_embedding_model' AND deleted_at IS NULL
-	`).Scan(&embeddingModel)
+	embeddingModel, err := h.Queries.GetSettingValue(ctx, "ai_legal_embedding_model")
 	if err != nil || embeddingModel == "" {
 		embeddingModel = "all-minilm-l6-v2" // default
 	}
 
 	// Get last update (most recent indexed_at)
-	var lastUpdate sql.NullTime
-	err = h.DB.QueryRowContext(ctx, `
-		SELECT MAX(indexed_at) FROM legal_documents WHERE deleted_at IS NULL
-	`).Scan(&lastUpdate)
+	lastUpdate, err := db.GetLastLegalDocumentIndexTime(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Status] Failed to get last_update: %v", err)
 	}
@@ -833,7 +817,7 @@ func (h *Handler) HandleListLegalDocuments(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 
 	// Query all documents (no filter for now)
-	docs, err := db.ListLegalDocuments(ctx, h.DB, "")
+	docs, err := db.ListLegalDocuments(ctx, h.Queries, "")
 	if err != nil {
 		log.Printf("[Legal List] Failed: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to retrieve documents")
@@ -881,7 +865,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 
 	// Check if legal AI is enabled
-	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+	enabled, err := db.GetAILegalEnabled(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Upload] Failed to get enabled status: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
@@ -1000,7 +984,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 	userID := h.getUserID(r)
 	now := time.Now()
 
-	doc, err := db.CreateLegalDocument(ctx, h.DB, db.CreateLegalDocumentParams{
+	doc, err := db.CreateLegalDocument(ctx, h.Queries, db.CreateLegalDocumentParams{
 		Title:         title,
 		DocumentType:   docType,
 		Content:        content,
@@ -1032,7 +1016,7 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 
 		// Create embedder and indexer
 		embedder := minirag.NewEmbeddingClient("", "")
-		indexer := minirag.NewIndexer(h.DB, vectorDB, embedder)
+		indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
 
 		// Build models.LegalDocument using stored doc and extracted content
 		legalDoc := &models.LegalDocument{
@@ -1074,7 +1058,7 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check if legal AI is enabled
-	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+	enabled, err := db.GetAILegalEnabled(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Chat] Failed to get enabled status: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
@@ -1167,7 +1151,7 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create chat service with dependencies
-	chatSvc := legal.NewChatService(h.DB, vectorDB, embedder, llmClient)
+	chatSvc := legal.NewChatService(h.Queries, vectorDB, embedder, llmClient)
 
 	// Process message
 	resp, err := chatSvc.ProcessMessage(ctx, legal.ChatMessage{
@@ -1193,7 +1177,7 @@ func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 
 	// Check if legal AI is enabled
-	enabled, err := db.GetAILegalEnabled(ctx, h.DB)
+	enabled, err := db.GetAILegalEnabled(ctx, h.Queries)
 	if err != nil {
 		log.Printf("[Legal Validate] Failed to get enabled status: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to check AI legal status")
@@ -1319,7 +1303,7 @@ func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Requ
 	ctx := r.Context()
 
 	// Retrieve the legal document from the database
-	docRow, err := db.GetLegalDocument(ctx, h.DB, int64(id))
+	docRow, err := db.GetLegalDocument(ctx, h.Queries, int64(id))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			h.Error(w, http.StatusNotFound, "Document not found")
@@ -1370,7 +1354,7 @@ func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Requ
 
 	// Create embedder and indexer
 	embedder := minirag.NewEmbeddingClient("", "")
-	indexer := minirag.NewIndexer(h.DB, vectorDB, embedder)
+	indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
 
 	// Re-index the document
 	if err := indexer.IndexLegalDocument(legalDoc); err != nil {
@@ -1395,18 +1379,18 @@ func (h *Handler) HandleDeleteLegalDocument(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 
 	// Get document to know chunk count and company
-	docRow, err := db.GetLegalDocument(ctx, h.DB, int64(id))
+	docRow, err := db.GetLegalDocument(ctx, h.Queries, int64(id))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			h.Error(w, http.StatusNotFound, "Document not found")
-			return
+		} else {
+			h.Error(w, http.StatusInternalServerError, "Database error")
 		}
-		h.Error(w, http.StatusInternalServerError, "Database error")
 		return
 	}
 
 	// Soft delete
-	if err := db.DeleteLegalDocument(ctx, h.DB, int64(id)); err != nil {
+	if err := db.DeleteLegalDocument(ctx, h.Queries, int64(id)); err != nil {
 		h.Error(w, http.StatusInternalServerError, "Failed to delete: "+err.Error())
 		return
 	}
@@ -1499,7 +1483,7 @@ func (h *Handler) HandleLegalChatHistory(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	messages, err := db.ListLegalChatMessages(r.Context(), h.DB, sessionID)
+	messages, err := db.ListLegalChatMessages(r.Context(), h.Queries, sessionID)
 	if err != nil {
 		log.Printf("[Legal Chat History] Failed: %v", err)
 		h.Error(w, http.StatusInternalServerError, "Failed to retrieve chat history")
@@ -1538,7 +1522,7 @@ func (h *Handler) HandlePreviewLegalDocument(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	ctx := r.Context()
-	doc, err := db.GetLegalDocument(ctx, h.DB, int64(id))
+	doc, err := db.GetLegalDocument(ctx, h.Queries, int64(id))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			h.Error(w, http.StatusNotFound, "Document not found")
