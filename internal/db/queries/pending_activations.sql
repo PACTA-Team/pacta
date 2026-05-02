@@ -11,4 +11,4 @@ ORDER BY pa.created_at DESC;
 
 -- name: CreatePendingActivation :exec
 INSERT INTO pending_activations (user_id, company_id, company_name, role_at_company, status)
-VALUES ($1, $2, $3, $4, 'pending_activation');
+VALUES (?, ?, ?, ?, 'pending_activation');

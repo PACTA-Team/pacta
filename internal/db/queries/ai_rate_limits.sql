@@ -5,25 +5,25 @@
 
 -- name: IncrementRateLimit :one
 INSERT INTO ai_rate_limits (company_id, date, count)
-VALUES ($1, $2, 1)
+VALUES (?, ?, 1)
 ON CONFLICT (company_id, date)
 DO UPDATE SET count = count + 1
 RETURNING count;
 
 -- name: GetTodayRateLimitCount :one
 SELECT COALESCE(SUM(count), 0) FROM ai_rate_limits
-WHERE company_id = $1 AND date(created_at) = date('now');
+WHERE company_id = ? AND date(created_at) = date('now');
 
 -- name: IncrementRateLimitCount :exec
 INSERT INTO ai_rate_limits (company_id, count, created_at)
-VALUES ($1, 1, CURRENT_TIMESTAMP);
+VALUES (?, 1, CURRENT_TIMESTAMP);
 
 -- name: GetRateLimitInfo :many
 SELECT id, company_id, count, created_at
 FROM ai_rate_limits
-WHERE company_id = $1
+WHERE company_id = ?
 ORDER BY created_at DESC
-LIMIT $2;
+LIMIT ?;
 
 -- name: CleanupOldRateLimits :exec
 DELETE FROM ai_rate_limits

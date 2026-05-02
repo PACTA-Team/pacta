@@ -4,29 +4,29 @@
 
 -- name: CreatePasswordResetToken :exec
 INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
-VALUES ($1, $2, $3, CURRENT_TIMESTAMP);
+VALUES (?, ?, ?, CURRENT_TIMESTAMP);
 
 -- name: GetPasswordResetToken :one
 SELECT id, user_id, token, expires_at, used, created_at
 FROM password_reset_tokens
-WHERE token = $1
+WHERE token = ?
 LIMIT 1;
 
 -- name: GetValidPasswordResetToken :one
 SELECT id, user_id, token, expires_at, used, created_at
 FROM password_reset_tokens
-WHERE token = $1 AND used = 0 AND expires_at > CURRENT_TIMESTAMP
+WHERE token = ? AND used = 0 AND expires_at > CURRENT_TIMESTAMP
 LIMIT 1;
 
 -- name: MarkPasswordResetTokenUsed :exec
 UPDATE password_reset_tokens
 SET used = 1
-WHERE token = $1;
+WHERE token = ?;
 
 -- name: GetLatestPasswordResetTokenForUser :one
 SELECT id, token, expires_at, used
 FROM password_reset_tokens
-WHERE user_id = $1
+WHERE user_id = ?
 ORDER BY created_at DESC
 LIMIT 1;
 

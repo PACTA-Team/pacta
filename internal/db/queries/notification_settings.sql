@@ -5,12 +5,12 @@
 -- name: GetNotificationSettings :one
 SELECT id, user_id, company_id, enabled, thresholds, recipients, created_at, updated_at
 FROM notification_settings
-WHERE user_id = $1 AND company_id = $2
+WHERE user_id = ? AND company_id = ?
 LIMIT 1;
 
 -- name: UpsertNotificationSettings :exec
 INSERT INTO notification_settings (user_id, company_id, enabled, thresholds, recipients, updated_at)
-VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 ON CONFLICT(user_id, company_id) DO UPDATE SET
   enabled = excluded.enabled,
   thresholds = excluded.thresholds,

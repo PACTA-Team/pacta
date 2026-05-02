@@ -16,14 +16,14 @@ SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
 FROM companies c
 JOIN user_companies uc ON uc.company_id = c.id
 LEFT JOIN companies p ON c.parent_id = p.id
-WHERE uc.user_id = $1 AND c.deleted_at IS NULL
+WHERE uc.user_id = ? AND c.deleted_at IS NULL
 ORDER BY c.company_type DESC, c.name;
 
 -- name: GetCompanyByID :one
 SELECT id, name, address, tax_id, company_type,
        parent_id, created_at, updated_at
 FROM companies
-WHERE id = $1 AND deleted_at IS NULL
+WHERE id = ? AND deleted_at IS NULL
 LIMIT 1;
 
 -- name: ListCompanies :many
@@ -34,12 +34,12 @@ ORDER BY name;
 
 -- name: GetCompanyType :one
 SELECT company_type FROM companies
-WHERE id = $1 AND deleted_at IS NULL
+WHERE id = ? AND deleted_at IS NULL
 LIMIT 1;
 
 -- name: GetCompanyTypeByID :one
 SELECT company_type FROM companies
-WHERE id = $1 AND deleted_at IS NULL
+WHERE id = ? AND deleted_at IS NULL
 LIMIT 1;
 
 -- name: CreateCompany :one
@@ -47,26 +47,26 @@ INSERT INTO companies (
   name, address, tax_id, company_type, parent_id,
   created_by, created_at, updated_at
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+  ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 )
 RETURNING *;
 
 -- name: UpdateCompany :one
 UPDATE companies
-SET name = $2, address = $3, tax_id = $4,
+SET name = ?, address = ?, tax_id = ?,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $5 AND deleted_at IS NULL
+WHERE id = ? AND deleted_at IS NULL
 RETURNING *;
 
 -- name: DeleteCompany :exec
 UPDATE companies
 SET deleted_at = CURRENT_TIMESTAMP
-WHERE id = $1 AND deleted_at IS NULL;
+WHERE id = ? AND deleted_at IS NULL;
 
 -- name: GetSubsidiaries :many
 SELECT id, name, company_type
 FROM companies
-WHERE parent_id = $1 AND deleted_at IS NULL
+WHERE parent_id = ? AND deleted_at IS NULL
 ORDER BY name;
 
 -- name: GetCompanyWithParent :one
@@ -74,7 +74,7 @@ SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
        p.name as parent_name, c.created_by, c.created_at, c.updated_at
 FROM companies c
 LEFT JOIN companies p ON c.parent_id = p.id
-WHERE c.id = $1 AND c.deleted_at IS NULL
+WHERE c.id = ? AND c.deleted_at IS NULL
 LIMIT 1;
 
 -- name: ListCompaniesForUser :many
@@ -83,7 +83,7 @@ SELECT c.id, c.name, c.address, c.tax_id, c.company_type, c.parent_id,
 FROM companies c
 JOIN user_companies uc ON uc.company_id = c.id
 LEFT JOIN companies p ON c.parent_id = p.id
-WHERE uc.user_id = $1 AND c.deleted_at IS NULL
+WHERE uc.user_id = ? AND c.deleted_at IS NULL
 ORDER BY c.company_type DESC, c.name;
 
 -- name: ListAllCompaniesOrdered :many
@@ -102,7 +102,7 @@ WHERE deleted_at IS NULL;
 INSERT INTO companies (
   name, company_type, created_at, updated_at
 ) VALUES (
-  $1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+  ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 )
 RETURNING *;
 

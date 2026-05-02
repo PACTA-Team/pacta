@@ -7,12 +7,12 @@
 
 -- name: GetSettingValue :one
 SELECT value FROM system_settings
-WHERE key = $1 AND deleted_at IS NULL
+WHERE key = ? AND deleted_at IS NULL
 LIMIT 1;
 
 -- name: SetSettingValue :exec
 INSERT INTO system_settings (key, value, category, updated_at)
-VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, CURRENT_TIMESTAMP)
 ON CONFLICT(key) DO UPDATE SET
   value = excluded.value,
   category = excluded.category,
@@ -26,20 +26,20 @@ ORDER BY category, key;
 
 -- name: GetSettingsByKeys :many
 SELECT key, value FROM system_settings
-WHERE key IN ($1, $2, $3, $4)
+WHERE key IN (?, ?, ?, ?)
   AND deleted_at IS NULL;
 
 -- name: GetBoolSetting :one
 SELECT value FROM system_settings
-WHERE key = $1 AND deleted_at IS NULL
+WHERE key = ? AND deleted_at IS NULL
 LIMIT 1;
 
 -- name: UpdateSettingValue :exec
 UPDATE system_settings
-SET value = $2, updated_by = $3, updated_at = CURRENT_TIMESTAMP
-WHERE key = $1 AND deleted_at IS NULL;
+SET value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+WHERE key = ? AND deleted_at IS NULL;
 
 -- name: DeleteSetting :exec
 UPDATE system_settings
 SET deleted_at = CURRENT_TIMESTAMP
-WHERE key = $1 AND deleted_at IS NULL;
+WHERE key = ? AND deleted_at IS NULL;

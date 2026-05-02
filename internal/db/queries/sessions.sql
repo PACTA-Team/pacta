@@ -4,37 +4,37 @@
 
 -- name: CreateSession :one
 INSERT INTO sessions (token, user_id, company_id, expires_at, created_at)
-VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
 RETURNING *;
 
 -- name: GetSessionByToken :one
 SELECT token, user_id, company_id, expires_at, created_at
 FROM sessions
-WHERE token = $1
+WHERE token = ?
 LIMIT 1;
 
 -- name: UpdateSessionExpiry :exec
 UPDATE sessions
-SET expires_at = $2
-WHERE token = $1;
+SET expires_at = ?
+WHERE token = ?;
 
 -- name: GetSessionForRefresh :one
 SELECT last_activity, expires_at
 FROM sessions
-WHERE token = $1 AND expires_at > datetime('now')
+WHERE token = ? AND expires_at > datetime('now')
 LIMIT 1;
 
 -- name: UpdateSessionActivityAndExpiry :exec
 UPDATE sessions
-SET last_activity = CURRENT_TIMESTAMP, expires_at = $2
-WHERE token = $1;
+SET last_activity = CURRENT_TIMESTAMP, expires_at = ?
+WHERE token = ?;
 
 -- name: DeleteSessionByUserID :exec
-DELETE FROM sessions WHERE user_id = $1;
+DELETE FROM sessions WHERE user_id = ?;
 
 -- name: GetActiveSessionByToken :one
 SELECT * FROM sessions
-WHERE token = $1 AND expires_at > CURRENT_TIMESTAMP
+WHERE token = ? AND expires_at > CURRENT_TIMESTAMP
 LIMIT 1;
 
 -- name: DeleteExpiredSessions :exec
@@ -43,9 +43,9 @@ WHERE expires_at < CURRENT_TIMESTAMP;
 
 -- name: SessionExists :one
 SELECT COUNT(*) FROM sessions
-WHERE token = $1;
+WHERE token = ?;
 
 -- name: UpdateSessionCompany :exec
 UPDATE sessions
-SET company_id = $2
-WHERE token = $1;
+SET company_id = ?
+WHERE token = ?;
