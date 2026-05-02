@@ -484,7 +484,7 @@ func (h *Handler) HandleAITestConnection(w http.ResponseWriter, r *http.Request)
 
 // HandleRAGLocal handles local RAG queries
 func (h *Handler) HandleRAGLocal(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	_, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 	
 	var req struct {
@@ -554,7 +554,7 @@ func (h *Handler) HandleRAGLocal(w http.ResponseWriter, r *http.Request) {
 
 // HandleRAGHybrid handles hybrid RAG queries
 func (h *Handler) HandleRAGHybrid(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
+	_, cancel := context.WithTimeout(r.Context(), 90*time.Second)
 	defer cancel()
 	
 	var req struct {
@@ -653,7 +653,7 @@ func (h *Handler) HandleRAGHybrid(w http.ResponseWriter, r *http.Request) {
 
 // HandleRAGIndex handles indexing requests
 func (h *Handler) HandleRAGIndex(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 300*time.Second)
+	_, cancel := context.WithTimeout(r.Context(), 300*time.Second)
 	defer cancel()
 	
 	companyID := h.GetCompanyID(r)
