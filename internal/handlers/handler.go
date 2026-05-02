@@ -23,10 +23,16 @@ const (
 )
 
 type Handler struct {
-	DB          *sql.DB
+	Queries     *db.Queries
 	DataDir     string
 	RateLimiter *ai.RateLimiter
 	LLMClient   LLMClient
+}
+
+// DB returns the underlying *sql.DB for compatibility during migration.
+// Prefer using Queries directly.
+func (h *Handler) DB() *sql.DB {
+	return h.Queries.db
 }
 
 func (h *Handler) JSON(w http.ResponseWriter, status int, data interface{}) {
@@ -64,7 +70,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			h.Error(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
-		userID, err := auth.GetUserID(h.DB, cookie.Value)
+		userID, err := auth.GetUserID(h.Queries.db, cookie.Value)
 		if err != nil {
 			h.Error(w, http.StatusUnauthorized, "session expired")
 			return
@@ -72,11 +78,11 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 
 		// Update last_access asynchronously (non-blocking)
 		go func() {
-			h.DB.Exec("UPDATE users SET last_access = ? WHERE id = ?", time.Now(), userID)
+			h.Queries.UpdateUserLastAccess(r.Context(), userID)
 		}()
 
 		var role string
-		if err := h.DB.QueryRow("SELECT role FROM users WHERE id = ? AND deleted_at IS NULL AND status = 'active'", userID).Scan(&role); err != nil {
+		if err := h.Queries.GetUserRole(r.Context(), userID); err != nil {
 			h.Error(w, http.StatusForbidden, "account inactive or not found")
 			return
 		}
@@ -109,7 +115,7 @@ func (h *Handler) getCompanyID(r *http.Request) int {
 		return 0
 	}
 	var companyID int
-	err := h.DB.QueryRow("SELECT company_id FROM users WHERE id = ? AND deleted_at IS NULL", userID).Scan(&companyID)
+	err := h.Queries.GetUserCompanyID(r.Context(), userID)
 	if err != nil {
 		return 0
 	}
