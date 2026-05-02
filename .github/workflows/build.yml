@@ -37,6 +37,23 @@ jobs:
       - name: Tidy
         run: go mod tidy
 
+      - name: Install sqlc
+        run: go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.46.0
+
+      - name: Generate sqlc queries
+        run: |
+          cd internal/db
+          sqlc generate
+          go fmt ./...
+
+      - name: Verify generated code is up-to-date
+        run: |
+          git diff --exit-code internal/db/ || (
+            echo "Error: Generated sqlc code is out of date."
+            echo "Run 'cd internal/db && sqlc generate' locally and commit the changes."
+            exit 1
+          )
+
       - name: Clone llama.cpp
         run: |
           if [ ! -d "internal/ai/minirag/llama.cpp/.git" ]; then
