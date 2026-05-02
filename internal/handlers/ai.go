@@ -1517,8 +1517,8 @@ func (h *Handler) HandleLegalChatHistory(w http.ResponseWriter, r *http.Request)
 	out := make([]outMsg, len(messages))
 	for i, m := range messages {
 		out[i] = outMsg{
-			ID:          m.ID,
-			UserID:      m.UserID,
+			ID:          int64(m.ID),
+			UserID:      int64(m.UserID),
 			MessageType: m.MessageType,
 			Content:     m.Content,
 			CreatedAt:   m.CreatedAt,
