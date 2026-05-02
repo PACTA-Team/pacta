@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -158,7 +159,8 @@ type contractInfo struct {
 
 func (w *ContractExpiryWorker) queryExpiringContracts(thresholdDays int) ([]contractInfo, error) {
 	ctx := context.Background()
-	rows, err := w.Queries.ListExpiringContracts(ctx, thresholdDays, thresholdDays, thresholdDays)
+	daysStr := strconv.Itoa(thresholdDays)
+	rows, err := w.Queries.ListExpiringContracts(ctx, daysStr, daysStr, int64(thresholdDays))
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +284,7 @@ func (w *ContractExpiryWorker) logSend(
 	ctx := context.Background()
 	_, dbErr := w.Queries.UpsertNotificationLog(ctx, db.UpsertNotificationLogParams{
 		ContractID:      contractID,
-		ThresholdDays:   threshold,
+		ThresholdDays:   int64(threshold),
 		SentToUser:      sentToUser,
 		SentToAdmin:     sentToAdmin,
 		SentAt:          time.Now(),
