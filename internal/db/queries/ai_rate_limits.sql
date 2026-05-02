@@ -1,0 +1,23 @@
+-- ============================================================
+-- ai_rate_limits queries
+-- Note: This table does NOT have deleted_at (metrics/audit data)
+-- ============================================================
+
+-- name: GetTodayRateLimitCount :one
+SELECT COALESCE(SUM(count), 0) FROM ai_rate_limits
+WHERE company_id = $1 AND date(created_at) = date('now');
+
+-- name: IncrementRateLimitCount :exec
+INSERT INTO ai_rate_limits (company_id, count, created_at)
+VALUES ($1, 1, CURRENT_TIMESTAMP);
+
+-- name: GetRateLimitInfo :many
+SELECT id, company_id, count, created_at
+FROM ai_rate_limits
+WHERE company_id = $1
+ORDER BY created_at DESC
+LIMIT $2;
+
+-- name: CleanupOldRateLimits :exec
+DELETE FROM ai_rate_limits
+WHERE created_at < datetime('now', '-30 days');

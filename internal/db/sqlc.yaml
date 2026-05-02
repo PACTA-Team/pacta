@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  - schema: "internal/db/migrations/*.sql"
+    queries: "internal/db/queries/*.sql"
+    engine: "sqlite"
+    gen:
+      go_package:
+        mode: "query"
+        package: "db"
+emit:
+  go_package: "github.com/PACTA-Team/pacta/internal/db"
