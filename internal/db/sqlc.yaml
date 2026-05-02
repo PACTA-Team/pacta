@@ -4,9 +4,9 @@ sql:
     queries: "internal/db/queries/*.sql"
     engine: "sqlite"
     gen:
-      go_package:
-        mode: "query"
-        name: "db"
+      go:
+        package: "db"
+        out: "."
       emit:
         interface: true
         # Genera interfaz Queries para poder mockear en tests y usar WithTx
