@@ -127,15 +127,81 @@ PACTA follows a minimalist, self-contained architecture:
 
 ### Database Access
 
-All database queries are type-safe via **sqlc** code generation:
+All database queries are type-safe via **sqlc v2** code generation:
 
-- SQL queries are defined in `internal/db/queries/*.sql`
-- Code generation: `sqlc generate` produces `internal/db/queries_gen.go`
-- Handlers use `*db.Queries` injected through constructor dependency injection
-- Soft-delete pattern (`deleted_at IS NULL`) is consistently applied across all entities
-- Transactions use `queries.WithTx(tx)` when the transaction-aware interface is enabled
+- **SQL queries** are defined in `internal/db/queries/*.sql` (organized by domain: system_settings, users, contracts, clients, suppliers, etc.)
+- **Code generation**: `sqlc generate` produces `internal/db/queries_gen.go` with type-safe methods
+- **Handlers** inject `*db.Queries` (interface) via constructor dependency injection
+- **Soft-delete pattern** (`deleted_at IS NULL`) is consistently applied across all entities
+- **Transactions** use `queries.WithTx(tx)` when transaction-aware methods are needed
 
-> **Developer note:** After modifying any `.sql` file, run `sqlc generate` to regenerate `queries_gen.go`, then commit both the `.sql` changes and the updated generated code.
+**Architecture**:
+
+```
+internal/db/
+├── migrations/        # goose migrations (auto-applied on startup)
+├── models.go          # Go structs for database rows
+├── queries/           # 22 .sql files by domain (source of truth)
+│   ├── system_settings.sql
+│   ├── users.sql
+│   ├── contracts.sql
+│   └── ...
+├── queries_gen.go     # GENERATED - type-safe query methods (committed)
+├── sqlc.yaml          # sqlc configuration
+└── db.go              # Open() + Migrate() helpers
+```
+
+**Configuration** (`sqlc.yaml`):
+
+```yaml
+version: "2"
+sql:
+  - schema: "internal/db/migrations/*.sql"
+    queries: "internal/db/queries/*.sql"
+    engine: "sqlite"
+    gen:
+      go_package:
+        mode: "query"
+        name: "db"
+      emit:
+        interface: true  # generates Queries interface for mocking
+```
+
+**Workflow for adding a new query**:
+
+1. Create `internal/db/queries/<domain>.sql` (or edit existing)
+2. Run `sqlc generate` from `internal/db/` directory
+3. Use generated method in handlers: `h.queries.GetXxx(ctx, args)`
+4. Commit both the `.sql` file and updated `queries_gen.go`
+
+**Example** (`system_settings.sql`):
+
+```sql
+-- name: GetSettingValue :one
+SELECT value FROM system_settings
+WHERE key = $1 AND deleted_at IS NULL
+LIMIT 1;
+```
+
+Generates: `func (q *Queries) GetSettingValue(ctx context.Context, key string) (string, error)`
+
+Handler usage:
+
+```go
+value, err := h.queries.GetSettingValue(r.Context(), "ai_provider")
+```
+
+**Exceptions** (manual SQL, not migrated to sqlc):
+
+- **RLS (Row Level Security)**: Dynamic RLS policies in `internal/db/rls.go` — sqlc cannot generate dynamic policy logic
+- **Dynamic parameter count**: Queries needing variable-length `IN` clauses (e.g., `GetSettingsByKeys(keys []string)`) — implemented with manual query building inside generated method
+- **Extremely dynamic filters**: Some handlers construct WHERE conditions dynamically; these remain as raw SQL in limited cases
+
+**Testing**: Unit tests can mock `db.Queries` interface, making database testing fast and isolated.
+
+> **Developer note**: After modifying any `.sql` file, always run `sqlc generate` and commit both the `.sql` changes and the regenerated `queries_gen.go`. The CI verifies generated code is up-to-date with `git diff --exit-code`.
+
+[See Architecture Decision Record →](docs/adr/2026-05-02-sqlc-migration.md)
 
 ---
 
@@ -548,7 +614,7 @@ For a complete history of changes, please see the [full changelog →](CHANGELOG
 
 ## Development
 
-See the [Development Guide](docs/DEVELOPMENT.md) for prerequisites, local setup, and contribution guidelines.
+See the [Development Guide](docs/DEVELOPMENT.md) for prerequisites, local setup, and contribution guidelines. For contribution workflow and best practices, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Quick start for developers:
 
