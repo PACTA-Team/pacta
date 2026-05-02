@@ -138,7 +138,7 @@ func Start(cfg *config.Config, staticFS fs.FS) error {
 			r.Get("/rag/status", h.HandleRAGStatus)
 
 			// Legal AI endpoints (Cuban expert)
-			r.Any("/legal/*", h.HandleAI)
+			r.Handle("/legal/*", h.HandleAI)
 		})
 
 		// Viewer+ (read-only)
