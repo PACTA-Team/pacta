@@ -42,7 +42,7 @@ func NewLocalLLMClient(model, endpoint string) *LLMClient {
 		Model:     model,
 		Endpoint:   endpoint,
 		HTTPClient: &http.Client{Timeout: 120 * time.Second},
-		LocalClient: minirag.NewLocalClient(endpoint, model),
+		LocalClient: minirag.NewLocalClient("cgo", model, endpoint),
 	}
 }
 
