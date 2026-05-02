@@ -112,7 +112,7 @@ export function ValidationModal({
                     {t('validation.risksDetected') || "Riesgos Detectados"}
                   </h4>
                   {result.risks.map((risk, idx) => (
-                    <Card key={idx} className="border-l-4 ${
+                    <Card key={idx} className={`border-l-4 ${
                       risk.risk === 'high' ? "border-l-red-500" :
                       risk.risk === 'medium' ? "border-l-yellow-500" : "border-l-blue-500"
                     }`}>
