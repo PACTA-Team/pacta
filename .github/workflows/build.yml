@@ -40,7 +40,7 @@ jobs:
         run: go mod tidy
 
       - name: Install sqlc
-        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 
       - name: Generate sqlc queries
         run: |
@@ -49,6 +49,7 @@ jobs:
           go fmt ./...
 
       - name: Auto-commit sqlc-generated changes
+        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
