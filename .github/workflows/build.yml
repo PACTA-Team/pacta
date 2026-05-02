@@ -37,8 +37,8 @@ jobs:
       - name: Tidy
         run: go mod tidy
 
-       - name: Install sqlc
-         run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
+      - name: Install sqlc
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
 
       - name: Generate sqlc queries
         run: |
@@ -95,7 +95,6 @@ jobs:
           go build -o pacta ./cmd/pacta
         env:
           CGO_ENABLED: 1
-
 
       - name: Vet
         run: go vet ./...
