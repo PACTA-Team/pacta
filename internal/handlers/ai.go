@@ -154,7 +154,7 @@ func (h *Handler) getRAGConfig() (mode, localMode, localModel, embeddingModel, h
 
 // getOrCreateVectorDB gets or creates the vector database for the company
 func (h *Handler) getOrCreateVectorDB(companyID int) (*minirag.VectorDB, error) {
-	dataDir := h.Config.DataDir
+	dataDir := h.DataDir
 	vectorPath := filepath.Join(dataDir, "rag_vectors", fmt.Sprintf("company_%d", companyID))
 	
 	return minirag.NewVectorDB(384, vectorPath)
