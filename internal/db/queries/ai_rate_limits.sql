@@ -19,7 +19,7 @@ INSERT INTO ai_rate_limits (company_id, count, created_at)
 VALUES (?, 1, CURRENT_TIMESTAMP);
 
 -- name: GetRateLimitInfo :many
-SELECT id, company_id, count, created_at
+SELECT company_id, count, created_at
 FROM ai_rate_limits
 WHERE company_id = ?
 ORDER BY created_at DESC
