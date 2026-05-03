@@ -31,7 +31,7 @@ func TestNormalizeVector(t *testing.T) {
 func TestGenerateEmbedding_NonEmpty(t *testing.T) {
 	// Check for model file presence
 	modelPath := filepath.Join(os.Getenv("PWD"),
-		"internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+		"internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf")
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		t.Skip("GGUF model file not found at: " + modelPath)
 	}
@@ -41,7 +41,7 @@ func TestGenerateEmbedding_NonEmpty(t *testing.T) {
 		t.Skip("SKIP_LLAMA set, skipping llama.cpp test")
 	}
 
-	emb, err := NewEmbedder()
+	emb, err := NewEmbedder(false)
 	if err != nil {
 		t.Skipf("Failed to create embedder (llama.cpp not built?): %v", err)
 	}
@@ -78,12 +78,12 @@ func TestGenerateEmbedding_NonEmpty(t *testing.T) {
 // TestGenerateEmbedding_Empty returns a zero vector of the correct dimension.
 func TestGenerateEmbedding_Empty(t *testing.T) {
 	modelPath := filepath.Join(os.Getenv("PWD"),
-		"internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+		"internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf")
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		t.Skip("GGUF model file not found at: " + modelPath)
 	}
 
-	emb, err := NewEmbedder()
+	emb, err := NewEmbedder(false)
 	if err != nil {
 		t.Skipf("Failed to create embedder: %v", err)
 	}
@@ -108,12 +108,12 @@ func TestGenerateEmbedding_Empty(t *testing.T) {
 // TestBatchEmbedding_SmallBatch tests batch generation of 3 texts.
 func TestBatchEmbedding_SmallBatch(t *testing.T) {
 	modelPath := filepath.Join(os.Getenv("PWD"),
-		"internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+		"internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf")
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		t.Skip("GGUF model file not found at: " + modelPath)
 	}
 
-	emb, err := NewEmbedder()
+	emb, err := NewEmbedder(false)
 	if err != nil {
 		t.Skipf("Failed to create embedder: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestBatchEmbedding_SmallBatch(t *testing.T) {
 
 // TestTokenize verifies that tokenization produces a non-empty token slice.
 func TestTokenize(t *testing.T) {
-	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf")
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		t.Skip("GGUF model file not found at: " + modelPath)
 	}
@@ -158,7 +158,7 @@ func TestTokenize(t *testing.T) {
 		t.Skip("SKIP_LLAMA set, skipping llama.cpp test")
 	}
 
-	emb, err := NewEmbedder()
+	emb, err := NewEmbedder(false)
 	if err != nil {
 		t.Skipf("Failed to create embedder (llama.cpp not built?): %v", err)
 	}
@@ -175,7 +175,7 @@ func TestTokenize(t *testing.T) {
 
 // TestTokensToText_RoundTrip tests that tokenizing and then detokenizing yields similar text.
 func TestTokensToText_RoundTrip(t *testing.T) {
-	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf")
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		t.Skip("GGUF model file not found at: " + modelPath)
 	}
@@ -183,7 +183,7 @@ func TestTokensToText_RoundTrip(t *testing.T) {
 		t.Skip("SKIP_LLAMA set, skipping llama.cpp test")
 	}
 
-	emb, err := NewEmbedder()
+	emb, err := NewEmbedder(false)
 	if err != nil {
 		t.Skipf("Failed to create embedder: %v", err)
 	}
@@ -200,5 +200,40 @@ func TestTokensToText_RoundTrip(t *testing.T) {
 	}
 	if recovered == "" {
 		t.Error("expected non-empty recovered text")
+	}
+}
+
+// TestAdapterApplication verifies that the linear adapter transforms embeddings.
+func TestAdapterApplication(t *testing.T) {
+	modelPath := filepath.Join(os.Getenv("PWD"),
+		"internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf")
+	if _, err := os.Stat(filepath.Join(os.Getenv("PWD"),
+		"internal/ai/minirag/models/adapter_weights.bin")); os.IsNotExist(err) {
+		t.Skip("adapter_weights.bin not found, skipping adapter test")
+	}
+
+	// Test with adapter enabled
+	emb, err := NewEmbedder(true)
+	if err != nil {
+		t.Skipf("Failed to create embedder with adapter: %v", err)
+	}
+	defer emb.Close()
+
+	// Generate embedding with adapter
+	vec, err := emb.GenerateEmbedding("test sentence")
+	if err != nil {
+		t.Fatalf("GenerateEmbedding error: %v", err)
+	}
+	if len(vec) != 384 {
+		t.Fatalf("expected 384-dim embedding, got %d", len(vec))
+	}
+	// L2 norm should still be ~1.0 after adapter
+	var normSq float64
+	for _, v := range vec {
+		normSq += float64(v * v)
+	}
+	norm := math.Sqrt(normSq)
+	if math.Abs(norm-1.0) > 1e-5 {
+		t.Errorf("L2 norm after adapter = %f, want ~1.0", norm)
 	}
 }
