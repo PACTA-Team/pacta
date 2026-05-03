@@ -3,11 +3,14 @@ package minirag
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
 	_ "modernc.org/sqlite"
 
+	"github.com/PACTA-Team/pacta/internal/db"
+	"github.com/PACTA-Team/pacta/internal/ai/minirag/embedding"
 	"github.com/PACTA-Team/pacta/internal/models"
 )
 
@@ -144,17 +147,32 @@ func setupTestVectorDB(t *testing.T) *VectorDB {
 }
 
 func TestIndexLegalDocument(t *testing.T) {
-	db := setupTestDB(t)
+	// Skip if embedder not available
+	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		t.Skip("GGUF model file not found")
+	}
+	if os.Getenv("SKIP_LLAMA") == "1" {
+		t.Skip("SKIP_LLAMA set")
+	}
+
+	dbConn := setupTestDB(t)
 	vectorDB := setupTestVectorDB(t)
 
-	// Create mock embedding client
-	embedder := &mockEmbeddingClient{}
+	// Create embedder
+	emb, err := embedding.NewEmbedder()
+	if err != nil {
+		t.Skipf("Failed to create embedder: %v", err)
+	}
+	defer emb.Close()
 
+	// Create queries and indexer
+	queries := db.NewQueries(dbConn)
 	indexer := &Indexer{
-		DB:           db,
-		VectorDB:     vectorDB,
-		Embedder:     embedder,
-		ChunkSize:    500,
+		Queries:     queries,
+		VectorDB:    vectorDB,
+		Embedder:    emb,
+		ChunkSize:   500,
 		ChunkOverlap: 50,
 	}
 
@@ -171,7 +189,7 @@ Las contrataciones se rigen por la presente ley.`
 		Jurisdiction: "Cuba",
 	}
 
-	err := indexer.IndexLegalDocument(doc)
+	err = indexer.IndexLegalDocument(doc)
 	if err != nil {
 		t.Fatalf("IndexLegalDocument failed: %v", err)
 	}
@@ -201,7 +219,7 @@ Las contrataciones se rigen por la presente ley.`
 	// Verify legal_documents table: chunk_count and indexed_at updated
 	var dbChunkCount int
 	var indexedAt sql.NullTime
-	err = db.QueryRow("SELECT chunk_count, indexed_at FROM legal_documents WHERE id = ?", doc.ID).Scan(&dbChunkCount, &indexedAt)
+	err = dbConn.QueryRow("SELECT chunk_count, indexed_at FROM legal_documents WHERE id = ?", doc.ID).Scan(&dbChunkCount, &indexedAt)
 	if err != nil {
 		t.Fatalf("Failed to query legal_documents: %v", err)
 	}

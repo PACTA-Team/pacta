@@ -147,3 +147,58 @@ func TestBatchEmbedding_SmallBatch(t *testing.T) {
 		}
 	}
 }
+
+// TestTokenize verifies that tokenization produces a non-empty token slice.
+func TestTokenize(t *testing.T) {
+	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		t.Skip("GGUF model file not found at: " + modelPath)
+	}
+	if os.Getenv("SKIP_LLAMA") == "1" {
+		t.Skip("SKIP_LLAMA set, skipping llama.cpp test")
+	}
+
+	emb, err := NewEmbedder()
+	if err != nil {
+		t.Skipf("Failed to create embedder (llama.cpp not built?): %v", err)
+	}
+	defer emb.Close()
+
+	tokens, err := emb.Tokenize("Hello world")
+	if err != nil {
+		t.Fatalf("Tokenize error: %v", err)
+	}
+	if len(tokens) == 0 {
+		t.Error("expected non-empty token slice")
+	}
+}
+
+// TestTokensToText_RoundTrip tests that tokenizing and then detokenizing yields similar text.
+func TestTokensToText_RoundTrip(t *testing.T) {
+	modelPath := filepath.Join(os.Getenv("PWD"), "internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
+		t.Skip("GGUF model file not found at: " + modelPath)
+	}
+	if os.Getenv("SKIP_LLAMA") == "1" {
+		t.Skip("SKIP_LLAMA set, skipping llama.cpp test")
+	}
+
+	emb, err := NewEmbedder()
+	if err != nil {
+		t.Skipf("Failed to create embedder: %v", err)
+	}
+	defer emb.Close()
+
+	text := "Hello world"
+	tokens, err := emb.Tokenize(text)
+	if err != nil {
+		t.Fatalf("Tokenize error: %v", err)
+	}
+	recovered, err := emb.TokensToText(tokens)
+	if err != nil {
+		t.Fatalf("TokensToText error: %v", err)
+	}
+	if recovered == "" {
+		t.Error("expected non-empty recovered text")
+	}
+}

@@ -167,6 +167,80 @@ func (e *Embedder) GenerateEmbedding(text string) ([]float32, error) {
 	return vec, nil
 }
 
+// Tokenize converts text into a slice of llama tokens.
+func (e *Embedder) Tokenize(text string) ([]C.llama_token, error) {
+	textC := C.CString(text)
+	defer C.free(unsafe.Pointer(textC))
+
+	nTokens := C.llama_tokenize(
+		e.vocab,
+		textC,
+		C.int(len(text)),
+		nil,
+		0,
+		true,
+		true,
+	)
+	if nTokens < 0 {
+		return nil, fmt.Errorf("tokenization failed")
+	}
+	if nTokens == 0 {
+		return []C.llama_token{}, nil
+	}
+	tokens := make([]C.llama_token, nTokens)
+	actual := C.llama_tokenize(
+		e.vocab,
+		textC,
+		C.int(len(text)),
+		&tokens[0],
+		C.int(nTokens),
+		true,
+		true,
+	)
+	if actual < 0 {
+		return nil, fmt.Errorf("tokenization failed on second pass")
+	}
+	return tokens, nil
+}
+
+// TokensToText converts a slice of tokens back into a string.
+func (e *Embedder) TokensToText(tokens []C.llama_token) (string, error) {
+	var result []byte
+	for _, token := range tokens {
+		buf := make([]byte, 128)
+		n := C.llama_token_to_piece(
+			e.vocab,
+			token,
+			(*C.char)(unsafe.Pointer(&buf[0])),
+			C.int(len(buf)),
+			1,
+			C.bool(true),
+		)
+		if n > 0 {
+			result = append(result, buf[:n]...)
+		}
+	}
+	return string(result), nil
+}
+
+// CheckHealth returns true if the embedder is ready (model and context loaded).
+func (e *Embedder) CheckHealth() bool {
+	return e != nil && e.model != nil && e.ctx != nil
+}
+
+// GetModelInfo returns information about the loaded embedding model.
+func (e *Embedder) GetModelInfo() map[string]interface{} {
+	info := make(map[string]interface{})
+	if e != nil {
+		info["model_path"] = e.modelPath
+		info["model_ready"] = e.model != nil && e.ctx != nil
+	} else {
+		info["model_ready"] = false
+	}
+	info["engine"] = "llama.cpp (CGo)"
+	return info
+}
+
 // GenerateBatch generates embeddings for multiple texts, calling GenerateEmbedding
 // for each item. batchSize is currently ignored (sequential implementation).
 // Returns a [][]float32 where each inner slice is an embedding vector.

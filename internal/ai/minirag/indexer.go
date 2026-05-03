@@ -208,15 +208,14 @@ func (idx *Indexer) GetIndexStats() map[string]interface{} {
 
 // IndexLegalDocument indexes a legal document by chunking and embedding
 func (idx *Indexer) IndexLegalDocument(doc *models.LegalDocument) error {
-	// Parse document into chunks using ParseByArticles
-	chunks := ParseByArticles(doc.Content)
-
+	// Chunk document using token-based chunking
+	chunks, err := ChunkByTokens(idx.Embedder, doc.Content, 512, 50)
+	if err != nil {
+		return fmt.Errorf("failed to chunk document: %w", err)
+	}
 	if len(chunks) == 0 {
 		return fmt.Errorf("no chunks generated from document content")
 	}
-
-	// Add overlap between chunks using MergeChunksWithOverlap
-	chunks = MergeChunksWithOverlap(chunks, 50)
 
 	// Generate embeddings for each chunk
 	embeddings := make([][]float32, len(chunks))
