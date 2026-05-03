@@ -50,9 +50,9 @@ SELECT company_id, company_type, first_name, last_name
 FROM authorized_signers
 WHERE id = ? AND deleted_at IS NULL
   AND company_id IN (
-    SELECT id FROM clients WHERE company_id = ? AND deleted_at IS NULL
+    SELECT cl.id FROM clients cl WHERE company_id = ? AND deleted_at IS NULL
     UNION ALL
-    SELECT id FROM suppliers WHERE company_id = ? AND deleted_at IS NULL
+    SELECT s.id FROM suppliers s WHERE company_id = ? AND deleted_at IS NULL
   )
 LIMIT 1;
 
@@ -61,9 +61,9 @@ SELECT id, company_id, company_type, first_name, last_name, position, phone, ema
 FROM authorized_signers
 WHERE id = ? AND deleted_at IS NULL
   AND company_id IN (
-    SELECT id FROM clients WHERE company_id = ? AND deleted_at IS NULL
+    SELECT cl.id FROM clients cl WHERE company_id = ? AND deleted_at IS NULL
     UNION ALL
-    SELECT id FROM suppliers WHERE company_id = ? AND deleted_at IS NULL
+    SELECT s.id FROM suppliers s WHERE company_id = ? AND deleted_at IS NULL
   )
 LIMIT 1;
 
