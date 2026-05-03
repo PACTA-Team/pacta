@@ -59,11 +59,7 @@ jobs:
           # Check if there are any unstaged changes in internal/db/
           if ! git diff --quiet internal/db/; then
             git add internal/db/
-            git commit -m "ci(sqlc): auto-generate queries from sqlc.yaml
-
-- Querier interface generated (emit.interface: true)
-- All query methods updated with v2 config format
-- Automated by CI build workflow"
+            git commit -m "ci(sqlc): auto-generate queries from sqlc.yaml - Querier interface generated (emit.interface: true) - All query methods updated with v2 config format - Automated by CI build workflow"
             # Push to the appropriate branch
             if [ -n "$HEAD_REF" ]; then
               # pull_request event: push to the head branch
