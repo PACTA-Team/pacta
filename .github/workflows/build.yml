@@ -95,18 +95,24 @@ jobs:
            cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
            make -j$(nproc)
 
-       - name: Build FAISS
-         working-directory: internal/ai/minirag/vector/faiss
-         run: |
-           if [ ! -d "faiss" ]; then
-             git clone --depth 1 https://github.com/facebookresearch/faiss .
-           fi
-           mkdir -p build
-           cd build
-           cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_SHARED_LIBS=OFF ..
-           make -j$(nproc) faiss
+        - name: Build FAISS
+          working-directory: internal/ai/minirag/vector/faiss
+          run: |
+            if [ ! -d "faiss" ]; then
+              git clone --depth 1 https://github.com/facebookresearch/faiss .
+            fi
+            mkdir -p build
+            cd build
+            cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_SHARED_LIBS=OFF ..
+            make -j$(nproc) faiss
 
-       - name: Download Qwen2.5-0.5B-Instruct GGUF model (cached)
+        - name: Run MiniRAG tests
+          env:
+            CGO_ENABLED: 1
+          run: |
+            go test ./internal/ai/minirag/... -v -count=1 -timeout=10m
+
+        - name: Download Qwen2.5-0.5B-Instruct GGUF model (cached)
          run: |
            mkdir -p internal/ai/minirag/models
            if [ ! -f "internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf" ]; then
