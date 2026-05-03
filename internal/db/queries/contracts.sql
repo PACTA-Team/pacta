@@ -174,7 +174,7 @@ WHERE internal_id LIKE 'CNT-' || ? || '-%' AND company_id = ?;
 
 -- name: GetContractForRAG :one
 SELECT
-  c.id, c.title, c.type, c.object, COALESCE(c.content, '') as content,
+  c.id, c.title, c.type, c.object, COALESCE(c.description, '') as content,
   COALESCE(cl.name, '') as client_name, COALESCE(s.name, '') as supplier_name,
   c.created_at
 FROM contracts c
