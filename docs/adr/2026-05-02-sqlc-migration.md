@@ -83,9 +83,9 @@ sql:
     queries: "internal/db/queries/*.sql"
     engine: "sqlite"
     gen:
-      go_package:
-        mode: "query"
-        name: "db"
+      go:
+        package: "db"
+        out: "."
       emit:
         interface: true  # Genera interfaz Queries para mocking y WithTx
 ```
@@ -146,20 +146,36 @@ Handlers que construyen WHERE condicionalmente (filtros opcionales) pueden reque
 
 ## CI/CD
 
-El workflow de GitHub Actions incluye:
+El workflow de GitHub Actions (`build.yml`) incluye:
 
 ```yaml
+- name: Install sqlc
+  run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
+
 - name: Generate sqlc queries
   run: |
-    go install github.com/kyleconroy/sqlc/cmd/sqlc@v1.46.0
     cd internal/db
     sqlc generate
+    go fmt ./...
 
-- name: Verify generated code
-  run: git diff --exit-code internal/db/queries_gen.go
+- name: Auto-commit sqlc-generated changes
+  run: |
+    git config user.name "github-actions[bot]"
+    git config user.email "github-actions[bot]@users.noreply.github.com"
+    if ! git diff --quiet internal/db/; then
+      git add internal/db/
+      git commit -m "ci(sqlc): auto-generate queries from sqlc.yaml"
+      git push origin HEAD:${GITHUB_REF#refs/heads/}
+    fi
 ```
 
-Si `queries_gen.go` no está actualizado, el build falla.
+**Flujo automático:**
+1. CI ejecuta `sqlc generate`
+2. Si `queries_gen.go` (u otros archivos generados) cambiaron, el workflow hace commit y push automáticamente
+3. Eso dispara un segundo workflow run (push event) que pasa sin cambios
+4. Build y release continúan con código actualizado
+
+Esto elimina la necesidad de regenerar manualmente y asegura que el código generado siempre esté sincronizado con `sqlc.yaml`.
 
 ---
 
@@ -169,8 +185,9 @@ Si `queries_gen.go` no está actualizado, el build falla.
 - **Queries migradas**: 215+ queries en 22 archivos `.sql`
 - **Módulos cubiertos**: system_settings, users, clients, suppliers, contracts, supplements, documents, authorized_signers, sessions, password_reset_tokens, registration_codes, ai_rate_limits, ai_legal, y más
 - **Handlers actualizados**: Todos los handlers ahora inyectan `*db.Queries`
-- **Tests**: Tests unitarios adaptados para usar queries generadas
-- **Excepciones documentadas**: RLS en `rls.go`, queries dinámicas específicas
+- **Interface generada**: `Querier` interface permite mocking en tests (emit.interface: true)
+- **CI/CD**: Auto-commit de código generado en build workflow
+- **Configuración**: `sqlc.yaml` corregido a formato v2 estándar (`gen.go.package`)
 
 ---
 
@@ -181,6 +198,7 @@ Si `queries_gen.go` no está actualizado, el build falla.
 3. **Autocomplete**: IDE sugiere todos los métodos disponibles
 4. **Mocking en tests**: `db.Queries` es interfaz → tests más rápidos y aislados
 5. **Documentación integrada**: Archivos `.sql` sirven como referencia clara
+6. **CI automatizado**: Código generado se actualiza automáticamente en cada build
 
 ---
 
