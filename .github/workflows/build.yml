@@ -88,35 +88,49 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-llama-cpp-
 
-      - name: Build llama.cpp
-        run: |
-          cd internal/ai/minirag/llama.cpp
-          mkdir -p build && cd build
-          cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
-          make -j$(nproc)
+       - name: Build llama.cpp
+         run: |
+           cd internal/ai/minirag/llama.cpp
+           mkdir -p build && cd build
+           cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+           make -j$(nproc)
 
-      - name: Download Qwen2.5-0.5B-Instruct GGUF model (cached)
-        run: |
-          mkdir -p internal/ai/minirag/models
-          if [ ! -f "internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf" ]; then
-            echo "Downloading Qwen2.5-0.5B-Instruct GGUF model..."
-            curl -L -o internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf \
-              https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
-          fi
+       - name: Build FAISS
+         working-directory: internal/ai/minirag/vector/faiss
+         run: |
+           if [ ! -d "faiss" ]; then
+             git clone --depth 1 https://github.com/facebookresearch/faiss .
+           fi
+           mkdir -p build
+           cd build
+           cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_SHARED_LIBS=OFF ..
+           make -j$(nproc) faiss
 
-      - name: Build with CGo (embedded Qwen2.5-0.5B)
-        run: |
-          export CGO_ENABLED=1
-          export CGO_CFLAGS="-I$(pwd)/internal/ai/minirag/llama.cpp/include \
-                             -I$(pwd)/internal/ai/minirag/llama.cpp/ggml/include"
-          export CGO_LDFLAGS="-L$(pwd)/internal/ai/minirag/llama.cpp/build/bin \
-                              -lllama -lggml -lggml-base"
-          go build -o pacta ./cmd/pacta
-        env:
-          CGO_ENABLED: 1
+       - name: Enable CGO
+         run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
 
-      - name: Vet
-        run: go vet ./...
+       - name: Build with CGo (embedded Qwen2.5-0.5B)
+         run: |
+           export CGO_ENABLED=1
+           export CGO_CFLAGS="-I$(pwd)/internal/ai/minirag/llama.cpp/include \
+                              -I$(pwd)/internal/ai/minirag/llama.cpp/ggml/include"
+           export CGO_LDFLAGS="-L$(pwd)/internal/ai/minirag/llama.cpp/build/bin \
+                               -lllama -lggml -lggml-base"
+           go build -ldflags="-s -w" -o pacta ./cmd/pacta
+           echo "Binary size:"
+           du -h cmd/pacta
+           # Fail if binary > 100MB
+           SIZE=$(du -m cmd/pacta | cut -f1)
+           if [ "$SIZE" -gt 100 ]; then
+             echo "❌ Binary size ${SIZE}MB exceeds 100MB limit"
+             exit 1
+           fi
+           echo "✅ Binary size ${SIZE}MB is within limit"
+         env:
+           CGO_ENABLED: 1
+
+       - name: Vet
+         run: go vet ./...
 
       - name: Check Go vulnerabilities
         run: |
