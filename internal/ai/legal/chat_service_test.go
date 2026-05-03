@@ -163,13 +163,12 @@ func TestChatService_Integration(t *testing.T) {
 		t.Fatalf("IndexLegalDocument failed: %v", err)
 	}
 
-	// Prepare LLM client using local CGo mode (placeholder response)
-	localClient := minirag.NewLocalClient("cgo", "qwen2.5-0.5b-instruct-q4_0.gguf", "")
-	llmClient := &ai.LLMClient{
-		Provider:    ai.ProviderCustom,
-		Model:       "qwen2.5-0.5b-instruct-q4_0.gguf",
-		LocalClient: localClient,
+	// Prepare LLM client (simple mock for testing)
+	type mockLLMClient struct{}
+	func (m *mockLLMClient) Generate(ctx context.Context, prompt, context string) (string, error) {
+		return "Respuesta de prueba del modelo legal", nil
 	}
+	llmClient := &mockLLMClient{}
 
 	// Create chat service
 	chatSvc := legal.NewChatService(queries, svc, llmClient)

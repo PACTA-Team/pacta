@@ -1114,39 +1114,18 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 	// Determine LLM client based on RAG configuration
 	llmClient := h.LLMClient
 	if llmClient == nil {
-		// Check RAG mode to decide local vs external
-		mode, localMode, localModel, _, _, _, err := h.getRAGConfig()
+		// Local LLM mode removed; always use external provider
+		provider, apiKey, model, endpoint, err := h.getAIConfig()
 		if err != nil {
-			log.Printf("[Legal Chat] Failed to get RAG config: %v", err)
-			// Fallback: return a simple response for testing/disabled AI
+			log.Printf("[Legal Chat] Failed to get AI config: %v", err)
+			// Fallback response for unconfigured AI
 			h.success(w, http.StatusOK, map[string]interface{}{
 				"session_id": req.SessionID,
 				"answer":      "Respuesta de experto legal no disponible (sin configuración de IA).",
 			})
 			return
 		}
-		if mode == "local" || mode == "hybrid" {
-			// Use local LLM (CGo or Ollama depending on localMode)
-			localClient := minirag.NewLocalClient(localMode, localModel, "")
-			llmClient = &ai.LLMClient{
-				Provider:    ai.ProviderCustom,
-				Model:       localModel,
-				LocalClient: localClient,
-			}
-		} else {
-			// External provider (OpenAI, Groq, etc.)
-			provider, apiKey, model, endpoint, err := h.getAIConfig()
-			if err != nil {
-				log.Printf("[Legal Chat] Failed to get AI config: %v", err)
-				// Fallback: return a simple response
-				h.success(w, http.StatusOK, map[string]interface{}{
-					"session_id": req.SessionID,
-					"answer":      "Respuesta de experto legal no disponible (sin configuración de IA).",
-				})
-				return
-			}
-			llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
-		}
+		llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
 	}
 
 	// Create chat service with dependencies
@@ -1214,11 +1193,11 @@ func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request)
 	// Determine LLM client (same logic as HandleLegalChat)
 	llmClient := h.LLMClient
 	if llmClient == nil {
-		// Check RAG configuration to decide local vs external
-		mode, localMode, localModel, _, _, _, err := h.getRAGConfig()
+		// Local LLM mode removed; use external provider only
+		provider, apiKey, model, endpoint, err := h.getAIConfig()
 		if err != nil {
-			log.Printf("[Legal Validate] Failed to get RAG config: %v", err)
-			// Fallback: return a canned validation response for testing/disabled AI
+			log.Printf("[Legal Validate] Failed to get AI config: %v", err)
+			// Fallback response
 			h.success(w, http.StatusOK, map[string]interface{}{
 				"contract_type": req.ContractType,
 				"analysis":      "Análisis no disponible: falta configuración de IA.",
@@ -1226,29 +1205,7 @@ func (h *Handler) HandleValidateContract(w http.ResponseWriter, r *http.Request)
 			})
 			return
 		}
-		if mode == "local" || mode == "hybrid" {
-			// Use local LLM (CGo or Ollama depending on localMode)
-			localClient := minirag.NewLocalClient(localMode, localModel, "")
-			llmClient = &ai.LLMClient{
-				Provider:    ai.ProviderCustom,
-				Model:       localModel,
-				LocalClient: localClient,
-			}
-		} else {
-			// External provider (OpenAI, Groq, etc.)
-			provider, apiKey, model, endpoint, err := h.getAIConfig()
-			if err != nil {
-				log.Printf("[Legal Validate] Failed to get AI config: %v", err)
-				// Fallback: return a canned validation response
-				h.success(w, http.StatusOK, map[string]interface{}{
-					"contract_type": req.ContractType,
-					"analysis":      "Análisis no disponible: falta configuración de IA.",
-					"status":        "completed",
-				})
-				return
-			}
-			llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
-		}
+		llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
 	}
 
 	// Generate validation answer

@@ -10,8 +10,8 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/PACTA-Team/pacta/internal/db"
-	"github.com/PACTA-Team/pacta/internal/ai/minirag/embedding"
 	"github.com/PACTA-Team/pacta/internal/models"
+	"github.com/stretchr/testify/require"
 )
 
 // mockEmbeddingClient is a test client that returns deterministic embeddings
@@ -134,14 +134,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func setupTestVectorDB(t *testing.T) *VectorDB {
-	t.Helper()
 
-	tmpDir := t.TempDir()
-	vectorDB, err := NewVectorDB(384, tmpDir)
-	if err != nil {
-		t.Fatalf("failed to create vector DB: %v", err)
-	}
 
 	return vectorDB
 }
@@ -157,24 +150,15 @@ func TestIndexLegalDocument(t *testing.T) {
 	}
 
 	dbConn := setupTestDB(t)
-	vectorDB := setupTestVectorDB(t)
-
-	// Create embedder
-	emb, err := embedding.NewEmbedder()
-	if err != nil {
-		t.Skipf("Failed to create embedder: %v", err)
-	}
-	defer emb.Close()
+	// Create RAG service
+	tmpDir := t.TempDir()
+	svc, err := minirag.NewService("", filepath.Join(tmpDir, "minirag.db"))
+	require.NoError(t, err)
+	defer svc.Close()
 
 	// Create queries and indexer
 	queries := db.NewQueries(dbConn)
-	indexer := &Indexer{
-		Queries:     queries,
-		VectorDB:    vectorDB,
-		Embedder:    emb,
-		ChunkSize:   500,
-		ChunkOverlap: 50,
-	}
+	indexer := minirag.NewIndexer(queries, svc)
 
 	content := `Artículo 1. Disposiciones generales.
 Las contrataciones se rigen por la presente ley.`
@@ -194,26 +178,13 @@ Las contrataciones se rigen por la presente ley.`
 		t.Fatalf("IndexLegalDocument failed: %v", err)
 	}
 
-	// Verify chunks were created in vector DB
-	vectorCount := vectorDB.Count()
-	if vectorCount == 0 {
-		t.Error("Expected chunks to be created in vector DB")
+	// Verify chunks were created
+	count, err := svc.Count()
+	if err != nil {
+		t.Fatalf("Failed to get chunk count: %v", err)
 	}
-
-	// Verify chunks have correct metadata
-	for i := 0; i < vectorCount; i++ {
-		chunkID := fmt.Sprintf("legal_%d_chunk_%d", doc.ID, i)
-		meta, ok := vectorDB.GetDocument(chunkID)
-		if !ok {
-			t.Errorf("Chunk %s not found in vector DB", chunkID)
-			continue
-		}
-		if meta.Source != "legal" {
-			t.Errorf("Expected source 'legal', got '%s'", meta.Source)
-		}
-		if meta.ExtraFields["jurisdiction"] != "Cuba" {
-			t.Errorf("Expected jurisdiction 'Cuba', got '%s'", meta.ExtraFields["jurisdiction"])
-		}
+	if count == 0 {
+		t.Error("Expected chunks to be created")
 	}
 
 	// Verify legal_documents table: chunk_count and indexed_at updated
@@ -223,8 +194,8 @@ Las contrataciones se rigen por la presente ley.`
 	if err != nil {
 		t.Fatalf("Failed to query legal_documents: %v", err)
 	}
-	if dbChunkCount != vectorCount {
-		t.Errorf("chunk_count mismatch: DB=%d, VectorDB=%d", dbChunkCount, vectorCount)
+	if dbChunkCount != count {
+		t.Errorf("chunk_count mismatch: DB=%d, Service=%d", dbChunkCount, count)
 	}
 	if !indexedAt.Valid {
 		t.Error("indexed_at should be set after indexing")

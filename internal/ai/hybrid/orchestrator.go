@@ -11,9 +11,7 @@ import (
 
 // Orchestrator manages hybrid RAG operations.
 type Orchestrator struct {
-	LocalClient    *minirag.LocalClient
-	Embedder       *minirag.EmbeddingClient
-	Service        *minirag.Service // replaces VectorDB
+	Service        *minirag.Service
 	Indexer        *minirag.Indexer
 	ExternalLLM    ai.LLMProvider
 	ExternalModel  string
@@ -32,26 +30,11 @@ func NewOrchestrator(mode, localMode, strategy, localModel, embeddingModel strin
 		Strategy:     strategy,
 		HybridRerank: true,
 	}
-	if mode != "external" {
-		o.LocalClient = minirag.NewLocalClient(localMode, localModel, "")
-		o.Embedder = minirag.NewEmbeddingClient("", embeddingModel)
-	}
+	// Note: Local LLM client removed (embedding-only). Embedder is accessed via Service.
 	return o
 }
 
-// Query executes a query based on the configured mode and strategy.
-func (o *Orchestrator) Query(ctx context.Context, prompt, context string) (string, error) {
-	switch o.Mode {
-	case "local":
-		return o.queryLocal(ctx, prompt, context)
-	case "external":
-		return o.queryExternal(ctx, prompt, context)
-	case "hybrid":
-		return o.queryHybrid(ctx, prompt, context)
-	default:
-		return "", fmt.Errorf("invalid RAG mode: %s", o.Mode)
-	}
-}
+
 
 // SearchSimilar searches for similar documents and returns enriched SearchResults.
 func (o *Orchestrator) SearchSimilar(queryText string, k int) ([]minirag.SearchResult, error) {
@@ -102,13 +85,11 @@ func (o *Orchestrator) SearchSimilar(queryText string, k int) ([]minirag.SearchR
 // CheckHealth checks the health of all components.
 func (o *Orchestrator) CheckHealth() map[string]bool {
 	health := make(map[string]bool)
-	if o.LocalClient != nil {
-		health["local_llm"] = o.LocalClient.CheckHealth()
-	} else {
-		health["local_llm"] = false
-	}
-	if o.Embedder != nil {
-		health["local_embeddings"] = o.Embedder.CheckHealth()
+	// Local LLM is no longer supported; always false
+	health["local_llm"] = false
+	// Check embedder via Service
+	if o.Service != nil && o.Service.Embedder != nil {
+		health["local_embeddings"] = o.Service.Embedder.CheckHealth()
 	} else {
 		health["local_embeddings"] = false
 	}
@@ -125,5 +106,4 @@ func (o *Orchestrator) CheckHealth() map[string]bool {
 	return health
 }
 
-// Remaining methods (queryLocal, queryExternal, queryHybrid, etc.) unchanged...
-// They remain as previously implemented.
+

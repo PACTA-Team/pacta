@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/ai/minirag"
+	"github.com/PACTA-Team/pacta/internal/ai/minirag/embedding"
 )
 
 // MergeStrategies combines results from multiple sources
@@ -107,12 +108,12 @@ func (m *MergeStrategies) ParallelWeighted(local, external []minirag.SearchResul
 
 // Rerank reorders results based on semantic similarity to query
 type Rerank struct {
-	embedder *minirag.EmbeddingClient
+	embedder *embedding.Embedder
 	query    string
 }
 
 // NewRerank creates a new reranker
-func NewRerank(embedder *minirag.EmbeddingClient, query string) *Rerank {
+func NewRerank(embedder *embedding.Embedder, query string) *Rerank {
 	return &Rerank{
 		embedder: embedder,
 		query:    query,
@@ -237,11 +238,11 @@ func countCommonWords(s1, s2 string) int {
 
 // SemanticRerank reranks using semantic similarity only
 type SemanticRerank struct {
-	embedder *minirag.EmbeddingClient
+	embedder *embedding.Embedder
 }
 
 // NewSemanticRerank creates a new semantic reranker
-func NewSemanticRerank(embedder *minirag.EmbeddingClient) *SemanticRerank {
+func NewSemanticRerank(embedder *embedding.Embedder) *SemanticRerank {
 	return &SemanticRerank{embedder: embedder}
 }
 
