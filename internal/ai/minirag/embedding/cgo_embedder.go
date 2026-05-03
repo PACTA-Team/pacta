@@ -10,35 +10,44 @@ package embedding
 import "C"
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"unsafe"
 
 	_ "embed"
 )
 
-//go:embed ../../../models/paraphrase-MiniLM-L3-v2-Q8_0.gguf
+//go:embed ../../../models/bge-small-en-v1.5.Q8_0.gguf
 var embeddedModel []byte
 
+//go:embed ../../../models/adapter_weights.bin
+var embeddedAdapter []byte
+
 // Embedder generates embeddings using llama.cpp via CGo.
-// It loads a frozen GGUF embedding model (paraphrase-MiniLM-L3-v2-Q8_0) and
-// produces normalized L2 vectors of size 384.
+// It loads a frozen GGUF embedding model (bge-small-en-v1.5.Q8_0) and
+// produces normalized L2 vectors of size 384. Optionally applies a linear
+// adapter for domain adaptation when useAdapter=true.
 type Embedder struct {
 	model     *C.struct_llama_model
 	ctx       *C.struct_llama_context
 	vocab     *C.struct_llama_vocab
-	modelPath string
+	adapterW  [384 * 384]float32
+	useAdapter bool
 }
 
 // NewEmbedder creates a new CGo-based embedder.
+// If useAdapter is true, it loads adapter_weights.bin and applies linear transformation.
 // It extracts the embedded GGUF to a temp file (llama.cpp requires a file path),
 // loads the model via llama.cpp, and prepares the inference context.
-func NewEmbedder() (*Embedder, error) {
+func NewEmbedder(useAdapter bool) (*Embedder, error) {
 	// 1. Extract embedded GGUF to temp file
-	modelFile := filepath.Join(os.TempDir(), "paraphrase-MiniLM-L3-v2-Q8_0.gguf")
+	modelFile := filepath.Join(os.TempDir(), "bge-small-en-v1.5.Q8_0.gguf")
 
 	// Write only if not already present (avoids repeated extraction on restarts)
 	if _, err := os.Stat(modelFile); err != nil {
@@ -75,12 +84,21 @@ func NewEmbedder() (*Embedder, error) {
 	// 4. Get vocabulary
 	vocab := C.llama_model_get_vocab(model)
 
-	return &Embedder{
-		model:     model,
-		ctx:       ctx,
-		vocab:     vocab,
-		modelPath: modelFile,
-	}, nil
+	e := &Embedder{
+		model:      model,
+		ctx:        ctx,
+		vocab:      vocab,
+		useAdapter: useAdapter,
+	}
+
+	if useAdapter {
+		if len(embeddedAdapter) != 384*384*4 {
+			return nil, fmt.Errorf("adapter weights size invalid: got %d, want %d", len(embeddedAdapter), 384*384*4)
+		}
+		binary.Read(bytes.NewReader(embeddedAdapter), binary.LittleEndian, e.adapterW[:])
+	}
+
+	return e, nil
 }
 
 // GenerateEmbedding produces a single embedding vector for the given text.
@@ -164,7 +182,27 @@ func (e *Embedder) GenerateEmbedding(text string) ([]float32, error) {
 
 	// L2 normalize
 	vec = normalizeVector(vec)
+
+	// Apply linear adapter if enabled
+	if e.useAdapter {
+		vec = e.applyAdapter(vec)
+	}
+
 	return vec, nil
+}
+
+// applyAdapter applies the linear transformation W (384×384) to v.
+// W is stored in row-major order: W[j*384 + i] = W_ji such that out[i] = sum_j v[j] * W[j,i].
+func (e *Embedder) applyAdapter(v []float32) []float32 {
+	out := make([]float32, 384)
+	for i := 0; i < 384; i++ {
+		var sum float32
+		for j := 0; j < 384; j++ {
+			sum += v[j] * e.adapterW[j*384+i]
+		}
+		out[i] = sum
+	}
+	return out
 }
 
 // Tokenize converts text into a slice of llama tokens.
