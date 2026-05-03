@@ -46,24 +46,25 @@ FROM authorized_signers
 WHERE id = ? AND deleted_at IS NULL;
 
 -- name: GetSignerForContractValidation :one
-SELECT company_id, company_type, first_name, last_name
-FROM authorized_signers
-WHERE id = ? AND deleted_at IS NULL
-  AND company_id IN (
-    SELECT cl.id FROM clients cl WHERE company_id = ? AND deleted_at IS NULL
+SELECT a.company_id, a.company_type, a.first_name, a.last_name
+FROM authorized_signers a
+WHERE a.id = ? AND a.deleted_at IS NULL
+  AND a.company_id IN (
+    SELECT cl.id FROM clients cl WHERE cl.company_id = ? AND cl.deleted_at IS NULL
     UNION ALL
-    SELECT s.id FROM suppliers s WHERE company_id = ? AND deleted_at IS NULL
+    SELECT s.id FROM suppliers s WHERE s.company_id = ? AND s.deleted_at IS NULL
   )
 LIMIT 1;
 
 -- name: GetSignerWithValidation :one
-SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
-FROM authorized_signers
-WHERE id = ? AND deleted_at IS NULL
-  AND company_id IN (
-    SELECT cl.id FROM clients cl WHERE company_id = ? AND deleted_at IS NULL
+SELECT a.id, a.company_id, a.company_type, a.first_name, a.last_name,
+       a.position, a.phone, a.email, a.created_at, a.updated_at
+FROM authorized_signers a
+WHERE a.id = ? AND a.deleted_at IS NULL
+  AND a.company_id IN (
+    SELECT cl.id FROM clients cl WHERE cl.company_id = ? AND cl.deleted_at IS NULL
     UNION ALL
-    SELECT s.id FROM suppliers s WHERE company_id = ? AND deleted_at IS NULL
+    SELECT s.id FROM suppliers s WHERE s.company_id = ? AND s.deleted_at IS NULL
   )
 LIMIT 1;
 
