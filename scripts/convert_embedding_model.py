@@ -16,6 +16,8 @@ import argparse
 import os
 import sys
 import subprocess
+import tempfile
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -29,12 +31,11 @@ except ImportError as e:
 
 
 def detect_llama_cpp_convert() -> Optional[Path]:
-    """Find llama.cpp convert.py script."""
-    # Check common locations relative to repo root
+    """Find llama.cpp conversion script for HuggingFace models."""
     repo_root = Path(__file__).resolve().parents[1]  # scripts/ -> repo root
     possible_paths = [
-        repo_root / "internal" / "ai" / "minirag" / "llama.cpp" / "convert.py",
-        repo_root / "llama.cpp" / "convert.py",
+        repo_root / "internal" / "ai" / "minirag" / "llama.cpp" / "convert_hf_to_gguf.py",
+        repo_root / "llama.cpp" / "convert_hf_to_gguf.py",
     ]
     for p in possible_paths:
         if p.exists():
@@ -67,12 +68,16 @@ def convert_model(force: bool = False) -> bool:
     # Find llama.cpp convert.py
     convert_script = detect_llama_cpp_convert()
     if convert_script is None:
-        print("\nERROR: llama.cpp convert.py not found.")
+        print("\nERROR: llama.cpp convert_hf_to_gguf.py not found.")
         print("Clone llama.cpp first:")
         print("  git clone https://github.com/ggerganov/llama.cpp internal/ai/minirag/llama.cpp")
         sys.exit(1)
 
-    print(f"\nUsing convert.py: {convert_script}")
+    print(f"\nUsing converter: {convert_script}")
+
+    # Create temporary directory for downloaded model files
+    temp_dir = Path(tempfile.mkdtemp(prefix="minirag_convert_"))
+    print(f"  Temporary model dir: {temp_dir}")
 
     # Step 1: Download model via transformers
     print("\nStep 1/2: Downloading model from Hugging Face...")
@@ -81,8 +86,11 @@ def convert_model(force: bool = False) -> bool:
         model = AutoModel.from_pretrained(model_name)
         print(f"  Model loaded: {type(model)}")
         print(f"  Model dtype: {model.dtype}")
+        print(f"  Saving to {temp_dir}...")
+        model.save_pretrained(temp_dir)
     except Exception as e:
         print(f"  ERROR downloading model: {e}")
+        shutil.rmtree(temp_dir, ignore_errors=True)
         sys.exit(1)
 
     # Step 2: Run llama.cpp convert.py
@@ -92,7 +100,7 @@ def convert_model(force: bool = False) -> bool:
     cmd = [
         sys.executable,  # Use same Python interpreter
         str(convert_script),
-        model_name,
+        str(temp_dir),   # Model directory as positional argument
         "--outfile", str(output_path),
         "--outtype", "q8_0",
     ]
@@ -108,13 +116,21 @@ def convert_model(force: bool = False) -> bool:
             check=True,
         )
         print(f"\nSUCCESS: Model converted to {output_path}")
-        print(f"File size: {output_path.stat().st_size / 1024 / 1024:.1f} MB")
+        try:
+            size_mb = output_path.stat().st_size / 1024 / 1024
+            print(f"File size: {size_mb:.1f} MB")
+        except Exception:
+            pass
+        # Cleanup temp dir
+        shutil.rmtree(temp_dir, ignore_errors=True)
         return True
     except subprocess.CalledProcessError as e:
         print(f"\nERROR: Conversion failed with exit code {e.returncode}")
+        shutil.rmtree(temp_dir, ignore_errors=True)
         sys.exit(1)
     except Exception as e:
         print(f"\nERROR: {e}")
+        shutil.rmtree(temp_dir, ignore_errors=True)
         sys.exit(1)
 
 
