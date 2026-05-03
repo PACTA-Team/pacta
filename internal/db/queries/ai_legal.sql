@@ -44,10 +44,6 @@ WHERE deleted_at IS NULL;
 SELECT MAX(indexed_at) FROM legal_documents
 WHERE deleted_at IS NULL;
 
--- name: GetLegalDocumentChunkCount :one
-SELECT COUNT(*) FROM document_chunks
-WHERE document_id = ? AND source = 'legal';
-
 -- ========== ai_legal_chat_history ==========
 -- Note: ai_legal_chat_history does NOT have deleted_at (chat history)
 
