@@ -2,7 +2,9 @@ package minirag
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/PACTA-Team/pacta/internal/ai/minirag/embedding"
 	"github.com/PACTA-Team/pacta/internal/ai/minirag/storage"
@@ -30,11 +32,27 @@ type LegalDocument = models.LegalDocument
 
 // NewService creates a new Service with embedded embedder, FAISS index, and SQLite store.
 // modelPath is currently unused (embedded model is fixed).
+// The MINIRAG_ADAPTER environment variable controls whether the linear adapter is applied.
 func NewService(modelPath, dbPath string) (*Service, error) {
-	emb, err := embedding.NewEmbedder()
+	useAdapter := os.Getenv("MINIRAG_ADAPTER") == "1"
+	emb, err := embedding.NewEmbedder(useAdapter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create embedder: %w", err)
 	}
+	vdb, err := vector.NewFAISSIndex(384)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create FAISS index: %w", err)
+	}
+	store, err := storage.NewSQLiteStore(dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SQLite store: %w", err)
+	}
+	return &Service{
+		Embedder: emb,
+		VectorDB: vdb,
+		Store:    store,
+	}, nil
+}
 	vdb, err := vector.NewFAISSIndex(384)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create FAISS index: %w", err)

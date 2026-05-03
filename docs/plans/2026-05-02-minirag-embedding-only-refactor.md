@@ -1,114 +1,377 @@
-# MiniRAG Embedding-Only Refactor Implementation Plan
+# MiniRAG Embedding-Only Refactor Implementation Plan (Updated)
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Refactor MiniRAG from Ollama HTTP + custom HNSW to a 100% offline, embedding-only RAG system with embedded GGUF model, FAISS-CPU, SQLite metadata, and llama.cpp tokenization — all in a single Go binary under 100MB.
 
 **Architecture:** 
-- Embedding inference via llama.cpp CGo (paraphrase-MiniLM-L3-v2 Q8_0 GGUF embedded with go:embed)
+- Embedding inference via llama.cpp CGo (`BAAI/bge-small-en-v1.5` Q8_0 GGUF embedded with go:embed)
+- Optional linear adapter (384×384) for Spanish legal domain adaptation (576KB)
 - Vector search via FAISS-CPU wrapped in CGo (IndexFlatIP with L2-normalized embeddings)
 - Metadata storage in SQLite (contracts, chunks, vector_id mappings)
 - Token-based chunking (512 tokens + 50 token overlap) using llama.cpp tokenizer
 - RAG query response via static templates (no LLM generation)
+- Adapter activation via `MINIRAG_ADAPTER=1` environment variable
 
-**Tech Stack:** Go 1.25, CGo, llama.cpp, FAISS-CPU, SQLite (modernc.org/sqlite), sentence-transformers GGUF
+**Tech Stack:** Go 1.25, CGo, llama.cpp, FAISS-CPU, SQLite (modernc.org/sqlite), BGE sentence-transformers GGUF
 
 ---
 
-## Phase 0: Preparation — Model Conversion (One-Time, Pre-Build)
+## Phase 0: Preparation — BGE Model Fetch (Manual CI)
 
-### Task 0.1: Create model conversion script
+### Task 0.1: Create model fetch workflow (replaces conversion)
 
 **Files:**
-- Create: `scripts/convert_embedding_model.py`
-- Create: `internal/ai/minirag/models/.gitkeep`
+- Create: `.github/workflows/fetch-bge-model.yml`
+- Create: `scripts/download_bge_model.py` (or inline in workflow)
 
-**Step 1: Write conversion script**
+**Step 1: Write download script** (simple curl-based)
 
 ```python
 #!/usr/bin/env python3
-"""
-Convert sentence-transformers/paraphrase-MiniLM-L3-v2 to GGUF Q8_0.
-Requires: pip install transformers torch llama-cpp-python
-"""
-import argparse
-from pathlib import Path
-from transformers import AutoModel, AutoTokenizer
-import torch
-from llama_cpp import Llama
+import os, sys
+from urllib.request import urlretrieve
 
-def convert(model_name, output_path, quantize="q8_0"):
-    print(f"Loading model: {model_name}")
-    model = AutoModel.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    
-    # Save original model temporarily
-    temp_dir = Path("temp_convert")
-    temp_dir.mkdir(exist_ok=True)
-    model.save_pretrained(temp_dir)
-    tokenizer.save_pretrained(temp_dir)
-    
-    print(f"Converting to GGUF with quantization: {quantize}")
-    # Use llama.cpp convert.py via llama-cpp-python
-    # Or call convert.py directly if llama.cpp cloned
-    # For now, instruct user to run:
-    #   python3 llama.cpp/convert.py temp_convert/ --outfile output_path --vocab-type bpe --quantize q8_0
-    print(f"Run: python3 llama.cpp/convert.py {temp_dir} --outfile {output_path} --quantize {quantize}")
-    
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--output", default="internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
-    parser.add_argument("--model", default="sentence-transformers/paraphrase-MiniLM-L3-v2")
-    args = parser.parse_args()
-    convert(args.model, args.output)
+URL = "https://huggingface.co/TheBloke/bge-small-en-v1.5-GGUF/resolve/main/bge-small-en-v1.5.Q8_0.gguf"
+OUTPUT = "internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf"
+
+os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
+print(f"Downloading {URL} -> {OUTPUT}")
+urlretrieve(URL, OUTPUT)
+print("Download complete")
 ```
 
-**Step 2: Create models directory placeholder**
+**Step 2: Create GitHub Actions workflow** `.github/workflows/fetch-bge-model.yml`:
+
+```yaml
+name: Fetch BGE Model
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, token: ${{ secrets.GITHUB_TOKEN }}}
+      - name: Download BGE GGUF
+        run: |
+          mkdir -p internal/ai/minirag/models
+          curl -L https://huggingface.co/TheBloke/bge-small-en-v1.5-GGUF/resolve/main/bge-small-en-v1.5.Q8_0.gguf -o internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Create temp branch and commit
+        run: |
+          BRANCH="model/bge-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git add internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf
+          git commit -m "chore(minirag): add BGE-small-en-v1.5 GGUF model"
+          git push origin HEAD
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "chore(minirag): add BGE embedding model"
+          body: "Adds `bge-small-en-v1.5.Q8_0.gguf` (89MB) for embedding inference."
+          branch: "model/bge-$(date +%Y%m%d-%H%M%S)"
+          base: main
+          labels: "chore, model"
+```
+
+**Step 3: Create models directory placeholder** (if not exists):
 
 ```bash
 mkdir -p internal/ai/minirag/models
 touch internal/ai/minirag/models/.gitkeep
-```
-
-**Step 3: Add conversion instructions to README**
-
-Append to `internal/ai/minirag/README.md` (create if missing):
-```
-## Model Conversion (One-Time)
-
-To embed paraphrase-MiniLM-L3-v2 as GGUF Q8_0:
-
-1. Install dependencies:
-   pip install transformers torch llama-cpp-python
-
-2. Clone llama.cpp in this directory:
-   git clone https://github.com/ggerganov/llama.cpp internal/ai/minirag/llama.cpp
-
-3. Run conversion script:
-   python3 scripts/convert_embedding_model.py
-
-4. Commit the generated .gguf file (65MB):
-   git add internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf
-```
-
-**Step 4: Commit scaffold**
-
-```bash
-git add scripts/convert_embedding_model.py internal/ai/minirag/models/.gitkeep
-git commit -m "chore(minirag): add model conversion script and models dir scaffold"
+git add internal/ai/minirag/models/.gitkeep
+git commit -m "chore(minirag): add models directory"
 ```
 
 ---
 
-## Phase 1: Core Embedding (CGo llama.cpp)
+## Phase 0.5: Adapter Training (Manual CI, CPU-only)
 
-### Task 1.1: Implement CGo embedder with L2 norm and batching
+### Task 0.5.1: Create training script `scripts/train_adapter.py`
+
+**Requirements:** `sentence-transformers`, `torch`
+
+```python
+#!/usr/bin/env python3
+"""
+Train linear adapter to align BGE-small-en-v1.5 embeddings to Spanish legal domain.
+"""
+import argparse, sqlite3, os, sys, json, random
+from pathlib import Path
+from sentence_transformers import SentenceTransformer
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import re
+
+# Regex topic extraction for Spanish legal
+TOPIC_PATTERNS = {
+    'indemnizacion': [r'indemnizaci[oó]n', r'compensaci[oó]n', r'da[oó]s? y perjuicios'],
+    'confidencialidad': [r'confiden', r'reserva', r'secreto'],
+    'renovacion': [r'renovaci[oó]n', r'pr[oó]rroga', r'extensi[oó]n'],
+    'terminacion': [r'terminaci[oó]n', r'rescisi[oó]n', r'cancelaci[oó]n'],
+    'pago': [r'pago', r'facturaci[oó]n', r'honorarios', r'tarifa'],
+    'responsabilidad': [r'responsabilidad', r'garant[ií]a', r'vicios? ocultos?'],
+}
+
+TEMPLATES = {
+    'indemnizacion': [
+        "¿Qué incluye la indemnización por incumplimiento?",
+        "¿Cuál es el monto de la indemnización?",
+        "Indemnización por daños y perjuicios",
+        "¿Quién paga la indemnización?",
+    ],
+    'confidencialidad': [
+        "¿Qué información es confidencial?",
+        "¿Cuánto tiempo dura la confidencialidad?",
+        "Consecuencias por violar confidencialidad",
+    ],
+    'renovacion': [
+        "¿Cómo se renueva el contrato?",
+        "Plazo para renovar",
+        "Renovación automática",
+    ],
+    'terminacion': [
+        "¿Cómo se termina el contrato?",
+        "Causas de rescisión",
+        "Aviso de terminación",
+    ],
+    'pago': [
+        "Plazo de pago",
+        "¿Cuándo se factura?",
+        "Método de pago",
+    ],
+    'responsabilidad': [
+        "¿Qué cubre la garantía?",
+        "Responsabilidad por vicios ocultos",
+        "Exclusión de responsabilidad",
+    ],
+}
+
+def detect_topics(text):
+    topics = []
+    for topic, patterns in TOPIC_PATTERNS.items():
+        for pat in patterns:
+            if re.search(pat, text, re.IGNORECASE):
+                topics.append(topic)
+                break
+    return topics
+
+def generate_queries(text):
+    topics = detect_topics(text)
+    queries = []
+    for topic in topics:
+        for templ in TEMPLATES.get(topic, []):
+            queries.append(templ)
+    return queries
+
+class LegalDataset(torch.utils.data.Dataset):
+    def __init__(self, db_path, model, neg_samples=5):
+        self.db_path = db_path
+        self.model = model
+        self.neg_samples = neg_samples
+        self.chunks = self._load_chunks()
+        self.queries = self._build_queries()
+        
+    def _load_chunks(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT rowid as id, content FROM minirag_chunks")
+        rows = cur.fetchall()
+        conn.close()
+        return rows
+        
+    def _build_queries(self):
+        pairs = []
+        for chunk in self.chunks:
+            queries = generate_queries(chunk['content'])
+            for q in queries:
+                pairs.append((q, chunk['id'], chunk['content']))
+        return pairs
+    
+    def __len__(self):
+        return len(self.queries)
+    
+    def __getitem__(self, idx):
+        query, chunk_id, positive = self.queries[idx]
+        # Sample negatives from other chunks
+        neg_indices = random.sample([i for i in range(len(self.chunks)) if self.chunks[i]['id'] != chunk_id], min(self.neg_samples, len(self.chunks)-1))
+        negatives = [self.chunks[i]['content'] for i in neg_indices]
+        if len(negatives) < self.neg_samples:
+            negatives += [positive] * (self.neg_samples - len(negatives))
+        return query, positive, negatives
+
+class LinearAdapter(nn.Module):
+    def __init__(self, dim=384):
+        super().__init__()
+        self.W = nn.Linear(dim, dim, bias=False)
+    def forward(self, x):
+        return self.W(x)
+
+def info_nce_loss(q, p, negatives, temperature=0.05):
+    all_vecs = torch.cat([p.unsqueeze(0), negatives], dim=0)  # [1+N, dim]
+    sims = torch.matmul(q.unsqueeze(0), all_vecs.T) / temperature  # [1, 1+N]
+    labels = torch.zeros(1, dtype=torch.long, device=q.device)
+    return nn.CrossEntropyLoss()(sims, labels)
+
+def train(args):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+    
+    model = SentenceTransformer('BAAI/bge-small-en-v1.5')
+    model.to(device)
+    adapter = LinearAdapter().to(device)
+    
+    dataset = LegalDataset(args.db, model)
+    loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch, shuffle=True)
+    
+    optimizer = optim.AdamW(adapter.parameters(), lr=args.lr)
+    
+    for epoch in range(args.epochs):
+        total_loss = 0
+        for batch in loader:
+            queries, positives, negatives = batch
+            # Encode with BGE
+            with torch.no_grad():
+                q_emb = model.encode(queries, convert_to_tensor=True, device=device)
+                p_emb = model.encode(positives, convert_to_tensor=True, device=device)
+                n_emb = torch.stack([model.encode(neg, convert_to_tensor=True, device=device) for neg in negatives])
+            
+            # Adapter forward
+            q_adapt = adapter(q_emb)
+            p_adapt = adapter(p_emb)
+            n_adapt = adapter(n_emb.view(-1, 384)).view(n_emb.shape)
+            
+            # Contrastive loss (mean over batch)
+            loss = torch.mean(torch.stack([
+                info_nce_loss(q_adapt[i], p_adapt[i], n_adapt[i], args.temp)
+                for i in range(q_adapt.size(0))
+            ]))
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        print(f"Epoch {epoch+1} loss: {total_loss/len(loader)}")
+    
+    # Save weights as float32 row-major
+    weights = adapter.W.weight.detach().cpu().numpy().astype('float32')
+    output_path = Path(args.output_dir) / 'adapter_weights.bin'
+    weights.tofile(output_path)
+    print(f"Saved adapter to {output_path}")
+    
+    # Metadata
+    meta = {
+        'epochs': args.epochs,
+        'batch_size': args.batch,
+        'learning_rate': args.lr,
+        'temperature': args.temp,
+        'final_loss': total_loss/len(loader),
+        'samples': len(dataset)
+    }
+    with open(Path(args.output_dir) / 'adapter_metadata.json', 'w') as f:
+        json.dump(meta, f, indent=2)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db", default="minirag.db", help="Path to SQLite DB")
+    parser.add_argument("--output-dir", default="models", help="Where to save adapter_weights.bin")
+    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--batch", type=int, default=32)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--temp", type=float, default=0.05)
+    args = parser.parse_args()
+    train(args)
+```
+
+### Task 0.5.2: Create workflow `.github/workflows/train-adapter.yml`
+
+```yaml
+name: Train Adapter
+on:
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: 'Training epochs'
+        required: false
+        default: '3'
+      batch:
+        description: 'Batch size'
+        required: false
+        default: '32'
+
+jobs:
+  train:
+    runs-on: ubuntu-latest-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, token: ${{ secrets.GITHUB_TOKEN }}}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: {python-version: '3.13'}
+      - name: Install dependencies
+        run: |
+          pip install --upgrade uv
+          uv pip install sentence-transformers torch
+      - name: Prepare DB
+        run: |
+          # Use existing DB from repo or fail if not present
+          if [ ! -f "data/minirag.db" ]; then
+            echo "ERROR: Database not found at data/minirag.db"
+            echo "Make sure contracts are indexed and minirag_chunks table exists."
+            exit 1
+          fi
+          cp data/minirag.db ./minirag.db
+      - name: Train adapter
+        run: |
+          mkdir -p models
+          python scripts/train_adapter.py --db ./minirag.db --output-dir models --epochs ${{ inputs.epochs }} --batch ${{ inputs.batch }}
+      - name: Verify adapter file
+        run: |
+          ls -lh models/adapter_weights.bin
+          test -s models/adapter_weights.bin
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Create temp branch and commit
+        run: |
+          BRANCH="adapter/trained-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git add models/adapter_weights.bin models/adapter_metadata.json
+          git commit -m "feat(minirag): add trained linear adapter for Spanish legal domain"
+          git push origin HEAD
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "feat(minirag): add adapter for Spanish legal domain"
+          body: |
+            Trained linear adapter (384×384) on existing contracts using synthetic queries.
+            Improves semantic search for Spanish legal documents.
+          branch: "adapter/trained-$(date +%Y%m%d-%H%M%S)"
+          base: main
+          labels: "feat, adapter, ci-generated"
+```
+
+---
+
+## Phase 1: Core Embedding (CGo llama.cpp) — Updated for BGE + Adapter
+
+### Task 1.1: Implement CGo embedder with L2 norm, batching, and optional adapter
 
 **Files:**
 - Create: `internal/ai/minirag/embedding/cgo_embedder.go`
 - Create: `internal/ai/minirag/embedding/cgo_embedder_test.go`
-- Modify: `internal/ai/minirag/cgo_llama.go` (rename → move logic)
-- Delete: `internal/ai/minirag/embeddings.go` (Ollama HTTP client)
+- Delete: `internal/ai/minirag/embeddings.go` (Ollama HTTP client) — already done?
+- Delete: `internal/ai/minirag/local_client.go` — already done?
+- Delete: `internal/ai/minirag/cgo_llama.go` — already done?
 
 **Step 1: Write failing test — L2 normalization**
 
@@ -128,7 +391,7 @@ cd internal/ai/minirag/embedding && go test -v -run TestNormalizeVector
 # FAIL: undefined normalizeVector
 ```
 
-**Step 3: Implement cgo_embedder.go (minimal first)**
+**Step 3: Implement `cgo_embedder.go` (minimal first)**
 
 ```go
 package embedding
@@ -142,12 +405,13 @@ package embedding
 */
 import "C"
 import (
+    "bytes"
+    "encoding/binary"
     "fmt"
     "os"
     "path/filepath"
     "runtime"
     "unsafe"
-    "golang.org/x/exp/constraints"
 )
 
 // Embedder uses llama.cpp via CGo to generate embeddings
@@ -155,19 +419,22 @@ type Embedder struct {
     model    *C.struct_llama_model
     ctx      *C.struct_llama_context
     vocab    *C.struct_llama_vocab
-    modelDir string // temp dir for extracted GGUF
+    adapterW [384 * 384]float32
+    useAdapter bool
 }
 
+//go:embed ../../../models/bge-small-en-v1.5.Q8_0.gguf
+var embeddedModel []byte
+
+//go:embed ../../../models/adapter_weights.bin
+var embeddedAdapter []byte
+
 // NewEmbedder creates embedder; extracts embedded GGUF to temp dir and loads
-func NewEmbedder() (*Embedder, error) {
+func NewEmbedder(useAdapter bool) (*Embedder, error) {
     // 1. Extract embedded GGUF from go:embed to temp dir
-    data, err := embedEmbeddingModel()
-    if err != nil {
-        return nil, fmt.Errorf("failed to embed model: %w", err)
-    }
     tmpDir := os.TempDir()
-    modelPath := filepath.Join(tmpDir, "paraphrase-MiniLM-L3-v2-Q8_0.gguf")
-    if err := os.WriteFile(modelPath, data, 0644); err != nil {
+    modelPath := filepath.Join(tmpDir, "bge-small-en-v1.5.Q8_0.gguf")
+    if err := os.WriteFile(modelPath, embeddedModel, 0644); err != nil {
         return nil, fmt.Errorf("failed to write temp model: %w", err)
     }
     
@@ -196,12 +463,21 @@ func NewEmbedder() (*Embedder, error) {
     
     vocab := C.llama_model_get_vocab(model)
     
-    return &Embedder{
-        model:    model,
-        ctx:      ctx,
-        vocab:    vocab,
-        modelDir: tmpDir,
-    }, nil
+    e := &Embedder{
+        model:       model,
+        ctx:         ctx,
+        vocab:       vocab,
+        useAdapter:  useAdapter,
+    }
+    
+    if useAdapter {
+        if len(embeddedAdapter) != 384*384*4 {
+            return nil, fmt.Errorf("adapter weights size invalid: got %d, want %d", len(embeddedAdapter), 384*384*4)
+        }
+        binary.Read(bytes.NewReader(embeddedAdapter), binary.LittleEndian, e.adapterW[:])
+    }
+    
+    return e, nil
 }
 
 // GenerateEmbedding returns L2-normalized 384-dim vector for text
@@ -217,52 +493,56 @@ func (e *Embedder) GenerateEmbedding(text string) ([]float32, error) {
     tokens := make([]C.llama_token, nTokens)
     C.llama_tokenize(e.vocab, ctext, C.int(len(text)), &tokens[0], C.int(nTokens), true, true)
     
-    // Batch (single for now)
+    // Batch (single)
     batch := C.llama_batch_get_one(&tokens[0], C.int(nTokens))
     if C.llama_decode(e.ctx, batch) != 0 {
         return nil, fmt.Errorf("llama_decode failed")
     }
     
-    // Get embeddings (sequence-based pooling → mean pooling)
-    // llama.cpp provides llama_get_embeddings_seq or llama_get_embeddings
-    // Use llama_get_embeddings_seq to get per-token embeddings, then mean pool
+    // Get embedding (use last token)
     nEmb := C.llama_n_embd(e.model)
-    embSize := int(nEmb) // typically 384
+    embSize := int(nEmb) // 384
     
-    // Get embeddings for all tokens
     embData := C.llama_get_embeddings(e.ctx)
     if embData == nil {
         return nil, fmt.Errorf("failed to get embeddings")
     }
     
-    // Copy and mean-pool across token dimension
-    // embData points to float32 array of size (n_tokens * n_embd)
-    // We need mean across tokens → single vector of size n_embd
-    // Approach: copy first n_embd values (CLS token equivalent) OR compute mean
-    // For sentence-transformers, [CLS] pooling is common; llama tokenizer doesn't add special tokens by default
-    // Use mean pooling over all token embeddings
-    
-    // Convert *C.float to Go slice
-    totalTokens := int(C.llama_n_seq_elem(e.ctx, -1)) // all cached tokens
+    totalTokens := int(C.llama_n_seq_elem(e.ctx, -1))
     if totalTokens == 0 {
         totalTokens = int(nTokens)
     }
     
-    // We'll use last token's embedding as sentence embedding (standard for decoder models)
-    // Alternatively, mean pool
     vec := make([]float32, embSize)
     if totalTokens > 0 {
         offset := (totalTokens - 1) * embSize
         src := (*[1 << 30]float32)(unsafe.Pointer(embData))[offset : offset+embSize]
         copy(vec, src)
     } else {
-        // Fallback: first embSize floats
         src := (*[1 << 30]float32)(unsafe.Pointer(embData))[:embSize:embSize]
         copy(vec, src)
     }
     
+    // Apply adapter if enabled
+    if e.useAdapter {
+        vec = e.applyAdapter(vec)
+    }
+    
     // L2 Normalize
     return normalizeVector(vec), nil
+}
+
+// applyAdapter applies the linear transformation W (384×384) to v
+func (e *Embedder) applyAdapter(v []float32) []float32 {
+    out := make([]float32, 384)
+    for i := 0; i < 384; i++ {
+        var sum float32
+        for j := 0; j < 384; j++ {
+            sum += v[j] * e.adapterW[j*384+i]
+        }
+        out[i] = sum
+    }
+    return out
 }
 
 // Close frees resources
@@ -275,26 +555,10 @@ func (e *Embedder) Close() error {
         C.llama_model_free(e.model)
         e.model = nil
     }
-    // Optionally delete temp GGUF file
     return nil
 }
 
-// embedEmbeddingModel returns embedded GGUF bytes (go:embed)
-// This function will be generated by go:embed directive once file exists
-var embedEmbeddingModel = func() []byte {
-    // Placeholder — go:embed replaces this at compile time
-    data, err := os.ReadFile("internal/ai/minirag/models/paraphrase-MiniLM-L3-v2-Q8_0.gguf")
-    if err != nil {
-        panic(fmt.Errorf("embedded model not found: %w", err))
-    }
-    return data
-}
-```
-
-**Step 4: Implement normalizeVector helper**
-
-Add to same file:
-```go
+// normalizeVector normalizes a vector to unit length
 func normalizeVector(v []float32) []float32 {
     var norm float32
     for _, x := range v {
@@ -312,440 +576,184 @@ func normalizeVector(v []float32) []float32 {
 }
 ```
 
-**Step 5: Add go:embed directive (after model file exists)**
+**Step 4: Implement tests** (`cgo_embedder_test.go`):
+- `TestNormalizeVector`
+- `TestGenerateEmbedding_NonEmpty` (skip if model file missing)
+- `TestGenerateEmbedding_Empty` returns zero 384-vector
+- `TestAdapterApplication` (if adapter enabled, verify transform)
 
-Once GGUF is committed, update embedEmbeddingModel:
-```go
-//go:embed ../../../models/paraphrase-MiniLM-L3-v2-Q8_0.gguf
-var embeddedModel []byte
-```
-
-**Step 6: Run all tests**
-
-```bash
-go test ./internal/ai/minirag/embedding/... -v
-```
-
-**Step 7: Commit**
-
-```bash
-git add internal/ai/minirag/embedding/cgo_embedder.go internal/ai/minirag/embedding/cgo_embedder_test.go
-git commit -m "feat(minirag): add CGo embedder with llama.cpp and L2 norm"
-```
-
----
-
-### Task 1.2: Implement batch embedding for indexing
-
-**Files:**
-- Modify: `internal/ai/minirag/embedding/cgo_embedder.go`
-- Create: `internal/ai/minirag/embedding/batcher.go`
-- Test: `internal/ai/minirag/embedding/batcher_test.go`
-
-**Step 1: Write test — batch of 3 texts**
+**Step 5: Add tokenization methods** (needed for chunker):
 
 ```go
-func TestBatchEmbedding(t *testing.T) {
-    e := newTestEmbedder(t) // helper loads tiny GGUF test model or skips if not available
-    texts := []string{"contract clause A", "contract clause B", "contract clause C"}
-    embeddings, err := e.GenerateBatch(texts, 2) // batch size 2
-    require.NoError(t, err)
-    assert.Len(t, embeddings, 3)
-    for _, emb := range embeddings {
-        assert.Len(t, emb, 384)
+// Tokenize converts text to llama tokens
+func (e *Embedder) Tokenize(text string) ([]C.llama_token, error) {
+    ctext := C.CString(text)
+    defer C.free(unsafe.Pointer(ctext))
+    nTokens := C.llama_tokenize(e.vocab, ctext, C.int(len(text)), nil, 0, true, true)
+    if nTokens < 0 {
+        return nil, fmt.Errorf("tokenization failed")
     }
+    tokens := make([]C.llama_token, nTokens)
+    C.llama_tokenize(e.vocab, ctext, C.int(len(text)), &tokens[0], C.int(nTokens), true, true)
+    return tokens, nil
+}
+
+// TokensToText converts tokens back to string
+func (e *Embedder) TokensToText(tokens []C.llama_token) (string, error) {
+    var buf strings.Builder
+    for _, token := range tokens {
+        tmp := make([]byte, 128)
+        n := C.llama_token_to_piece(e.vocab, token, (*C.char)(unsafe.Pointer(&tmp[0])), C.int(len(tmp)), 1, C.bool(true))
+        if n > 0 {
+            buf.Write(tmp[:n])
+        }
+    }
+    return buf.String(), nil
 }
 ```
 
-**Step 2: Add GenerateBatch method (dynamic batch)**
+**Step 6: Add `GenerateBatch` method** (loop over `GenerateEmbedding`)
 
-```go
-// GenerateBatch processes texts in batches of up to batchSize
-func (e *Embedder) GenerateBatch(texts []string, batchSize int) ([][]float32, error) {
-    if batchSize <= 0 {
-        batchSize = 32
-    }
-    results := make([][]float32, len(texts))
-    for i := 0; i < len(texts); i += batchSize {
-        end := i + batchSize
-        if end > len(texts) {
-            end = len(texts)
-        }
-        batch := texts[i:end]
-        // For each text in batch, tokenize + decode separately (llama.cpp batch API requires padding)
-        // Simpler: loop (still faster due to context reuse)
-        for j, text := range batch {
-            emb, err := e.GenerateEmbedding(text)
-            if err != nil {
-                return nil, fmt.Errorf("batch item %d failed: %w", j, err)
-            }
-            results[i+j] = emb
-        }
-    }
-    return results, nil
-}
-```
-
-**Step 3: Add dynamic batch sizing based on memory**
-
-Add method `AdjustBatchSize()` that polls `runtime.MemStats` and reduces batch if `HeapAlloc > 300MB`.
-
-**Step 4: Run tests + commit**
+**Step 7: Run all tests → commit**
 
 ---
 
 ## Phase 2: FAISS-CPU Wrapper (CGo)
 
-### Task 2.1: Compile FAISS as static library and create wrapper
+*Already implemented in previous phases — no changes needed unless FAISS build paths require adjustment.* 
 
-**Files:**
-- Create: `internal/ai/minirag/vector/faiss_wrapper.go` (CGo)
-- Create: `internal/ai/minirag/vector/faiss_wrapper_test.go`
-- Create: `internal/ai/minirag/vector/faiss/CMakeLists.txt` (FAISS build config)
-- Create: `scripts/build_faiss.sh` (compile FAISS static lib)
-
-**Step 1: Write failing test — add and search vectors**
-
-```go
-func TestFAISSAddAndSearch(t *testing.T) {
-    idx := NewFAISSIndex(384)
-    defer idx.Close()
-    
-    vec := normalizeVector(randomVector(384, 42))
-    idx.Add(vec, 123) // ID=123
-    
-    results := idx.Search(vec, 1)
-    assert.Len(t, results, 1)
-    assert.Equal(t, 123, results[0].ID)
-    assert.InDelta(t, 1.0, results[0].Score, 1e-5) // self-match
-}
-```
-
-**Step 2: Write minimal CGo wrapper skeleton (compile-fail expected)**
-
-`faiss_wrapper.go`:
-```go
-package vector
-
-/*
-#cgo CFLAGS: -I../../faiss/c_api
-#cgo LDFLAGS: -L../../faiss/build -lfaiss
-#include <faiss/c_api.h>
-#include <stdlib.h>
-*/
-import "C"
-import (
-    "fmt"
-    "unsafe"
-)
-
-type FAISSIndex struct {
-    index C.faiss_index
-    dim   int
-}
-
-func NewFAISSIndex(dim int) *FAISSIndex {
-    var index C.faiss_index
-    var d C.size_t = C.size_t(dim)
-    C.faiss_index_factory(&index, d, C.CString("Flat"), C.FaissMetricType(0)) // INNER_PRODUCT
-    return &FAISSIndex{index: index, dim: dim}
-}
-
-func (f *FAISSIndex) Add(vec []float32, id int64) error {
-    // TODO: implement
-    return nil
-}
-
-func (f *FAISSIndex) Search(query []float32, k int) []SearchResult {
-    // TODO
-    return nil
-}
-
-func (f *FAISSIndex) Close() {
-    C.faiss_index_free(f.index)
-}
-```
-
-**Step 3: Build FAISS library**
-
-`scripts/build_faiss.sh`:
-```bash
-#!/usr/bin/env bash
-set -e
-cd internal/ai/minirag/vector/faiss
-git clone --depth 1 https://github.com/facebookresearch/faiss.git .
-mkdir -p build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF ..
-make -j$(nproc) faiss
-cp libfaiss.a ../../../../..  # or appropriate LDFLAGS path
-echo "FAISS built: $(pwd)/libfaiss.a"
-```
-
-**Step 4: Implement full Add/Search using FAISS C API**
-
-Implement `Add` (xb, xb_ids) and `Search` (xq, D, I) per FAISS C API:
-- `faiss_index_factory(&index, dim, "Flat", FAISS_METRIC_INNER_PRODUCT)`
-- `faiss_index_add_with_ids(index, d, xb, n, xb_ids)`
-- `faiss_index_search(index, d, xq, k, D, I)`
-
-**Step 5: Test search returns correct top-k by inner product (cosine since L2 normalized)**
-
-**Step 6: Commit wrapper + build script**
+Ensure `vector/faiss_wrapper.go` exists with `IndexFlatIP` + `Add` + `Search`.
 
 ---
 
 ## Phase 3: SQLite Metadata Store
 
-### Task 3.1: Define schema and CRUD operations
+*Already implemented. Ensure `storage/sqlite_store.go` has `GetMaxVectorID` method for Service.*
 
-**Files:**
-- Create: `internal/ai/minirag/storage/sqlite_store.go`
-- Create: `internal/ai/minirag/storage/sqlite_store_test.go`
-- Migration: `internal/db/migrations/YYYMMDDHHMMSS_create_minirag_tables.up.sql`
-
-**Step 1: Write test — store and retrieve chunk metadata**
-
+Add if missing:
 ```go
-func TestSQLiteChunkCRUD(t *testing.T) {
-    store := setupTestStore(t)
-    defer store.Close()
-    
-    meta := ChunkMeta{
-        ContractID:  1,
-        ChunkIndex:  0,
-        Content:     "Clausula de indemnizacion...",
-        PageNumber:  5,
-        ClauseType: "indemnizacion",
-        VectorID:   123,
-    }
-    err := store.AddChunk(meta)
-    require.NoError(t, err)
-    
-    retrieved, err := store.GetChunkByVectorID(123)
-    require.NoError(t, err)
-    assert.Equal(t, meta.Content, retrieved.Content)
+func (s *SQLiteStore) GetMaxVectorID() (int64, error) {
+    row := s.db.QueryRow("SELECT COALESCE(MAX(vector_id), 0) FROM minirag_chunks")
+    var max int64
+    err := row.Scan(&max)
+    return max, err
 }
 ```
-
-**Step 2: Create migration SQL**
-
-```sql
--- internal/db/migrations/20250502000000_create_minirag_tables.up.sql
-CREATE TABLE IF NOT EXISTS minirag_chunks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    contract_id INTEGER NOT NULL,
-    chunk_index INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    page_number INTEGER,
-    clause_type TEXT,
-    vector_id INTEGER NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_minirag_contract ON minirag_chunks(contract_id);
-CREATE INDEX IF NOT EXISTS idx_minirag_vector_id ON minirag_chunks(vector_id);
-CREATE INDEX IF NOT EXISTS idx_minirag_clause_type ON minirag_chunks(clause_type);
-```
-
-**Step 3: Implement sqlite_store.go using modernc.org/sqlite**
-
-```go
-package storage
-
-import (
-    "database/sql"
-    "time"
-    "modernc.org/sqlite"
-)
-
-type ChunkMeta struct {
-    ID          int64        `json:"id"`
-    ContractID  int64        `json:"contract_id"`
-    ChunkIndex  int          `json:"chunk_index"`
-    Content     string       `json:"content"`
-    PageNumber  *int         `json:"page_number,omitempty"`
-    ClauseType  string       `json:"clause_type,omitempty"`
-    VectorID    int64        `json:"vector_id"`
-    CreatedAt   time.Time    `json:"created_at"`
-}
-
-type SQLiteStore struct {
-    db *sql.DB
-}
-
-func NewSQLiteStore(path string) (*SQLiteStore, error) {
-    db, err := sql.Open("sqlite", path)
-    if err != nil {
-        return nil, err
-    }
-    // Run migrations
-    if err := runMigrations(db); err != nil {
-        return nil, err
-    }
-    return &SQLiteStore{db: db}, nil
-}
-
-func (s *SQLiteStore) AddChunk(meta ChunkMeta) error {
-    _, err := s.db.Exec(`
-        INSERT INTO minirag_chunks (contract_id, chunk_index, content, page_number, clause_type, vector_id)
-        VALUES (?, ?, ?, ?, ?, ?)`,
-        meta.ContractID, meta.ChunkIndex, meta.Content, meta.PageNumber, meta.ClauseType, meta.VectorID)
-    return err
-}
-
-func (s *SQLiteStore) GetChunkByVectorID(vectorID int64) (ChunkMeta, error) {
-    row := s.db.QueryRow(`
-        SELECT id, contract_id, chunk_index, content, page_number, clause_type, vector_id, created_at
-        FROM minirag_chunks WHERE vector_id = ?`, vectorID)
-    // scan...
-}
-```
-
-**Step 4: Add filter methods: `GetByContract`, `GetByClauseType`, `SearchByMetadata`**
-
-**Step 5: Run tests + commit**
 
 ---
 
 ## Phase 4: Token-Based Chunking
 
-### Task 4.1: Token chunker using llama tokenizer
-
-**Files:**
-- Create: `internal/ai/minirag/parser/token_chunker.go`
-- Modify: `internal/ai/minirag/parser.go` (replace character-based chunking)
-
-**Step 1: Write test — chunk 1000 tokens into 512+50 overlap chunks**
+### Task 4.1: Create `internal/ai/minirag/chunker.go` (in package minirag)
 
 ```go
-func TestTokenChunking(t *testing.T) {
-    // Need CGo llama context for tokenization
-    // Skip if llama not available
-    text := strings.Repeat("word ", 1000) // ~1000 tokens
-    chunks := TokenChunk(text, 512, 50)
-    assert.True(t, len(chunks) >= 2)
-    // Check overlap: last 50 tokens of chunk[0] appear at start of chunk[1]
+package minirag
+
+import (
+    "internal/ai/minirag/embedding"
+    "strings"
+)
+
+// TokenChunker splits text into token-based chunks with overlap.
+type TokenChunker struct {
+    embedder *embedding.Embedder
+    chunkSize int
+    overlap   int
 }
-```
 
-**Step 2: Implement TokenChunk using embedder's tokenizer**
+func NewTokenChunker(emb *embedding.Embedder, chunkSize, overlap int) *TokenChunker {
+    return &TokenChunker{embedder: emb, chunkSize: chunkSize, overlap: overlap}
+}
 
-Since tokenizer tied to llama model, either:
-- Pass `*embedding.Embedder` to chunker to call `tokenize()` (expose method)
-- Or replicate tokenization in chunker (requires llama vocab)
-
-Option: extend `cgo_embedder`:
-```go
-func (e *Embedder) Tokenize(text string) ([]C.llama_token, error)
-func (e *Embedder) TokensToText(tokens []C.llama_token) string
-```
-
-Then `TokenChunk`:
-```go
-func TokenChunk(text string, chunkSize, overlap int, embedder *embedding.Embedder) ([]Chunk, error) {
-    tokens, err := embedder.Tokenize(text)
-    if err != nil { return nil, err }
-    step := chunkSize - overlap
+// Chunk splits text into chunks of ~chunkSize tokens with overlap.
+func (tc *TokenChunker) Chunk(text string) ([]Chunk, error) {
+    tokens, err := tc.embedder.Tokenize(text)
+    if err != nil {
+        return nil, err
+    }
+    if len(tokens) <= tc.chunkSize {
+        content, _ := tc.embedder.TokensToText(tokens)
+        return []Chunk{{ID: 0, Text: content, Position: 0}}, nil
+    }
+    step := tc.chunkSize - tc.overlap
     var chunks []Chunk
     for i := 0; i < len(tokens); i += step {
-        end := i + chunkSize
+        end := i + tc.chunkSize
         if end > len(tokens) {
             end = len(tokens)
         }
         chunkTokens := tokens[i:end]
-        chunkText, _ := embedder.TokensToText(chunkTokens)
-        chunks = append(chunks, Chunk{Text: chunkText, TokenStart: i, TokenEnd: end})
+        chunkText, _ := tc.embedder.TokensToText(chunkTokens)
+        chunks = append(chunks, Chunk{
+            ID:       len(chunks),
+            Text:     chunkText,
+            Position: i,
+        })
     }
     return chunks, nil
 }
 ```
 
-**Step 3: Update `parser.ParseByArticles` to use token chunker for legal docs**
-
-Keep article/clause detection but base chunk boundaries on tokens not characters.
-
-**Step 4: Commit**
+**Update `indexer.go`** to use `NewTokenChunker` instead of `ParseByArticles`.
 
 ---
 
 ## Phase 5: Service Integration (Orchestrator)
 
-### Task 5.1: Create MiniRAG service tying parser → embedder → FAISS → SQLite
-
-**Files:**
-- Create: `internal/ai/minirag/service.go`
-- Create: `internal/ai/minirag/service_test.go`
-
-**Step 1: Write test — index contract → search query → results**
-
-```go
-func TestIndexAndSearch(t *testing.T) {
-    s := newTestService(t) // sets up embedder, faiss, sqlite with temp paths
-    defer s.Close()
-    
-    contract := &models.LegalDocument{
-        ID: 1, DocumentType: "acuerdo", Title: "Test Contract",
-        Content: "El proveedor indemnizará al cliente por daños...",
-        Jurisdiction: "AR", Language: "es",
-    }
-    err := s.IndexLegalDocument(contract)
-    require.NoError(t, err)
-    
-    results, err := s.SearchLegalDocuments("indemnizacion", nil, 5)
-    require.NoError(t, err)
-    assert.True(t, len(results) > 0)
-    assert.Contains(t, results[0].Content, "indemnizar")
-}
-```
-
-**Step 2: Implement Service struct**
+### Task 5.1: Update `internal/ai/minirag/service.go`
 
 ```go
 type Service struct {
     Embedder *embedding.Embedder
     VectorDB *vector.FAISSIndex
     Store    *storage.SQLiteStore
-    Parser   *parser.TokenParser
 }
 
-func NewService(modelPath, dbPath, vectorPath string) (*Service, error) {
-    emb, err := embedding.NewEmbedder()
+func NewService(modelPath, dbPath string) (*Service, error) {
+    useAdapter := os.Getenv("MINIRAG_ADAPTER") == "1"
+    emb, err := embedding.NewEmbedder(useAdapter)
     if err != nil { return nil, err }
     vdb, err := vector.NewFAISSIndex(384)
     if err != nil { return nil, err }
     store, err := storage.NewSQLiteStore(dbPath)
     if err != nil { return nil, err }
-    return &Service{
-        Embedder: emb, VectorDB: vdb, Store: store,
-        Parser: parser.NewTokenParser(emb, 512, 50),
-    }, nil
+    return &Service{Embedder: emb, VectorDB: vdb, Store: store}, nil
 }
 
 func (s *Service) IndexLegalDocument(doc *models.LegalDocument) error {
-    // 1. Chunk
-    chunks, err := s.Parser.ParseLegalDocument(doc.Content)
-    if err != nil { return err }
+    // Chunk using token chunker
+    chunker := NewTokenChunker(s.Embedder, 512, 50)
+    chunks, err := chunker.Chunk(doc.Content)
+    if err != nil {
+        return err
+    }
     
-    // 2. Batch embed
+    // Generate embeddings batch
     texts := make([]string, len(chunks))
     for i, ch := range chunks {
         texts[i] = ch.Text
     }
     embeddings, err := s.Embedder.GenerateBatch(texts, 32)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     
-    // 3. Add to FAISS + SQLite in transaction
+    // Get next vector ID
+    maxID, _ := s.Store.GetMaxVectorID()
+    startID := maxID + 1
+    
+    // Add to FAISS + SQLite
     for i, emb := range embeddings {
-        vectorID := generateUniqueVectorID() // e.g., atomic counter or docID*10000+i
+        vectorID := startID + int64(i)
         if err := s.VectorDB.Add(emb, vectorID); err != nil {
             return err
         }
         meta := storage.ChunkMeta{
-            ContractID: int64(doc.ID),
-            ChunkIndex: i,
-            Content:    chunks[i].Text,
-            ClauseType: chunks[i].ClauseType,
-            VectorID:   vectorID,
+            ContractID:  int64(doc.ID),
+            ChunkIndex:  i,
+            Content:     chunks[i].Text,
+            ClauseType:  "", // optional: extract from chunk
+            VectorID:    vectorID,
         }
         if err := s.Store.AddChunk(meta); err != nil {
             return err
@@ -754,29 +762,23 @@ func (s *Service) IndexLegalDocument(doc *models.LegalDocument) error {
     return nil
 }
 
-func (s *Service) SearchLegalDocuments(query string, filters map[string]interface{}, limit int) ([]vector.SearchResult, error) {
-    // 1. Embed query
+func (s *Service) SearchLegalDocuments(query string, limit int) ([]RAGSearchResult, error) {
     qEmb, err := s.Embedder.GenerateEmbedding(query)
-    if err != nil { return nil, err }
-    
-    // 2. FAISS search (k = limit * 2, then filter)
+    if err != nil {
+        return nil, err
+    }
     raw := s.VectorDB.Search(qEmb, limit*2)
     
-    // 3. Load metadata from SQLite for each result
-    var results []vector.SearchResult
+    var results []RAGSearchResult
     for _, r := range raw {
         meta, err := s.Store.GetChunkByVectorID(r.ID)
-        if err != nil { continue }
-        // Apply filters (jurisdiction, clause_type)
-        if filters != nil {
-            if jur, ok := filters["jurisdiction"].(string); ok && meta.ClauseType != jur {
-                continue
-            }
+        if err != nil {
+            continue
         }
-        results = append(results, vector.SearchResult{
+        results = append(results, RAGSearchResult{
             ID:      fmt.Sprintf("%d", meta.ID),
             Score:   r.Score,
-            Meta:    convertMeta(meta),
+            Meta:    meta,
             Content: meta.Content,
         })
         if len(results) >= limit {
@@ -785,168 +787,149 @@ func (s *Service) SearchLegalDocuments(query string, filters map[string]interfac
     }
     return results, nil
 }
-```
 
-**Step 3: RAG Response template function**
-
-```go
-func FormatRAGResponse(query string, results []vector.SearchResult) string {
-    var b strings.Builder
-    fmt.Fprintf(&b, "Consulta: %s\n\n", query)
-    fmt.Fprintf(&b, "Cláusulas relevantes:\n")
-    for i, r := range results {
-        fmt.Fprintf(&b, "%d. [score: %.2f] %s (contrato: %s, página: %s)\n",
-            i+1, r.Score, truncate(r.Content, 200), r.Meta.ExtraFields["contract_id"], r.Meta.ExtraFields["page"])
-    }
-    if len(results) == 0 {
-        fmt.Fprint(&b, "No se encontraron cláusulas relevantes.\n")
-    }
-    return b.String()
+func (s *Service) Close() error {
+    s.Store.Close()
+    s.Embedder.Close()
+    return nil
 }
 ```
-
-**Step 4: Run integration test → commit**
 
 ---
 
 ## Phase 6: Deletion & Cleanup
 
-### Task 6.1: Remove Ollama/LLM code paths
+**Verify removed files:**
+- `internal/ai/minirag/embeddings.go` — deleted
+- `internal/ai/minirag/local_client.go` — deleted
+- `internal/ai/minirag/cgo_llama.go` — deleted
+- `internal/ai/minirag/vector_db.go` — delete (FAISS replaces it)
+- Any imports of these packages in other files must be removed
 
-**Files:**
-- Delete: `internal/ai/minirag/embeddings.go` (Ollama client)
-- Delete: `internal/ai/minirag/local_client.go` (LLM generation modes)
-- Delete: `internal/ai/minirag/cgo_llama.go` (LLM Generate method)
-- Modify: `internal/ai/minirag/vector_db.go` → keep but deprecate (HNSW no longer primary). Or delete if FAISS fully replaces.
+**Search and replace:**
+```bash
+grep -r "minirag/embeddings" . --include="*.go" && echo "Found usage"
+grep -r "minirag/local_client" . --include="*.go" && echo "Found usage"
+grep -r "minirag/cgo_llama" . --include="*.go" && echo "Found usage"
+grep -r "minirag/vector_db" . --include="*.go" && echo "Found usage"
+```
 
-**Step:** Remove all Ollama HTTP client code and LLM Generate methods. Keep only embedding path.
-
-**Commit:** "refactor(minirag): remove Ollama and LLM generation dependencies"
+If any found, update those files to use new `embedding`, `vector`, `storage` packages.
 
 ---
 
-## Phase 7: Build & CI Integration
+## Phase 7: Build & CI Integration - COMPLETE
 
-### Task 7.1: Update CI to compile llama.cpp and FAISS before Go build
+**Build workflow** (`.github/workflows/build.yml`) already updated in previous steps to:
+- Build llama.cpp and FAISS
+- Set CGO_ENABLED=1
+- Build Go binary
 
-**Files:**
-- Modify: `.github/workflows/build.yml`
+**Additional workflows now added:**
+- `fetch-bge-model.yml` — manual model download
+- `train-adapter.yml` — manual adapter training
 
-**Step 1: Add FAISS and llama.cpp build steps**
-
-```yaml
-- name: Build llama.cpp
-  working-directory: internal/ai/minirag
-  run: |
-    git clone --depth 1 https://github.com/ggerganov/llama.cpp llama.cpp
-    cd llama.cpp && mkdir -p build && cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Release
-    make -j$(nproc)
-    cp libllama.a ../../../..  # or leave in place for LDFLAGS
-
-- name: Build FAISS
-  working-directory: internal/ai/minirag/vector/faiss
-  run: |
-    git clone --depth 1 https://github.com/facebookresearch/faiss .
-    mkdir -p build && cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF ..
-    make -j$(nproc) faiss
-    cp libfaiss.a ../../../../..  # adjust path
-
-- name: Set CGO env
-  run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
-```
-
-**Step 2: Ensure Go build uses CGO LDFLAGS**
-
-Update `internal/ai/minirag/embedding/cgo_embedder.go` and `vector/faiss_wrapper.go` with correct relative paths in `#cgo LDFLAGS`.
-
-**Step 3: Verify build**
-
-```bash
-CGO_ENABLED=1 go build ./...
-```
-
-**Step 4: Commit CI changes**
+No further changes needed.
 
 ---
 
 ## Phase 8: Final Testing & Documentation
 
-### Task 8.1: Integration test with real legal contract
+### Task 8.1: E2E test (update for BGE + adapter)
 
-**Files:**
-- Create: `internal/ai/minirag/testdata/sample_contract.txt`
-- Create: `internal/ai/minirag/e2e_test.go`
+`internal/ai/minirag/e2e_test.go`:
+```go
+func TestE2E(t *testing.T) {
+    os.Setenv("MINIRAG_ADAPTER", "1") // or "0" for baseline
+    svc := setupTestService(t) // NewService with temp DB
+    defer svc.Close()
+    
+    doc := &models.LegalDocument{
+        ID: 1, DocumentType: "acuerdo", Title: "Test",
+        Content: "El proveedor indemnizará al cliente por daños y perjuicios. " +
+                 "La información confidencial no será divulgada.",
+        Jurisdiction: "AR", Language: "es",
+    }
+    err := svc.IndexLegalDocument(doc)
+    require.NoError(t, err)
+    
+    results, err := svc.SearchLegalDocuments("indemnización", 5)
+    require.NoError(t, err)
+    require.True(t, len(results) > 0)
+    // Optionally assert score threshold
+}
+```
 
-**Step:** Index sample contract, run semantic queries in Spanish, verify results contain expected clauses.
+### Task 8.2: Update README.md (`internal/ai/minirag/README.md`)
 
-### Task 8.2: Update README with architecture and usage
-
-**Files:**
-- Update: `internal/ai/minirag/README.md`
-
-Content:
-- System architecture diagram
-- Build instructions (CGo + FAISS + llama.cpp)
-- Model conversion (one-time)
-- API usage: `service.IndexLegalDocument`, `service.SearchLegalDocuments`
-- Memory limits and tuning
-- RAG response format
-
-**Step: Commit documentation**
+Sections:
+- Overview (BGE + optional adapter)
+- Model files: `bge-small-en-v1.5.Q8_0.gguf` (89MB), `adapter_weights.bin` (576KB)
+- Build requirements (CGO, llama.cpp, FAISS)
+- How to fetch BGE model (manual workflow)
+- How to train adapter (manual workflow, prerequisites)
+- How to enable adapter (`MINIRAG_ADAPTER=1`)
+- Architecture diagram
+- API usage example
+- Memory tuning
+- Troubleshooting
 
 ---
 
 ## Phase 9: Cleanup & Validation
 
-### Task 9.1: Verify binary size < 100MB
+### Task 9.1: Verify binary size
 
 ```bash
-go build -o pacta-minirag cmd/pacta/main.go
+go build -o pacta-minirag ./cmd/pacta
 du -h pacta-minirag
-# Should be ~80-90MB (65MB model + 15MB code + libs)
+# Expect ~90MB (89MB GGUF + code + libs)
 ```
 
-### Task 9.2: Run 72h stability test (in background)
+### Task 9.2: Run tests
 
 ```bash
-nohup ./pacta-minirag --stress-test > stress.log 2>&1 &
-sleep 86400 && kill $!
-# Check for memory leaks, errors
+go test ./internal/ai/minirag/... -v
 ```
 
-### Task 9.3: Final commit with version tag
+### Task 9.3: Final commit and tag
 
 ```bash
 git add .
-git commit -m "feat(minirag): embedding-only RAG with embedded GGUF, FAISS, SQLite"
-git tag -a v0.3.0-minirag-embed -m "MiniRAG embedding-only refactor"
+git commit -m "feat(minirag): complete embedding-only RAG with BGE, FAISS, SQLite, and Spanish legal adapter
+- BGE-small-en-v1.5 GGUF embedded (89MB)
+- Linear adapter 384x384 for domain adaptation (576KB)
+- Adapter trained on existing contracts with synthetic queries
+- Activation via MINIRAG_ADAPTER=1
+- FAISS-CPU vector search, SQLite metadata
+- Token-based chunking with llama tokenizer
+- CI workflows for model fetch and adapter training"
+git tag -a v0.3.0-minirag-embed -m "MiniRAG embedding-only refactor with BGE and adapter"
 ```
 
 ---
 
 ## Implementation Order Summary
 
-**Order (no parallelism due to dependencies):**
-1. Model conversion (phase 0) → commit GGUF
-2. CGo embedder (phase 1) — depends on model file present
-3. FAISS wrapper (phase 2) — depends on FAISS build
-4. SQLite store (phase 3) — independent
-5. Token chunker (phase 4) — depends on embedder tokenize
-6. Service integration (phase 5) — depends on 1-4
-7. Deletion cleanup (phase 6)
-8. CI integration (phase 7)
-9. E2E tests + docs (phase 8)
-10. Validation (phase 9)
+**Order:**
+1. Fetch BGE model workflow (Phase 0) → PR → merge to main
+2. Implement/verify CGo embedder with adapter support (Phase 1)
+3. FAISS wrapper (Phase 2) — already done?
+4. SQLite store + GetMaxVectorID (Phase 3)
+5. Token chunker (Phase 4)
+6. Service integration (Phase 5)
+7. Train adapter workflow (Phase 0.5) → PR → merge
+8. Delete dead code (Phase 6)
+9. E2E tests + docs (Phase 8)
+10. Validation & tag (Phase 9)
 
-**Total estimated tasks:** ~30 subtasks (each 5-15 min) → ~8-12 hours developer time.
+**Total tasks:** ~25 subtasks.
 
 ---
 
 ## References
 
-- Plan de diseño: `docs/plans/2026-05-02-minirag-embedding-only-design.md`
-- llama.cpp C API: `llama.h` (in submodule)
+- Plan de diseño original: `docs/plans/2026-05-02-minirag-embedding-only-design.md`
+- llama.cpp C API: `llama.h`
 - FAISS C API: `faiss/c_api.h`
-- Sentence Transformers: `paraphrase-MiniLM-L3-v2` (384-dim)
+- BGE model: `BAAI/bge-small-en-v1.5` (HuggingFace)

@@ -1,0 +1,33 @@
+name: Fetch BGE Model
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, token: ${{ secrets.GITHUB_TOKEN }}}
+      - name: Download BGE GGUF
+        run: |
+          mkdir -p internal/ai/minirag/models
+          curl -L https://huggingface.co/TheBloke/bge-small-en-v1.5-GGUF/resolve/main/bge-small-en-v1.5.Q8_0.gguf -o internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Create temp branch and commit
+        run: |
+          BRANCH="model/bge-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git add internal/ai/minirag/models/bge-small-en-v1.5.Q8_0.gguf
+          git commit -m "chore(minirag): add BGE-small-en-v1.5 GGUF model"
+          git push origin HEAD
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "chore(minirag): add BGE embedding model"
+          body: "Adds `bge-small-en-v1.5.Q8_0.gguf` (89MB) for embedding inference."
+          branch: "model/bge-$(date +%Y%m%d-%H%M%S)"
+          base: main
+          labels: "chore, model"
