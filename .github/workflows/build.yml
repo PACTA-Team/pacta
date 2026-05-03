@@ -106,6 +106,15 @@ jobs:
            cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_SHARED_LIBS=OFF ..
            make -j$(nproc) faiss
 
+       - name: Download Qwen2.5-0.5B-Instruct GGUF model (cached)
+         run: |
+           mkdir -p internal/ai/minirag/models
+           if [ ! -f "internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf" ]; then
+             echo "Downloading Qwen2.5-0.5B-Instruct GGUF model..."
+             curl -L -o internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf \
+               https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
+           fi
+
        - name: Enable CGO
          run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
 

@@ -98,6 +98,28 @@ func (s *SQLiteStore) GetChunkByVectorID(vectorID int64) (ChunkMeta, error) {
 	return meta, nil
 }
 
+// GetMaxVectorID returns the highest vector_id currently in the chunks table.
+func (s *SQLiteStore) GetMaxVectorID() (int64, error) {
+	row := s.db.QueryRow("SELECT COALESCE(MAX(vector_id), 0) FROM minirag_chunks")
+	var max int64
+	err := row.Scan(&max)
+	return max, err
+}
+
+// CountChunks returns the total number of chunk records.
+func (s *SQLiteStore) CountChunks() (int, error) {
+	row := s.db.QueryRow("SELECT COUNT(*) FROM minirag_chunks")
+	var count int
+	err := row.Scan(&count)
+	return count, err
+}
+
+// DeleteChunksByContract removes all chunks belonging to a given contract.
+func (s *SQLiteStore) DeleteChunksByContract(contractID int64) error {
+	_, err := s.db.Exec("DELETE FROM minirag_chunks WHERE contract_id = ?", contractID)
+	return err
+}
+
 // GetChunksByContract returns all chunks for a given contract, ordered by chunk_index.
 func (s *SQLiteStore) GetChunksByContract(contractID int64) ([]ChunkMeta, error) {
 	rows, err := s.db.Query(`

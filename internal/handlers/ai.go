@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -144,12 +145,16 @@ func (h *Handler) getRAGConfig() (mode, localMode, localModel, embeddingModel, h
 	return mode, localMode, localModel, embeddingModel, hybridStrategy, hybridRerank, nil
 }
 
-// getOrCreateVectorDB gets or creates the vector database for the company
-func (h *Handler) getOrCreateVectorDB(companyID int) (*minirag.VectorDB, error) {
+// getOrCreateService gets or creates the MiniRAG service for the company.
+func (h *Handler) getOrCreateService(companyID int) (*minirag.Service, error) {
 	dataDir := h.DataDir
-	vectorPath := filepath.Join(dataDir, "rag_vectors", fmt.Sprintf("company_%d", companyID))
-	
-	return minirag.NewVectorDB(384, vectorPath)
+	serviceDir := filepath.Join(dataDir, "rag_vectors", fmt.Sprintf("company_%d", companyID))
+	// Ensure directory exists
+	if err := os.MkdirAll(serviceDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create rag directory: %w", err)
+	}
+	dbPath := filepath.Join(serviceDir, "minirag.db")
+	return minirag.NewService("", dbPath)
 }
 
 // HandleAI is the main router for AI endpoints
@@ -515,17 +520,17 @@ func (h *Handler) HandleRAGLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// Get vector DB
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	// Get RAG service
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		log.Printf("[RAG Local] Failed to create vector DB: %v", err)
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		log.Printf("[RAG Local] Failed to create service: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize RAG service")
 		return
 	}
-	
-	// Create embedding client and indexer
-	embedder := minirag.NewEmbeddingClient("", "")
-	indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
+	defer svc.Close()
+
+	// Create indexer using service
+	indexer := minirag.NewIndexer(h.Queries, svc)
 
 	// Search for similar documents
 	results, err := indexer.Search(req.Query, req.K)
@@ -597,17 +602,19 @@ func (h *Handler) HandleRAGHybrid(w http.ResponseWriter, r *http.Request) {
 		hybridStrategy = req.Strategy
 	}
 	
-	// Get vector DB
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	// Get RAG service
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		log.Printf("[RAG Hybrid] Failed to create vector DB: %v", err)
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		log.Printf("[RAG Hybrid] Failed to create service: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize RAG service")
 		return
 	}
-	
+	defer svc.Close()
+
 	// Create orchestrator
 	orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
-	orchestrator.VectorDB = vectorDB
+	orchestrator.Service = svc
+	orchestrator.Queries = h.Queries
 	orchestrator.HybridRerank = hybridRerank
 	
 	// Set external LLM config if needed
@@ -654,20 +661,18 @@ func (h *Handler) HandleRAGIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// Get vector DB
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	// Get RAG service
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		log.Printf("[RAG Index] Failed to create vector DB: %v", err)
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		log.Printf("[RAG Index] Failed to create service: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize RAG service")
 		return
 	}
-	
-	// Create embedding client
-	embedder := minirag.NewEmbeddingClient("", "")
+	defer svc.Close()
 
 	// Create indexer
-	indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
-	
+	indexer := minirag.NewIndexer(h.Queries, svc)
+
 	// Index all contracts
 	go func() {
 		count, err := indexer.IndexAllContracts()
@@ -677,7 +682,7 @@ func (h *Handler) HandleRAGIndex(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[RAG Index] Successfully indexed %d contracts", count)
 		}
 	}()
-	
+
 	h.success(w, http.StatusOK, map[string]string{
 		"status":  "started",
 		"message": "Indexing started in background",
@@ -700,25 +705,32 @@ func (h *Handler) HandleRAGStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// Get vector DB
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	// Get RAG service
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		log.Printf("[RAG Status] Failed to create vector DB: %v", err)
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		log.Printf("[RAG Status] Failed to create service: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize RAG service")
 		return
 	}
-	
+	defer svc.Close()
+
 	// Create orchestrator for health check
 	orchestrator := hybrid.NewOrchestrator(mode, localMode, hybridStrategy, localModel, embeddingModel)
-	orchestrator.VectorDB = vectorDB
-	
+	orchestrator.Service = svc
+	orchestrator.Queries = h.Queries
 	// Get AI config for external status
 	provider, apiKey, _, _, _ := h.getAIConfig()
 	orchestrator.ExternalLLM = ai.LLMProvider(provider)
 	orchestrator.ExternalKey = apiKey
-	
+
 	health := orchestrator.CheckHealth()
-	
+
+	// Get indexed document count
+	count, err := svc.Count()
+	if err != nil {
+		count = 0
+	}
+
 	h.success(w, http.StatusOK, map[string]interface{}{
 		"mode":              mode,
 		"local_model":       localModel,
@@ -726,7 +738,7 @@ func (h *Handler) HandleRAGStatus(w http.ResponseWriter, r *http.Request) {
 		"hybrid_strategy":   hybridStrategy,
 		"hybrid_rerank":     hybridRerank,
 		"health":            health,
-		"indexed_documents": vectorDB.Count(),
+		"indexed_documents": count,
 		"ai_configured":     h.isAIConfigured(),
 	})
 }
@@ -1001,17 +1013,12 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 
 	// Index the document asynchronously
 	go func(doc db.LegalDocumentRow) {
-		// Get vector DB
-		vectorDB, err := h.getOrCreateVectorDB(companyID)
+		svc, err := h.getOrCreateService(companyID)
 		if err != nil {
-			log.Printf("[Legal Index] Failed to get vector DB: %v", err)
+			log.Printf("[Legal Index] Failed to get service: %v", err)
 			return
 		}
-
-		// Create embedder and indexer
-		embedder := minirag.NewEmbeddingClient("", "")
-		indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
-
+		defer svc.Close()
 		// Build models.LegalDocument using stored doc and extracted content
 		legalDoc := &models.LegalDocument{
 			ID:            doc.ID,
@@ -1029,8 +1036,8 @@ func (h *Handler) HandleUploadLegalDocument(w http.ResponseWriter, r *http.Reque
 			CreatedAt:     doc.CreatedAt,
 			UpdatedAt:     doc.UpdatedAt,
 		}
-
-		// Index the document (chunking, embedding, storing)
+		// Create indexer and index the document
+		indexer := minirag.NewIndexer(h.Queries, svc)
 		if err := indexer.IndexLegalDocument(legalDoc); err != nil {
 			log.Printf("[Legal Index] Failed to index document %d: %v", doc.ID, err)
 		} else {
@@ -1089,22 +1096,20 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 		userID = user.ID
 	}
 
-	// Get company ID for vector DB
+	// Get company ID for RAG service
 	companyID := h.GetCompanyID(r)
 	if companyID == 0 {
 		companyID = 1 // default
 	}
 
-	// Get or create vector DB
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	// Get RAG service
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		log.Printf("[Legal Chat] Failed to get vector DB: %v", err)
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		log.Printf("[Legal Chat] Failed to get service: %v", err)
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize RAG service")
 		return
 	}
-
-	// Create embedder for RAG
-	embedder := minirag.NewEmbeddingClient("", "")
+	defer svc.Close()
 
 	// Determine LLM client based on RAG configuration
 	llmClient := h.LLMClient
@@ -1133,19 +1138,19 @@ func (h *Handler) HandleLegalChat(w http.ResponseWriter, r *http.Request) {
 			provider, apiKey, model, endpoint, err := h.getAIConfig()
 			if err != nil {
 				log.Printf("[Legal Chat] Failed to get AI config: %v", err)
-			// Fallback: return a simple response
-			h.success(w, http.StatusOK, map[string]interface{}{
-				"session_id": req.SessionID,
-				"answer":      "Respuesta de experto legal no disponible (sin configuración de IA).",
-			})
-			return
+				// Fallback: return a simple response
+				h.success(w, http.StatusOK, map[string]interface{}{
+					"session_id": req.SessionID,
+					"answer":      "Respuesta de experto legal no disponible (sin configuración de IA).",
+				})
+				return
 			}
 			llmClient = ai.NewLLMClient(ai.LLMProvider(provider), apiKey, model, endpoint)
 		}
 	}
 
 	// Create chat service with dependencies
-	chatSvc := legal.NewChatService(h.Queries, vectorDB, embedder, llmClient)
+	chatSvc := legal.NewChatService(h.Queries, svc, llmClient)
 
 	// Process message
 	resp, err := chatSvc.ProcessMessage(ctx, legal.ChatMessage{
@@ -1313,19 +1318,17 @@ func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Requ
 		companyID = 1 // default company
 	}
 
-	// Get or create vector DB for this company
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	// Get RAG service
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "Failed to initialize vector database")
+		h.Error(w, http.StatusInternalServerError, "Failed to initialize RAG service")
 		return
 	}
+	defer svc.Close()
 
-	// Delete existing chunks for this document from the vector DB
-	for i := 0; i < docRow.ChunkCount; i++ {
-		chunkID := fmt.Sprintf("legal_%d_chunk_%d", id, i)
-		if err := vectorDB.DeleteDocument(chunkID); err != nil {
-			log.Printf("[Reindex] warning: failed to delete chunk %s: %v", chunkID, err)
-		}
+	// Delete existing chunks for this document from the store
+	if err := svc.DeleteDocumentChunks(int64(id)); err != nil {
+		log.Printf("[Reindex] warning: failed to delete chunks: %v", err)
 	}
 
 	// Convert to models.LegalDocument for indexing
@@ -1346,11 +1349,8 @@ func (h *Handler) HandleReindexLegalDocument(w http.ResponseWriter, r *http.Requ
 		UpdatedAt:     docRow.UpdatedAt,
 	}
 
-	// Create embedder and indexer
-	embedder := minirag.NewEmbeddingClient("", "")
-	indexer := minirag.NewIndexer(h.Queries, vectorDB, embedder)
-
-	// Re-index the document
+	// Re-index the document using indexer (which updates legal_documents metadata)
+	indexer := minirag.NewIndexer(h.Queries, svc)
 	if err := indexer.IndexLegalDocument(legalDoc); err != nil {
 		log.Printf("[Reindex] Failed to index document %d: %v", id, err)
 		h.Error(w, http.StatusInternalServerError, "Indexing failed: "+err.Error())
@@ -1389,22 +1389,18 @@ func (h *Handler) HandleDeleteLegalDocument(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Get company ID for vector DB
+	// Get RAG service to delete chunks
 	companyID := h.GetCompanyID(r)
 	if companyID == 0 {
 		companyID = 1
 	}
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		// Log but don't fail — document is already soft-deleted
-		log.Printf("[DeleteLegalDoc] warning: failed to get vector DB for company %d: %v", companyID, err)
+		log.Printf("[DeleteLegalDoc] warning: failed to get service: %v", err)
 	} else {
-		// Delete all chunks for this document from the vector DB
-		for i := 0; i < docRow.ChunkCount; i++ {
-			chunkID := fmt.Sprintf("legal_%d_chunk_%d", id, i)
-			if err := vectorDB.DeleteDocument(chunkID); err != nil {
-				log.Printf("[DeleteLegalDoc] warning: failed to delete chunk %s: %v", chunkID, err)
-			}
+		defer svc.Close()
+		if err := svc.DeleteDocumentChunks(int64(id)); err != nil {
+			log.Printf("[DeleteLegalDoc] warning: %v", err)
 		}
 	}
 
@@ -1423,43 +1419,47 @@ func (h *Handler) HandleSuggestClauses(w http.ResponseWriter, r *http.Request) {
 	if companyID == 0 {
 		companyID = 1 // default
 	}
-	vectorDB, err := h.getOrCreateVectorDB(companyID)
+	svc, err := h.getOrCreateService(companyID)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "Failed to get vector DB")
+		h.Error(w, http.StatusInternalServerError, "Failed to get RAG service")
 		return
 	}
+	defer svc.Close()
 
-	embedder := minirag.NewEmbeddingClient("", "")
-	embedding, err := embedder.GenerateEmbedding(contractType)
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "Failed to generate embedding for query")
-		return
-	}
-
-	// Filter for clause model documents
-	filter := map[string]interface{}{
+	// Search using service with filter for clause models and Cuban jurisdiction
+	results, err := svc.SearchLegalDocuments(contractType, map[string]interface{}{
 		"type":         "modelo_contrato",
 		"jurisdiction": "Cuba",
-	}
-	results, err := vectorDB.SearchLegalDocuments(embedding, filter, 5)
+	}, 5)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "Search failed")
 		return
 	}
 
+	// Convert to suggestions, enriching with contract metadata
 	type Suggestion struct {
 		ID    int     `json:"id"`
 		Title string  `json:"title"`
 		Score float32 `json:"score,omitempty"`
 	}
 	suggestions := make([]Suggestion, 0, len(results))
-	for _, res := range results {
-		var docID int
-		fmt.Sscanf(res.Meta.ExtraFields["document_id"], "%d", &docID)
+	contractCache := make(map[int64]db.GetContractForRAGRow)
+	ctx := r.Context()
+	for _, r := range results {
+		meta := r.Meta
+		row, ok := contractCache[meta.ContractID]
+		if !ok {
+			row, err = h.Queries.GetContractForRAG(ctx, meta.ContractID)
+			if err != nil {
+				// Skip if contract not found
+				continue
+			}
+			contractCache[meta.ContractID] = row
+		}
 		suggestions = append(suggestions, Suggestion{
-			ID:    docID,
-			Title: res.Meta.Title,
-			Score: res.Score,
+			ID:    int(meta.ContractID),
+			Title: row.Title,
+			Score: r.Score,
 		})
 	}
 

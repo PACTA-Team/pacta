@@ -15,10 +15,9 @@ import (
 
 // ChatService maneja el chat con el experto legal
 type ChatService struct {
-	Queries   *db.Queries
-	vectorDB  *minirag.VectorDB
-	embedder *minirag.EmbeddingClient
-	llm       ai.LLM
+	Queries *db.Queries
+	Service *minirag.Service
+	llm     ai.LLM
 }
 
 // ChatMessage representa un mensaje del usuario
@@ -30,9 +29,9 @@ type ChatMessage struct {
 
 // ChatResponse es la respuesta del servicio
 type ChatResponse struct {
-	Answer      string
-	Sources     []SourceRef
-	ContextUsed bool
+	Answer      string     `json:"answer"`
+	Sources     []SourceRef `json:"sources"`
+	ContextUsed bool       `json:"context_used"`
 }
 
 // SourceRef es una fuente citada en la respuesta
@@ -45,13 +44,12 @@ type SourceRef struct {
 	ContentSnippet string  `json:"content_snippet,omitempty"`
 }
 
-// NewChatService crea un nuevo servicio de chat legal usando sqlc Queries
-func NewChatService(queries *db.Queries, vectorDB *minirag.VectorDB, embedder *minirag.EmbeddingClient, llm ai.LLM) *ChatService {
+// NewChatService crea un nuevo servicio de chat legal usando sqlc Queries.
+func NewChatService(queries *db.Queries, svc *minirag.Service, llm ai.LLM) *ChatService {
 	return &ChatService{
-		Queries:   queries,
-		vectorDB:  vectorDB,
-		embedder: embedder,
-		llm:      llm,
+		Queries: queries,
+		Service: svc,
+		llm:     llm,
 	}
 }
 
@@ -66,12 +64,12 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 	metadataJSON, _ := json.Marshal(metadata)
 
 	_, err := s.Queries.CreateLegalChatMessage(ctx, db.CreateLegalChatMessageParams{
-		UserID:      int64(msg.UserID),
-		SessionID:   msg.SessionID,
-		MessageType: "user",
-		Content:     msg.Content,
-		ContextDocs: string(contextJSON),
-		Metadata:    string(metadataJSON),
+		UserID:       int64(msg.UserID),
+		SessionID:    msg.SessionID,
+		MessageType:  "user",
+		Content:      msg.Content,
+		ContextDocs:  string(contextJSON),
+		Metadata:     string(metadataJSON),
 	})
 	if err != nil {
 		return ChatResponse{}, fmt.Errorf("guardar mensaje usuario: %w", err)
@@ -99,7 +97,6 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 				fmt.Fprintf(&sb, "  %s\n", doc.ChunkTitle)
 			}
 			if doc.ContentSnippet != "" {
-				// Truncate for safety
 				snippet := doc.ContentSnippet
 				if len(snippet) > 500 {
 					snippet = snippet[:500] + "..."
@@ -127,12 +124,12 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 	metadataJSON, _ = json.Marshal(metadata)
 
 	_, err = s.Queries.CreateLegalChatMessage(ctx, db.CreateLegalChatMessageParams{
-		UserID:      int64(msg.UserID),
-		SessionID:   msg.SessionID,
-		MessageType: "assistant",
-		Content:     answer,
-		ContextDocs: string(contextJSON),
-		Metadata:    string(metadataJSON),
+		UserID:       int64(msg.UserID),
+		SessionID:    msg.SessionID,
+		MessageType:  "assistant",
+		Content:      answer,
+		ContextDocs:  string(contextJSON),
+		Metadata:     string(metadataJSON),
 	})
 	if err != nil {
 		fmt.Printf("[WARN] No se pudo guardar mensaje asistente: %v\n", err)
@@ -147,53 +144,42 @@ func (s *ChatService) ProcessMessage(ctx context.Context, msg ChatMessage) (Chat
 
 // searchContext busca documentos legales relevantes para la consulta usando RAG
 func (s *ChatService) searchContext(ctx context.Context, query string, limit int) ([]SourceRef, error) {
-	if s.vectorDB == nil || s.embedder == nil {
+	if s.Service == nil {
 		return []SourceRef{}, nil
 	}
-
-	// Generar embedding de la consulta
-	embedding, err := s.embedder.GenerateEmbedding(query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate embedding: %w", err)
-	}
-
-	// Buscar en vector DB con filtro jurisdiction=Cuba
-	filter := map[string]interface{}{
+	// Search with jurisdiction filter for Cuba
+	results, err := s.Service.SearchLegalDocuments(query, map[string]interface{}{
 		"jurisdiction": "Cuba",
-	}
-	results, err := s.vectorDB.SearchLegalDocuments(embedding, filter, limit)
+	}, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search vector DB: %w", err)
 	}
-
-	// Mapear a SourceRef
+	// Convert to SourceRef, enriching with contract metadata
 	sources := make([]SourceRef, 0, len(results))
+	contractCache := make(map[int64]db.GetContractForRAGRow)
 	for _, r := range results {
-		// Extraer document_id de metadata ExtraFields
-		var docID int
-		if idStr, ok := r.Meta.ExtraFields["document_id"]; ok {
-			fmt.Sscanf(idStr, "%d", &docID)
+		meta := r.Meta
+		row, ok := contractCache[meta.ContractID]
+		if !ok {
+			row, err = s.Queries.GetContractForRAG(ctx, meta.ContractID)
+			if err != nil {
+				continue
+			}
+			contractCache[meta.ContractID] = row
 		}
-		// Extraer chunk_title de metadata ExtraFields
-		chunkTitle := ""
-		if title, ok := r.Meta.ExtraFields["chunk_title"]; ok {
-			chunkTitle = title
-		}
-		// Truncar contenido a máximo 500 caracteres
-		snippet := r.Content
+		snippet := meta.Content
 		if len(snippet) > 500 {
 			snippet = snippet[:500] + "..."
 		}
 		sources = append(sources, SourceRef{
-			DocumentID:     docID,
-			DocumentType:   r.Meta.Type,
-			Title:          r.Meta.Title,
-			ChunkTitle:     chunkTitle,
+			DocumentID:     int(meta.ContractID),
+			DocumentType:   row.Type,
+			Title:          row.Title,
+			ChunkTitle:     "", // not stored
 			Relevance:      r.Score,
 			ContentSnippet: snippet,
 		})
 	}
-
 	return sources, nil
 }
 
