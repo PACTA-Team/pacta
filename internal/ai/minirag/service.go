@@ -53,21 +53,6 @@ func NewService(modelPath, dbPath string) (*Service, error) {
 		Store:    store,
 	}, nil
 }
-	vdb, err := vector.NewFAISSIndex(384)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create FAISS index: %w", err)
-	}
-	store, err := storage.NewSQLiteStore(dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create SQLite store: %w", err)
-	}
-	return &Service{
-		Embedder: emb,
-		VectorDB: vdb,
-		Store:    store,
-	}, nil
-}
-
 // IndexLegalDocument chunks, embeds, and indexes a legal document.
 func (s *Service) IndexLegalDocument(doc *LegalDocument) error {
 	// 1. Chunk the document by tokens
