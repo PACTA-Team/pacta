@@ -1,51 +1,64 @@
-name: Train Adapter
+name: Trainer
+
 on:
   workflow_dispatch:
     inputs:
       epochs:
-        description: 'Training epochs'
+        description: "Training epochs"
         required: false
-        default: '3'
+        default: "3"
       batch:
-        description: 'Batch size'
+        description: "Batch size"
         required: false
-        default: '32'
+        default: "32"
 
 jobs:
   train:
     runs-on: ubuntu-latest-24.04
     timeout-minutes: 360
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 0, token: ${{ secrets.GITHUB_TOKEN }}}
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup Python
         uses: actions/setup-python@v5
-        with: {python-version: '3.13'}
+        with:
+          python-version: "3.13"
+
       - name: Install dependencies
         run: |
           pip install --upgrade uv
           uv pip install sentence-transformers torch
+
       - name: Prepare DB
         run: |
-          # Use existing DB from repo or fail if not present
           if [ ! -f "data/minirag.db" ]; then
             echo "ERROR: Database not found at data/minirag.db"
             echo "Make sure contracts are indexed and minirag_chunks table exists."
             exit 1
           fi
           cp data/minirag.db ./minirag.db
+
       - name: Train adapter
         run: |
           mkdir -p models
           python scripts/train_adapter.py --db ./minirag.db --output-dir models --epochs ${{ inputs.epochs }} --batch ${{ inputs.batch }}
+
       - name: Verify adapter file
         run: |
           ls -lh models/adapter_weights.bin
           test -s models/adapter_weights.bin
+
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Create temp branch and commit
         run: |
           BRANCH="adapter/trained-$(date +%Y%m%d-%H%M%S)"
@@ -53,6 +66,7 @@ jobs:
           git add models/adapter_weights.bin models/adapter_metadata.json
           git commit -m "feat(minirag): add trained linear adapter for Spanish legal domain"
           git push origin HEAD
+
       - name: Create PR
         uses: peter-evans/create-pull-request@v5
         with:
