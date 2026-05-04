@@ -2,9 +2,10 @@ package auth
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"time"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 type Session struct {
@@ -23,7 +24,7 @@ func generateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func CreateSession(db *sql.DB, userID int, companyID int) (*Session, error) {
+func CreateSession(queries *db.Queries, userID int, companyID int) (*Session, error) {
 	token, err := generateToken()
 	if err != nil {
 		return nil, err
@@ -32,40 +33,43 @@ func CreateSession(db *sql.DB, userID int, companyID int) (*Session, error) {
 	lastActivity := time.Now()
 
 	// Delete existing sessions for this user before creating new one (prevents session fixation)
-	_, err = db.Exec("DELETE FROM sessions WHERE user_id = ?", userID)
-	if err != nil {
-		return nil, err
-	}
+	_ = queries.DeleteSessionByUserID(context.Background(), int64(userID))
 
-	_, err = db.Exec(
-		"INSERT INTO sessions (token, user_id, company_id, expires_at, last_activity) VALUES (?, ?, ?, ?, ?)",
-		token, userID, companyID, expiresAt, lastActivity,
-	)
+	_, err = queries.CreateSession(context.Background(), db.CreateSessionParams{
+		Token:        token,
+		UserID:      int64(userID),
+		CompanyID:   int64(companyID),
+		ExpiresAt:   expiresAt,
+		LastActivity: lastActivity,
+	})
 	if err != nil {
 		return nil, err
 	}
 	return &Session{Token: token, UserID: userID, CompanyID: companyID, ExpiresAt: expiresAt}, nil
 }
 
-func GetSession(db *sql.DB, token string) (*Session, error) {
-	var s Session
-	err := db.QueryRow(
-		"SELECT token, user_id, company_id, expires_at FROM sessions WHERE token = ? AND expires_at > ?",
-		token, time.Now(),
-	).Scan(&s.Token, &s.UserID, &s.CompanyID, &s.ExpiresAt)
+func GetSession(queries *db.Queries, token string) (*Session, error) {
+	row, err := queries.GetSessionByToken(context.Background(), token)
 	if err != nil {
 		return nil, err
 	}
-	return &s, nil
+	if row.ExpiresAt.Before(time.Now()) {
+		return nil, fmt.Errorf("session expired")
+	}
+	return &Session{
+		Token:     row.Token,
+		UserID:    int(row.UserID),
+		CompanyID: int(row.CompanyID),
+		ExpiresAt: row.ExpiresAt,
+	}, nil
 }
 
-func DeleteSession(db *sql.DB, token string) error {
-	_, err := db.Exec("DELETE FROM sessions WHERE token = ?", token)
-	return err
+func DeleteSession(queries *db.Queries, token string) error {
+	return queries.DeleteSession(context.Background(), token)
 }
 
-func GetUserID(db *sql.DB, token string) (int, error) {
-	s, err := GetSession(db, token)
+func GetUserID(queries *db.Queries, token string) (int, error) {
+	s, err := GetSession(queries, token)
 	if err != nil {
 		return 0, err
 	}

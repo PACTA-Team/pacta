@@ -18,6 +18,8 @@ import { ClientInlineModal } from '@/components/modals/ClientInlineModal';
 import { SupplierInlineModal } from '@/components/modals/SupplierInlineModal';
 import { SignerInlineModal } from '@/components/modals/SignerInlineModal';
 import { upload } from '@/lib/upload';
+import { useContractValidation } from '@/hooks/useContractValidation';
+import { ValidationModal } from '@/components/legal/ValidationModal';
 import logger from '@/lib/logger';
 
 interface ContractFormWrapperProps {
@@ -39,6 +41,10 @@ interface ContractFormWrapperProps {
  */
 export default function ContractFormWrapper({ contract, aiDraft, onSubmit, onCancel }: ContractFormWrapperProps) {
   const { t } = useTranslation('contracts');
+
+  // ─── Legal Validation ───
+  const { result: validationResult, loading: validating, validate, clearResult: clearValidation } = useContractValidation();
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   // ─── Global State ───
   const { ownCompanies, selectedOwnCompany, setSelectedOwnCompany, loading: loadingCompanies } = useOwnCompanies();
@@ -166,8 +172,23 @@ export default function ContractFormWrapper({ contract, aiDraft, onSubmit, onCan
      }
    }, [aiDraft]);
 
-   // ─── Handlers ───
-   const handleCompanyChange = (value: string) => {
+    // ─── Handlers ───
+    const handleLegalValidation = async () => {
+      const contractText = [
+        `Número: ${formDataRef.current.contract_number || ''}`,
+        `Título: ${formDataRef.current.title || ''}`,
+        `Monto: ${formDataRef.current.amount || ''}`,
+        `Tipo: ${formDataRef.current.type || ''}`,
+        `Descripción: ${formDataRef.current.description || ''}`,
+        `Objeto: ${formDataRef.current.object || ''}`,
+      ].join('\n');
+
+      const contractType = formDataRef.current.type as string;
+      await validate(contractText, contractType);
+      setShowValidationModal(true);
+    };
+
+    const handleCompanyChange = (value: string) => {
       const company = ownCompanies.find(c => c.id === parseInt(value));
       if (company) {
         setSelectedOwnCompany(company);
@@ -455,15 +476,23 @@ export default function ContractFormWrapper({ contract, aiDraft, onSubmit, onCan
               />
           )}
 
-           {/* Action Buttons */}
-           <div className="flex gap-2 justify-end pt-4">
-             <Button type="button" variant="outline" onClick={onCancel}>
-               Cancelar
-             </Button>
-             <Button type="submit" form="contract-form" disabled={isSubmitting}>
-               {isSubmitting ? 'Saving...' : (contract ? 'Actualizar Contrato' : 'Crear Contrato')}
-             </Button>
-           </div>
+            {/* Action Buttons */}
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleLegalValidation}
+                disabled={validating}
+              >
+                {validating ? 'Validando...' : '🔍 Validar Legal'}
+              </Button>
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancelar
+              </Button>
+              <Button type="submit" form="contract-form" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : (contract ? 'Actualizar Contrato' : 'Crear Contrato')}
+              </Button>
+            </div>
         </form>
 
         {/* Modals */}
@@ -521,6 +550,14 @@ export default function ContractFormWrapper({ contract, aiDraft, onSubmit, onCan
             }}
           />
         )}
+
+        {/* Validation Modal */}
+        <ValidationModal
+          open={showValidationModal}
+          onOpenChange={setShowValidationModal}
+          result={validationResult}
+          loading={validating}
+        />
       </CardContent>
     </Card>
   );

@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+// LLM is the minimal interface required for language model generation.
+type LLM interface {
+	Generate(ctx context.Context, prompt string, context string) (string, error)
+}
+
 // LLMClient handles communication with LLM providers
 type LLMClient struct {
 	Provider   LLMProvider
@@ -139,22 +144,18 @@ func (c *LLMClient) callOpenAI(ctx context.Context, prompt, context string) (str
 }
 
 func (c *LLMClient) callGroq(ctx context.Context, prompt, context string) (string, error) {
-	// Groq uses OpenAI-compatible API
 	return c.callOpenAI(ctx, prompt, context)
 }
 
 func (c *LLMClient) callAnthropic(ctx context.Context, prompt, context string) (string, error) {
-	// Anthropic uses different API format
 	return "", fmt.Errorf("anthropic not yet implemented")
 }
 
 func (c *LLMClient) callOpenRouter(ctx context.Context, prompt, context string) (string, error) {
-	// OpenRouter uses OpenAI-compatible API
 	return c.callOpenAI(ctx, prompt, context)
 }
 
 func (c *LLMClient) callCustom(ctx context.Context, prompt, context string) (string, error) {
-	// Custom endpoint - assume OpenAI-compatible
 	return c.callOpenAI(ctx, prompt, context)
 }
 

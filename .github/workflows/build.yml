@@ -9,8 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-go@v6
         with:
@@ -37,11 +43,85 @@ jobs:
       - name: Tidy
         run: go mod tidy
 
-      - name: Build
-        run: go build ./...
+      - name: Install sqlc
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
+
+      - name: Generate sqlc queries
+        run: |
+          cd internal/db
+          sqlc generate
+          go fmt ./...
+
+      - name: Auto-commit sqlc-generated changes
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet internal/db/; then
+            git add internal/db/
+            git commit -m "ci(sqlc): auto-generate queries"
+            # Determine target branch for push
+            if [ -n "$HEAD_REF" ]; then
+              TARGET_BRANCH="$HEAD_REF"
+            else
+              TARGET_BRANCH="$REF_NAME"
+            fi
+            echo "Pushing to branch: $TARGET_BRANCH"
+            git push --force-with-lease origin HEAD:$TARGET_BRANCH
+            echo "✅ Committed and pushed sqlc-generated changes"
+          else
+            echo "✅ No sqlc-generated changes to commit"
+          fi
+
+      - name: Clone llama.cpp
+        run: |
+          if [ ! -d "internal/ai/minirag/llama.cpp/.git" ]; then
+            rm -rf internal/ai/minirag/llama.cpp
+            git clone --depth 1 https://github.com/ggerganov/llama.cpp.git internal/ai/minirag/llama.cpp
+          fi
+
+      - name: Cache llama.cpp build
+        uses: actions/cache@v4
+        with:
+          path: internal/ai/minirag/llama.cpp/build
+          key: ${{ runner.os }}-llama-cpp-${{ hashFiles('internal/ai/minirag/llama.cpp/**') }}
+          restore-keys: |
+            ${{ runner.os }}-llama-cpp-
+
+      - name: Build llama.cpp
+        run: |
+          cd internal/ai/minirag/llama.cpp
+          mkdir -p build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+          make -j$(nproc)
+
+      - name: Run MiniRAG tests
+        env:
+          CGO_ENABLED: 1
+        run: go test ./internal/ai/minirag/... -v -count=1 -timeout=10m
+
+      - name: Build with CGO (embedded BGE)
+        run: |
+          export CGO_ENABLED=1
+          export CGO_CFLAGS="-I$(pwd)/internal/ai/minirag/llama.cpp/include \
+                             -I$(pwd)/internal/ai/minirag/llama.cpp/ggml/include"
+          export CGO_LDFLAGS="-L$(pwd)/internal/ai/minirag/llama.cpp/build \
+                             -lllama -lggml -lggml-base -lm -lstdc++ -lpthread"
+          go build -ldflags="-s -w" -o pacta ./cmd/pacta
+        env:
+          CGO_ENABLED: 1
 
       - name: Vet
         run: go vet ./...
+
+      - name: Run Go tests
+        run: go test ./... -v -count=1 -timeout=10m
+
+      - name: Build Go binary
+        run: go build ./...
 
       - name: Check Go vulnerabilities
         run: |

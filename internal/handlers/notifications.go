@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -37,43 +39,68 @@ func (h *Handler) listNotifications(w http.ResponseWriter, r *http.Request) {
 
 	unreadOnly := r.URL.Query().Get("unread") == "true"
 
-	var rows interface {
-		Next() bool
-		Scan(...interface{}) error
-		Close() error
-	}
 	var err error
+	var notifs []Notification
 
 	if unreadOnly {
-		rows, err = h.DB.Query(`
-			SELECT id, user_id, type, title, message, entity_id, entity_type, read_at, created_at
-			FROM notifications WHERE user_id = ? AND company_id = ? AND read_at IS NULL
-			ORDER BY created_at DESC
-		`, userID, companyID)
-	} else {
-		rows, err = h.DB.Query(`
-			SELECT id, user_id, type, title, message, entity_id, entity_type, read_at, created_at
-			FROM notifications WHERE user_id = ? AND company_id = ?
-			ORDER BY created_at DESC
-			LIMIT 100
-		`, userID, companyID)
-	}
-	if err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to list notifications")
-		return
-	}
-	defer rows.Close()
-
-	var notifs []Notification
-	for rows.Next() {
-		var n Notification
-		if err := rows.Scan(&n.ID, &n.UserID, &n.Type, &n.Title, &n.Message,
-			&n.EntityID, &n.EntityType, &n.ReadAt, &n.CreatedAt); err != nil {
+		rows, err := h.Queries.ListNotificationsByUser(r.Context(), db.ListNotificationsByUserParams{
+			UserID:    int64(userID),
+			CompanyID: int64(companyID),
+		})
+		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to list notifications")
 			return
 		}
-		notifs = append(notifs, n)
+		for _, n := range rows {
+			notifs = append(notifs, Notification{
+				ID:        int(n.ID),
+				UserID:    int(n.UserID),
+				Type:      n.Type,
+				Title:     n.Title,
+				Message:   n.Message,
+				EntityID:  &n.EntityID.Int64,
+				EntityType: &n.EntityType.String,
+				ReadAt:    &n.ReadAt.Time,
+				CreatedAt: n.CreatedAt,
+			})
+		}
+	} else {
+		rows, err = h.Queries.ListAllNotificationsByUser(r.Context(), db.ListAllNotificationsByUserParams{
+			UserID:    int64(userID),
+			CompanyID: int64(companyID),
+		})
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "failed to list notifications")
+			return
+		}
+		for _, n := range rows {
+			readAt := (*time.Time)(nil)
+			if n.ReadAt.Valid {
+				readAt = &n.ReadAt.Time
+			}
+			entityID := (*int)(nil)
+			if n.EntityID.Valid {
+				id := int(n.EntityID.Int64)
+				entityID = &id
+			}
+			entityType := (*string)(nil)
+			if n.EntityType.Valid {
+				entityType = &n.EntityType.String
+			}
+			notifs = append(notifs, Notification{
+				ID:        int(n.ID),
+				UserID:    int(n.UserID),
+				Type:      n.Type,
+				Title:     n.Title,
+				Message:   n.Message,
+				EntityID:  entityID,
+				EntityType: entityType,
+				ReadAt:    readAt,
+				CreatedAt: n.CreatedAt,
+			})
+		}
 	}
+
 	if notifs == nil {
 		notifs = []Notification{}
 	}
@@ -112,20 +139,22 @@ func (h *Handler) createNotification(w http.ResponseWriter, r *http.Request) {
 
 	companyID := h.GetCompanyID(r)
 
-	result, err := h.DB.Exec(`
-		INSERT INTO notifications (user_id, type, title, message, entity_id, entity_type, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, targetUserID, req.Type, req.Title, req.Message, req.EntityID, req.EntityType, companyID)
+	notif, err := h.Queries.CreateNotification(r.Context(), db.CreateNotificationParams{
+		UserID:    int64(*targetUserID),
+		Type:      req.Type,
+		Title:     req.Title,
+		Message:   req.Message,
+		EntityID:  req.EntityID,
+		EntityType: req.EntityType,
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create notification")
 		return
 	}
 
-	id64, _ := result.LastInsertId()
-	id := int(id64)
-
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
-		"id":     id,
+		"id":     notif.ID,
 		"type":   req.Type,
 		"title":  req.Title,
 		"status": "created",
@@ -156,15 +185,33 @@ func (h *Handler) HandleNotificationByID(w http.ResponseWriter, r *http.Request)
 func (h *Handler) getNotification(w http.ResponseWriter, r *http.Request, id int) {
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
-	var n Notification
-	err := h.DB.QueryRow(`
-		SELECT id, user_id, type, title, message, entity_id, entity_type, read_at, created_at
-		FROM notifications WHERE id = ? AND user_id = ? AND company_id = ?
-	`, id, userID, companyID).Scan(&n.ID, &n.UserID, &n.Type, &n.Title, &n.Message,
-		&n.EntityID, &n.EntityType, &n.ReadAt, &n.CreatedAt)
+	notif, err := h.Queries.GetNotification(r.Context(), db.GetNotificationParams{
+		ID:        int64(id),
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "notification not found")
 		return
+	}
+
+	n := Notification{
+		ID:        int(notif.ID),
+		UserID:    int(notif.UserID),
+		Type:      notif.Type,
+		Title:     notif.Title,
+		Message:   notif.Message,
+		CreatedAt: notif.CreatedAt,
+	}
+	if notif.EntityID.Valid {
+		id := int(notif.EntityID.Int64)
+		n.EntityID = &id
+	}
+	if notif.EntityType.Valid {
+		n.EntityType = &notif.EntityType.String
+	}
+	if notif.ReadAt.Valid {
+		n.ReadAt = &notif.ReadAt.Time
 	}
 	h.JSON(w, http.StatusOK, n)
 }
@@ -173,9 +220,11 @@ func (h *Handler) markNotificationRead(w http.ResponseWriter, r *http.Request, i
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
 
-	_, err := h.DB.Exec(`
-		UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND company_id = ?
-	`, id, userID, companyID)
+	_, err := h.Queries.MarkNotificationRead(r.Context(), db.MarkNotificationReadParams{
+		ID:        int64(id),
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to mark notification as read")
 		return
@@ -188,7 +237,11 @@ func (h *Handler) deleteNotification(w http.ResponseWriter, r *http.Request, id 
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
 
-	_, err := h.DB.Exec("DELETE FROM notifications WHERE id = ? AND user_id = ? AND company_id = ?", id, userID, companyID)
+	_, err := h.Queries.DeleteNotification(r.Context(), db.DeleteNotificationParams{
+		ID:        int64(id),
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete notification")
 		return
@@ -207,9 +260,10 @@ func (h *Handler) HandleMarkAllNotificationsRead(w http.ResponseWriter, r *http.
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
 
-	_, err := h.DB.Exec(`
-		UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND company_id = ? AND read_at IS NULL
-	`, userID, companyID)
+	_, err := h.Queries.MarkAllNotificationsRead(r.Context(), db.MarkAllNotificationsReadParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to mark all notifications as read")
 		return
@@ -228,14 +282,14 @@ func (h *Handler) HandleNotificationCount(w http.ResponseWriter, r *http.Request
 	userID := h.getUserID(r)
 	companyID := h.GetCompanyID(r)
 
-	var count int
-	err := h.DB.QueryRow(`
-		SELECT COUNT(*) FROM notifications WHERE user_id = ? AND company_id = ? AND read_at IS NULL
-	`, userID, companyID).Scan(&count)
+	count, err := h.Queries.CountUnreadNotifications(r.Context(), db.CountUnreadNotificationsParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to count notifications")
 		return
 	}
 
-	h.JSON(w, http.StatusOK, map[string]int{"unread": count})
+	h.JSON(w, http.StatusOK, map[string]int{"unread": int(count)})
 }

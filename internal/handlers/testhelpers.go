@@ -7,18 +7,20 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 // setupTestDB creates an in-memory SQLite database with all necessary tables
-// for testing AI handlers.
-func setupTestDB(t *testing.T) *sql.DB {
+// for testing AI handlers. Returns *db.Queries for use with handlers.
+func setupTestDB(t *testing.T) *db.Queries {
 	t.Helper()
-	db, err := sql.Open("sqlite3", ":memory:")
+	database, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}
 	// Enable foreign keys for referential integrity
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+	if _, err := database.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		t.Fatalf("PRAGMA foreign_keys: %v", err)
 	}
 	// Create required tables
@@ -76,34 +78,41 @@ func setupTestDB(t *testing.T) *sql.DB {
 		)`,
 	}
 	for _, stmt := range tables {
-		if _, err := db.Exec(stmt); err != nil {
+		if _, err := database.Exec(stmt); err != nil {
 			t.Fatalf("failed to create table: %v\nstmt: %s", err, stmt)
 		}
 	}
-	return db
+	return db.New(database)
 }
 
 // insertTestCompany inserts a company and returns its ID.
-func insertTestCompany(t *testing.T, db *sql.DB) int {
+func insertTestCompany(t *testing.T, queries *db.Queries) int {
 	t.Helper()
-	res, err := db.Exec("INSERT INTO companies (name, company_type) VALUES (?, ?)", "Test Company", "single")
+	result, err := queries.CreateCompany(context.Background(), db.CreateCompanyParams{
+		Name:        "Test Company",
+		CompanyType: "single",
+	})
 	if err != nil {
 		t.Fatalf("insert company: %v", err)
 	}
-	id, _ := res.LastInsertId()
-	return int(id)
+	return int(result.ID)
 }
 
 // insertTestUser inserts a user linked to the given company and returns user ID.
-func insertTestUser(t *testing.T, db *sql.DB, companyID int) int {
+func insertTestUser(t *testing.T, queries *db.Queries, companyID int) int {
 	t.Helper()
-	res, err := db.Exec("INSERT INTO users (name, email, password_hash, role, company_id, status) VALUES (?, ?, ?, ?, ?, ?)",
-		"Test User", "test@example.com", "$2a$10$dummyhashforpassword", "admin", companyID, "active")
+	result, err := queries.CreateUser(context.Background(), db.CreateUserParams{
+		Name:         "Test User",
+		Email:        "test@example.com",
+		PasswordHash: "$2a$10$dummyhashforpassword",
+		Role:         "admin",
+		CompanyID:    int64(companyID),
+		Status:       "active",
+	})
 	if err != nil {
 		t.Fatalf("insert user: %v", err)
 	}
-	id, _ := res.LastInsertId()
-	return int(id)
+	return int(result.ID)
 }
 
 // withCompanyContext injects the given companyID into the request context

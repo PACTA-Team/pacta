@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -11,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
-	"github.com/PACTA-Team/pacta/internal/models"
+	"github.com/PACTA-Team/pacta/internal/db"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -58,45 +59,26 @@ func (h *Handler) HandleUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`
-		SELECT id, name, email, role, status, last_access, created_at, updated_at
-		FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC
-	`)
+	users, err := h.Queries.ListAllUsers(r.Context())
 	if err != nil {
 		log.Printf("[handlers/users] ERROR: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	defer rows.Close()
 
-	var users []models.User
-	for rows.Next() {
-		var u models.User
-		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status,
-			&u.LastAccess, &u.CreatedAt, &u.UpdatedAt); err != nil {
-			h.Error(w, http.StatusInternalServerError, "failed to list users")
-			return
-		}
-		users = append(users, u)
-	}
 	if users == nil {
-		users = []models.User{}
+		users = []db.User{}
 	}
 	h.JSON(w, http.StatusOK, users)
 }
 
 func (h *Handler) getUser(w http.ResponseWriter, id int) {
-	var u models.User
-	err := h.DB.QueryRow(`
-		SELECT id, name, email, role, status, last_access, created_at, updated_at
-		FROM users WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status,
-		&u.LastAccess, &u.CreatedAt, &u.UpdatedAt)
+	user, err := h.Queries.GetUserByID(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
 	}
-	h.JSON(w, http.StatusOK, u)
+	h.JSON(w, http.StatusOK, user)
 }
 
 type createUserRequest struct {
@@ -131,10 +113,14 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserID(r)
-	result, err := h.DB.Exec(`
-		INSERT INTO users (name, email, password_hash, role, status)
-		VALUES (?, ?, ?, ?, 'active')
-	`, req.Name, req.Email, hashedPassword, req.Role)
+	user, err := h.Queries.CreateUser(r.Context(), db.CreateUserParams{
+		Name:         req.Name,
+		Email:        req.Email,
+		PasswordHash: hashedPassword,
+		Role:         req.Role,
+		Status:       "active",
+		CompanyID:    0,
+	})
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
@@ -145,18 +131,15 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id64, _ := result.LastInsertId()
-	id := int(id64)
-
-	h.auditLog(r, userID, 0, "create", "user", &id, nil, map[string]interface{}{
-		"id":    id,
+	h.auditLog(r, userID, 0, "create", "user", &user.ID, nil, map[string]interface{}{
+		"id":    user.ID,
 		"name":  req.Name,
 		"email": req.Email,
 		"role":  req.Role,
 	})
 
 	h.JSON(w, http.StatusCreated, map[string]interface{}{
-		"id":     id,
+		"id":     user.ID,
 		"name":   req.Name,
 		"email":  req.Email,
 		"role":   req.Role,
@@ -183,10 +166,7 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 	}
 
 	// Fetch previous state
-	var prevName, prevEmail, prevRole string
-	err := h.DB.QueryRow(`
-		SELECT name, email, role FROM users WHERE id = ? AND deleted_at IS NULL
-	`, id).Scan(&prevName, &prevEmail, &prevRole)
+	prevUser, err := h.Queries.GetUserByID(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
@@ -199,10 +179,12 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 		return
 	}
 
-	_, err = h.DB.Exec(`
-		UPDATE users SET name=?, email=?, role=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
-	`, req.Name, req.Email, req.Role, id)
+	_, err = h.Queries.UpdateUser(r.Context(), db.UpdateUserParams{
+		Name:  req.Name,
+		Email: req.Email,
+		Role:  req.Role,
+		ID:    int64(id),
+	})
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: users.email") {
 			h.Error(w, http.StatusConflict, "email '"+req.Email+"' already exists")
@@ -214,10 +196,12 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 	}
 
 	h.auditLog(r, currentUserID, 0, "update", "user", &id, map[string]interface{}{
-		"name":  prevName,
-		"email": prevEmail,
-		"role":  prevRole,
+		"id":    id,
+		"name":  prevUser.Name,
+		"email": prevUser.Email,
+		"role":  prevUser.Role,
 	}, map[string]interface{}{
+		"id":    id,
 		"name":  req.Name,
 		"email": req.Email,
 		"role":  req.Role,
@@ -227,8 +211,8 @@ func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request, id int) {
 }
 
 func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
-	var prevName, prevEmail, prevRole string
-	err := h.DB.QueryRow("SELECT name, email, role FROM users WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevName, &prevEmail, &prevRole)
+	// Fetch previous state for audit
+	prevUser, err := h.Queries.GetUserByID(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
@@ -240,7 +224,7 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE users SET deleted_at=CURRENT_TIMESTAMP WHERE id=?", id)
+	_, err = h.Queries.DeleteUser(r.Context(), int64(id))
 	if err != nil {
 		log.Printf("[handlers/users] ERROR: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal server error")
@@ -249,9 +233,9 @@ func (h *Handler) deleteUser(w http.ResponseWriter, r *http.Request, id int) {
 
 	h.auditLog(r, currentUserID, 0, "delete", "user", &id, map[string]interface{}{
 		"id":    id,
-		"name":  prevName,
-		"email": prevEmail,
-		"role":  prevRole,
+		"name":  prevUser.Name,
+		"email": prevUser.Email,
+		"role":  prevUser.Role,
 	}, nil)
 
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
@@ -278,7 +262,10 @@ func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request, id int) 
 		return
 	}
 
-	_, err = h.DB.Exec("UPDATE users SET password_hash=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL", hashedPassword, id)
+	_, err = h.Queries.UpdateUserPassword(r.Context(), db.UpdateUserPasswordParams{
+		PasswordHash: hashedPassword,
+		ID:           int64(id),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
@@ -310,7 +297,10 @@ func (h *Handler) updateUserStatus(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
-	_, err := h.DB.Exec("UPDATE users SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL", req.Status, id)
+	_, err := h.Queries.UpdateUserStatus(r.Context(), db.UpdateUserStatusParams{
+		Status: req.Status,
+		ID:     int64(id),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
@@ -331,30 +321,17 @@ func (h *Handler) HandleUserCompanies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserID(r)
-	rows, err := h.DB.Query(`
-		SELECT uc.user_id, uc.company_id, c.name, uc.is_default
-		FROM user_companies uc
-		JOIN companies c ON c.id = uc.company_id
-		WHERE uc.user_id = ? AND c.deleted_at IS NULL
-		ORDER BY uc.is_default DESC, c.name
-	`, userID)
+	rows, err := h.Queries.ListUserCompanies(r.Context(), int64(userID))
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list user companies")
 		return
 	}
-	defer rows.Close()
 
-	var companies []models.UserCompany
-	for rows.Next() {
-		var uc models.UserCompany
-		rows.Scan(&uc.UserID, &uc.CompanyID, &uc.CompanyName, &uc.IsDefault)
-		companies = append(companies, uc)
-	}
-	if companies == nil {
-		companies = []models.UserCompany{}
+	if rows == nil {
+		rows = []db.ListUserCompaniesRow{}
 	}
 
-	h.JSON(w, http.StatusOK, companies)
+	h.JSON(w, http.StatusOK, rows)
 }
 
 func (h *Handler) HandleSwitchCompany(w http.ResponseWriter, r *http.Request) {
@@ -371,20 +348,29 @@ func (h *Handler) HandleSwitchCompany(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var exists int
-	h.DB.QueryRow("SELECT COUNT(*) FROM user_companies WHERE user_id = ? AND company_id = ?", userID, companyID).Scan(&exists)
-	if exists == 0 {
+	// Check user has access to this company
+	exists, err := h.Queries.CheckUserCompanyAccess(r.Context(), db.CheckUserCompanyAccessParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
+	if err != nil || exists == 0 {
 		h.Error(w, http.StatusForbidden, "access denied to this company")
 		return
 	}
 
 	cookie, err := r.Cookie("session")
 	if err == nil {
-		h.DB.Exec("UPDATE sessions SET company_id = ? WHERE token = ?", companyID, cookie.Value)
+		h.Queries.UpdateSessionCompany(r.Context(), db.UpdateSessionCompanyParams{
+			CompanyID: int64(companyID),
+			Token:      cookie.Value,
+		})
 	}
 
-	h.DB.Exec("UPDATE user_companies SET is_default = 0 WHERE user_id = ?", userID)
-	h.DB.Exec("UPDATE user_companies SET is_default = 1 WHERE user_id = ? AND company_id = ?", userID, companyID)
+	h.Queries.ResetUserDefaultCompanies(r.Context(), int64(userID))
+	h.Queries.SetDefaultCompany(r.Context(), db.SetDefaultCompanyParams{
+		UserID:    int64(userID),
+		CompanyID: int64(companyID),
+	})
 
 	h.JSON(w, http.StatusOK, map[string]interface{}{"company_id": companyID})
 }
@@ -404,17 +390,12 @@ func (h *Handler) HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getUserProfile(w http.ResponseWriter, userID int) {
-	var u models.User
-	err := h.DB.QueryRow(`
-		SELECT id, name, email, role, status, last_access, created_at, updated_at
-		FROM users WHERE id = ? AND deleted_at IS NULL
-	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Status,
-		&u.LastAccess, &u.CreatedAt, &u.UpdatedAt)
+	user, err := h.Queries.GetUserByID(r.Context(), int64(userID))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
 	}
-	h.JSON(w, http.StatusOK, u)
+	h.JSON(w, http.StatusOK, user)
 }
 
 type updateProfileRequest struct {
@@ -439,37 +420,32 @@ func (h *Handler) updateUserProfile(w http.ResponseWriter, r *http.Request, user
 	}
 
 	// Fetch previous state for audit
-	var prevName, prevEmail string
-	err := h.DB.QueryRow(`
-		SELECT name, email FROM users WHERE id = ? AND deleted_at IS NULL
-	`, userID).Scan(&prevName, &prevEmail)
+	prevUser, err := h.Queries.GetUserByID(r.Context(), int64(userID))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
 	}
 
 	// Check email uniqueness (excluding current user)
-	var existingID int
-	err = h.DB.QueryRow(`
-		SELECT id FROM users WHERE email = ? AND id != ? AND deleted_at IS NULL
-	`, req.Email, userID).Scan(&existingID)
-	if err == nil {
+	existing, err := h.Queries.GetUserByEmail(r.Context(), req.Email)
+	if err == nil && existing.ID != int64(userID) {
 		h.Error(w, http.StatusConflict, "email already exists")
 		return
 	}
 
-	_, err = h.DB.Exec(`
-		UPDATE users SET name=?, email=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
-	`, req.Name, req.Email, userID)
+	_, err = h.Queries.UpdateUserProfile(r.Context(), db.UpdateUserProfileParams{
+		Name:  req.Name,
+		Email: req.Email,
+		ID:    int64(userID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update profile")
 		return
 	}
 
 	h.auditLog(r, userID, 0, "update_profile", "user", &userID, map[string]interface{}{
-		"name":  prevName,
-		"email": prevEmail,
+		"name":  prevUser.Name,
+		"email": prevUser.Email,
 	}, map[string]interface{}{
 		"name":  req.Name,
 		"email": req.Email,
@@ -512,17 +488,14 @@ func (h *Handler) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get current password hash
-	var passwordHash string
-	err := h.DB.QueryRow(`
-		SELECT password_hash FROM users WHERE id = ? AND deleted_at IS NULL
-	`, userID).Scan(&passwordHash)
+	user, err := h.Queries.GetUserForSignIn(r.Context(), userID)
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "user not found")
 		return
 	}
 
 	// Verify current password
-	if !auth.CheckPassword(req.CurrentPassword, passwordHash) {
+	if !auth.CheckPassword(req.CurrentPassword, user.PasswordHash) {
 		h.Error(w, http.StatusUnauthorized, "current password is incorrect")
 		return
 	}
@@ -534,10 +507,10 @@ func (h *Handler) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.DB.Exec(`
-		UPDATE users SET password_hash=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
-	`, hashedPassword, userID)
+	_, err = h.Queries.UpdateUserPassword(r.Context(), db.UpdateUserPasswordParams{
+		PasswordHash: hashedPassword,
+		ID:           user.ID,
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update password")
 		return
@@ -633,28 +606,34 @@ func (h *Handler) uploadCertificate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update database
-	var urlField, keyField string
-	if certType == "digital_signature" {
-		urlField = "digital_signature_url"
-		keyField = "digital_signature_key"
-	} else {
-		urlField = "public_cert_url"
-		keyField = "public_cert_key"
-	}
-
 	// Delete old certificate if exists
-	var oldURL *string
-	h.DB.QueryRow("SELECT "+urlField+" FROM users WHERE id = ?", userID).Scan(&oldURL)
-	if oldURL != nil && *oldURL != "" {
-		os.Remove(filepath.Join(h.DataDir, certStorageDir, *oldURL))
+	fields, err := h.Queries.GetUserAvatarAndCertFields(r.Context(), int64(userID))
+	if err == nil {
+		if fields.DigitalSignatureUrl != nil && *fields.DigitalSignatureUrl != "" {
+			os.Remove(filepath.Join(h.DataDir, certStorageDir, *fields.DigitalSignatureUrl))
+		}
+		if fields.PublicCertUrl != nil && *fields.PublicCertUrl != "" {
+			os.Remove(filepath.Join(h.DataDir, certStorageDir, *fields.PublicCertUrl))
+		}
 	}
 
+	// Update database with new certificate path
 	relativePath := filepath.Join(strconv.Itoa(userID), certType, storageName+ext)
-	_, err = h.DB.Exec(
-		"UPDATE users SET "+urlField+"=?, "+keyField+"=?, updated_at=CURRENT_TIMESTAMP WHERE id = ?",
-		relativePath, header.Filename, userID,
-	)
+	var digitalSigUrl, digitalSigKey, publicCertUrl, publicCertKey *string
+	if certType == "digital_signature" {
+		digitalSigUrl = &relativePath
+		digitalSigKey = &header.Filename
+	} else {
+		publicCertUrl = &relativePath
+		publicCertKey = &header.Filename
+	}
+	_, err = h.Queries.UpdateUserCertFields(r.Context(), db.UpdateUserCertFieldsParams{
+		ID:                 int64(userID),
+		DigitalSignatureUrl: digitalSigUrl,
+		DigitalSignatureKey: digitalSigKey,
+		PublicCertUrl:       publicCertUrl,
+		PublicCertKey:       publicCertKey,
+	})
 	if err != nil {
 		os.Remove(dstPath)
 		h.Error(w, http.StatusInternalServerError, "failed to update certificate")
@@ -678,34 +657,43 @@ func (h *Handler) deleteCertificate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var urlField, keyField string
-	if certType == "digital_signature" {
-		urlField = "digital_signature_url"
-		keyField = "digital_signature_key"
-	} else {
-		urlField = "public_cert_url"
-		keyField = "public_cert_key"
-	}
-
 	// Get current certificate path
-	var certPath, certKey *string
-	err := h.DB.QueryRow(
-		"SELECT "+urlField+", "+keyField+" FROM users WHERE id = ?", userID,
-	).Scan(&certPath, &certKey)
-	if err != nil || certPath == nil || *certPath == "" {
+	fields, err := h.Queries.GetUserAvatarAndCertFields(r.Context(), int64(userID))
+	if err != nil || (certType == "digital_signature" && (fields.DigitalSignatureUrl == nil || *fields.DigitalSignatureUrl == "")) ||
+		(certType == "public_cert" && (fields.PublicCertUrl == nil || *fields.PublicCertUrl == "")) {
 		h.Error(w, http.StatusNotFound, "certificate not found")
 		return
 	}
 
 	// Delete file
-	filePath := filepath.Join(h.DataDir, certStorageDir, *certPath)
+	var filePath string
+	if certType == "digital_signature" && fields.DigitalSignatureUrl != nil {
+		filePath = filepath.Join(h.DataDir, certStorageDir, *fields.DigitalSignatureUrl)
+	} else if fields.PublicCertUrl != nil {
+		filePath = filepath.Join(h.DataDir, certStorageDir, *fields.PublicCertUrl)
+	}
 	os.Remove(filePath)
 
-	// Clear database
-	_, err = h.DB.Exec(
-		"UPDATE users SET "+urlField+"=NULL, "+keyField+"=NULL, updated_at=CURRENT_TIMESTAMP WHERE id = ?",
-		userID,
-	)
+	// Clear database fields
+	var digitalSigUrl, digitalSigKey, publicCertUrl, publicCertKey *string
+	if certType == "digital_signature" {
+		digitalSigUrl = nil
+		digitalSigKey = nil
+		publicCertUrl = fields.PublicCertUrl
+		publicCertKey = fields.PublicCertKey
+	} else {
+		digitalSigUrl = fields.DigitalSignatureUrl
+		digitalSigKey = fields.DigitalSignatureKey
+		publicCertUrl = nil
+		publicCertKey = nil
+	}
+	_, err = h.Queries.UpdateUserCertFields(r.Context(), db.UpdateUserCertFieldsParams{
+		ID:                 int64(userID),
+		DigitalSignatureUrl: digitalSigUrl,
+		DigitalSignatureKey: digitalSigKey,
+		PublicCertUrl:       publicCertUrl,
+		PublicCertKey:       publicCertKey,
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete certificate")
 		return

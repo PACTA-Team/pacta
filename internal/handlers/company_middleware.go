@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/PACTA-Team/pacta/internal/auth"
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 const ctxCompanyID ctxKey = "companyID"
@@ -31,11 +32,10 @@ func (h *Handler) CompanyMiddleware(next http.Handler) http.Handler {
 			}
 
 			// Verify user belongs to this company
-			var exists int
-			err = h.DB.QueryRow(
-				"SELECT COUNT(*) FROM user_companies WHERE user_id = ? AND company_id = ?",
-				userID, id,
-			).Scan(&exists)
+			exists, err := h.Queries.UserCompanyExists(r.Context(), db.UserCompanyExistsParams{
+				UserID:    int64(userID),
+				CompanyID: int64(id),
+			})
 			if err != nil || exists == 0 {
 				h.Error(w, http.StatusForbidden, "access denied to this company")
 				return
@@ -47,25 +47,25 @@ func (h *Handler) CompanyMiddleware(next http.Handler) http.Handler {
 		if companyID == 0 {
 			cookie, err := r.Cookie("session")
 			if err == nil {
-				session, err := auth.GetSession(h.DB, cookie.Value)
+				session, err := auth.GetSession(h.Queries, cookie.Value)
 				if err == nil && session.CompanyID > 0 {
-					companyID = session.CompanyID
+					companyID = int(session.CompanyID)
 				}
 			}
 		}
 
 		// Fallback: get user's default company
 		if companyID == 0 {
-			err := h.DB.QueryRow(
-				"SELECT company_id FROM user_companies WHERE user_id = ? AND is_default = 1",
-				userID,
-			).Scan(&companyID)
-			if err != nil {
-				err = h.DB.QueryRow("SELECT company_id FROM users WHERE id = ?", userID).Scan(&companyID)
-			}
-			if err != nil || companyID == 0 {
-				h.Error(w, http.StatusForbidden, "no company assigned. Contact administrator.")
-				return
+			defaultCompany, err := h.Queries.GetUserDefaultCompany(r.Context(), int64(userID))
+			if err == nil && defaultCompany.CompanyID > 0 {
+				companyID = int(defaultCompany.CompanyID)
+			} else {
+				// Final fallback: get company_id from users table
+				companyID, err = h.Queries.GetUserCompanyID(r.Context(), int64(userID))
+				if err != nil || companyID == 0 {
+					h.Error(w, http.StatusForbidden, "no company assigned. Contact administrator.")
+					return
+				}
 			}
 		}
 

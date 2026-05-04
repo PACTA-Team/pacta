@@ -1,0 +1,14 @@
+# Model files (large binaries, not committed by default)
+*.gguf
+*.bin
+*.safetensors
+*.pth
+*.ckpt
+
+# Keep directory but ignore contents
+models/*
+!models/.gitkeep
+
+# EXCEPTIONS: allow these specific files needed for go:embed during build
+!bge-small-en-v1.5.Q8_0.gguf
+!adapter_weights.bin

@@ -3,8 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
-
-	"github.com/PACTA-Team/pacta/internal/auth"
+	"time"
 )
 
 // TenantContextMiddleware establishes per-request tenant context for logging and
@@ -28,9 +27,14 @@ func (h *Handler) TenantContextMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Load session to obtain user_id and company_id
-		session, err := auth.GetSession(h.DB, cookie.Value)
+		session, err := h.Queries.GetSessionByToken(r.Context(), cookie.Value)
 		if err != nil {
 			h.Error(w, http.StatusUnauthorized, "invalid session")
+			return
+		}
+		// Check if session is expired
+		if session.ExpiresAt.Before(time.Now()) {
+			h.Error(w, http.StatusUnauthorized, "session expired")
 			return
 		}
 
@@ -38,16 +42,6 @@ func (h *Handler) TenantContextMiddleware(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), "tenant_id", session.CompanyID)
 		ctx = context.WithValue(ctx, "user_id_for_audit", session.UserID)
 		r = r.WithContext(ctx)
-
-		// For PostgreSQL future: set session variables if using Postgres
-		// if pgh, ok := h.DB.(*sql.DB); ok && isPostgres(pgh) {
-		//     pgh.ExecContext(ctx, "SET app.current_tenant_id = $1", session.CompanyID)
-		//     pgh.ExecContext(ctx, "SET app.current_user_id = $1", session.UserID)
-		// }
-
-		// Development: optionally audit tenant context establishment
-		// log.Printf("[AUDIT] Tenant context: user=%d company=%d path=%s", 
-		//     session.UserID, session.CompanyID, r.URL.Path)
 
 		next.ServeHTTP(w, r)
 	})

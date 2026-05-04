@@ -311,50 +311,104 @@ export default function ContraparteForm({
        {/* Contract Basic Information */}
        <div className="space-y-4 border-b pb-4">
          <h3 className="text-lg font-medium">Contract Information</h3>
-         <div className="grid grid-cols-2 gap-4">
-           <div className="space-y-2">
-             <Label htmlFor="contract-number">Contract Number *</Label>
-             <Input
-               id="contract-number"
-               value={contractNumber}
-               onChange={handleContractNumberChange}
-               required
-             />
-           </div>
-           <div className="space-y-2">
-             <Label htmlFor="title">Title</Label>
-             <Input id="title" value={title} onChange={handleTitleChange} />
-           </div>
-         </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="contract-number" className="cursor-help">Contract Number *</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Identificador único y obligatorio del contrato.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Input
+                id="contract-number"
+                value={contractNumber}
+                onChange={handleContractNumberChange}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="title" className="cursor-help">Title</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Debe describir clara y precisamente el objeto del contrato.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Input id="title" value={title} onChange={handleTitleChange} />
+            </div>
+          </div>
 
-         <div className="grid grid-cols-2 gap-4">
-           <div className="space-y-2">
-             <Label htmlFor="start-date">Start Date *</Label>
-             <Input id="start-date" type="date" value={startDate} onChange={handleStartDateChange} required />
-           </div>
-           <div className="space-y-2">
-             <Label htmlFor="end-date">End Date *</Label>
-             <Input id="end-date" type="date" value={endDate} onChange={handleEndDateChange} required />
-           </div>
-         </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="start-date" className="cursor-help">Start Date *</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: La fecha debe ser cierta y determinable. Verifique capacidad legal de las partes.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Input id="start-date" type="date" value={startDate} onChange={handleStartDateChange} required />
+            </div>
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="end-date" className="cursor-help">End Date *</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Plazo determinado o indeterminado según la ley aplicable.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Input id="end-date" type="date" value={endDate} onChange={handleEndDateChange} required />
+            </div>
+          </div>
 
-         <div className="grid grid-cols-2 gap-4">
-           <div className="space-y-2">
-             <Label htmlFor="amount">Amount (USD) *</Label>
-             <Input id="amount" type="number" step="0.01" min="0" value={amount} onChange={handleAmountChange} required />
-           </div>
-           <div className="space-y-2">
-             <Label htmlFor="type">Contract Type *</Label>
-              <Select value={contractType} onValueChange={(v) => handleTypeChange(v as ContractType)} required>
-               <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
-               <SelectContent>
-                 {Object.entries(CONTRACT_TYPE_LABELS).map(([value, label]) => (
-                   <SelectItem key={value} value={value}>{label}</SelectItem>
-                 ))}
-               </SelectContent>
-             </Select>
-           </div>
-         </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="amount" className="cursor-help">Amount (USD) *</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: El precio debe ser claro, determinable y estar expresado en moneda de curso legal.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Input id="amount" type="number" step="0.01" min="0" value={amount} onChange={handleAmountChange} required />
+            </div>
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="type" className="cursor-help">Contract Type *</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: El tipo determina las leyes aplicables y formalidades específicas.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+               <Select value={contractType} onValueChange={(v) => handleTypeChange(v as ContractType)} required>
+                <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CONTRACT_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
          <div className="space-y-2">
            <Label htmlFor="status">Status *</Label>
@@ -392,29 +446,65 @@ export default function ContraparteForm({
            {t('additionalClauses') || 'Cláusulas Adicionales'}
          </CollapsibleTrigger>
          <CollapsibleContent className="space-y-4 pt-4">
-           <div className="space-y-2">
-             <Label htmlFor="fulfillment-place">Fulfillment Place</Label>
-             <Input id="fulfillment-place" value={fulfillmentPlace} onChange={handleFulfillmentPlaceChange} />
-           </div>
-           <div className="space-y-2">
-             <Label htmlFor="dispute-resolution">Dispute Resolution</Label>
-             <Textarea id="dispute-resolution" value={disputeResolution} onChange={handleDisputeResolutionChange} rows={2} />
-           </div>
-           <div className="space-y-2">
-             <Label htmlFor="guarantees">Guarantees</Label>
-             <Textarea id="guarantees" value={guarantees} onChange={handleGuaranteesChange} rows={2} />
-           </div>
-           <div className="space-y-2">
-             <Label htmlFor="renewal-type">Renewal Type</Label>
-             <Select value={renewalType} onValueChange={(v) => handleRenewalTypeChange(v as RenewalType)}>
-               <SelectTrigger id="renewal-type"><SelectValue placeholder="Select renewal type" /></SelectTrigger>
-               <SelectContent>
-                 {Object.entries(RENEWAL_TYPE_LABELS).map(([value, label]) => (
-                   <SelectItem key={value} value={value}>{label}</SelectItem>
-                 ))}
-               </SelectContent>
-             </Select>
-           </div>
+          <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="fulfillment-place" className="cursor-help">Fulfillment Place (Jurisdicción)</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Determina la jurisdicción y leyes aplicables al contrato.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Input id="fulfillment-place" value={fulfillmentPlace} onChange={handleFulfillmentPlaceChange} />
+            </div>
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="dispute-resolution" className="cursor-help">Dispute Resolution</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Mecanismo para resolver controversias (mediación, arbitraje, tribunales).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Textarea id="dispute-resolution" value={disputeResolution} onChange={handleDisputeResolutionChange} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="guarantees" className="cursor-help">Guarantees</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Garantías exigibles según tipo de contrato (fianza, hipoteca, etc.).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Textarea id="guarantees" value={guarantees} onChange={handleGuaranteesChange} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="renewal-type" className="cursor-help">Renewal Type</Label>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Requisito legal: Mecanismo de renovación debe ser claro y expreso.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Select value={renewalType} onValueChange={(v) => handleRenewalTypeChange(v as RenewalType)}>
+                <SelectTrigger id="renewal-type"><SelectValue placeholder="Select renewal type" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(RENEWAL_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
          </CollapsibleContent>
        </Collapsible>
      </div>

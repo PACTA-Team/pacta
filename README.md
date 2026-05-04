@@ -125,7 +125,86 @@ PACTA follows a minimalist, self-contained architecture:
 | Auth         | Cookie-based sessions, bcrypt       |
 | Packaging    | GoReleaser, NFPM (.deb)             |
 
+### Database Access
+
+All database queries are type-safe via **sqlc v2** code generation:
+
+- **SQL queries** are defined in `internal/db/queries/*.sql` (organized by domain: system_settings, users, contracts, clients, suppliers, etc.)
+- **Code generation**: `sqlc generate` produces `internal/db/queries_gen.go` with type-safe methods
+- **Handlers** inject `*db.Queries` (interface) via constructor dependency injection
+- **Soft-delete pattern** (`deleted_at IS NULL`) is consistently applied across all entities
+- **Transactions** use `queries.WithTx(tx)` when transaction-aware methods are needed
+
+**Architecture**:
+
+```
+internal/db/
+├── migrations/        # goose migrations (auto-applied on startup)
+├── models.go          # Go structs for database rows
+├── queries/           # 22 .sql files by domain (source of truth)
+│   ├── system_settings.sql
+│   ├── users.sql
+│   ├── contracts.sql
+│   └── ...
+├── queries_gen.go     # GENERATED - type-safe query methods (committed)
+├── sqlc.yaml          # sqlc configuration
+└── db.go              # Open() + Migrate() helpers
+```
+
+**Configuration** (`sqlc.yaml`):
+
+```yaml
+version: "2"
+sql:
+  - schema: "internal/db/migrations/*.sql"
+    queries: "internal/db/queries/*.sql"
+    engine: "sqlite"
+    gen:
+      go_package:
+        mode: "query"
+        name: "db"
+      emit:
+        interface: true  # generates Queries interface for mocking
+```
+
+**Workflow for adding a new query**:
+
+1. Create `internal/db/queries/<domain>.sql` (or edit existing)
+2. Run `sqlc generate` from `internal/db/` directory
+3. Use generated method in handlers: `h.queries.GetXxx(ctx, args)`
+4. Commit both the `.sql` file and updated `queries_gen.go`
+
+**Example** (`system_settings.sql`):
+
+```sql
+-- name: GetSettingValue :one
+SELECT value FROM system_settings
+WHERE key = $1 AND deleted_at IS NULL
+LIMIT 1;
+```
+
+Generates: `func (q *Queries) GetSettingValue(ctx context.Context, key string) (string, error)`
+
+Handler usage:
+
+```go
+value, err := h.queries.GetSettingValue(r.Context(), "ai_provider")
+```
+
+**Exceptions** (manual SQL, not migrated to sqlc):
+
+- **RLS (Row Level Security)**: Dynamic RLS policies in `internal/db/rls.go` — sqlc cannot generate dynamic policy logic
+- **Dynamic parameter count**: Queries needing variable-length `IN` clauses (e.g., `GetSettingsByKeys(keys []string)`) — implemented with manual query building inside generated method
+- **Extremely dynamic filters**: Some handlers construct WHERE conditions dynamically; these remain as raw SQL in limited cases
+
+**Testing**: Unit tests can mock `db.Queries` interface, making database testing fast and isolated.
+
+> **Developer note**: After modifying any `.sql` file, always run `sqlc generate` and commit both the `.sql` changes and the regenerated `queries_gen.go`. The CI verifies generated code is up-to-date with `git diff --exit-code`.
+
+[See Architecture Decision Record →](docs/adr/2026-05-02-sqlc-migration.md)
+
 ---
+
 
 ## API Reference
 
@@ -154,7 +233,367 @@ PACTA follows a minimalist, self-contained architecture:
 | `GET`    | `/api/audit-logs`     | Yes  | List audit logs with filters |
 | `GET`    | `/api/audit-logs/contract/{id}` | Yes | Audit history for a contract |
 
-### Themis AI (Alpha — feature flag disabled by default)
+### Local AI with MiniRAG (Alpha — Self-Hosted, Offline-Capable)
+
+PACTA includes **MiniRAG**, a fully local retrieval-augmented generation system
+that operates **100% offline** using the `cgo` mode (CGo + llama.cpp). This gives
+you contract generation and review capabilities **without any cloud dependency**.
+
+### Features
+- **Offline-first**: No internet required once model is downloaded
+- **Local vector database**: per-company embeddings stored in SQLite-backed HNSW index
+- **Hybrid modes**: combine local inference with external APIs (OpenAI, Groq) for fallback
+- **PDF/Word parsing**: built-in document text extraction (with Apache Tika optional)
+
+### Supported Modes
+
+| Mode | Description | Offline? | Requirements |
+|------|-------------|----------|--------------|
+| `cgo` | Qwen2.5-0.5B-Instruct embedded via llama.cpp (CGo) | ✅ Yes | Model file present, CGO_ENABLED=1, llama.cpp compiled |
+| `ollama` | Ollama HTTP API (local server) | ⚠️ Yes, if Ollama installed | Ollama service running locally |
+| `external` | Cloud APIs (OpenAI, Groq, etc.) | ❌ No | API key + internet |
+| `hybrid` | Combines local + external based on strategy | ✅ Partial | Depends on local mode chosen |
+
+**Note**: The `cgo` mode is the only truly offline option. The model (429 MB `.gguf`
+file) is **not embedded in the binary** — it's stored separately under
+`internal/ai/minirag/models/`. The binary contains the inference engine
+(llama.cpp via CGo), but you must provide the model weights file.
+
+### Quick Start (Local/Offline Setup)
+
+#### Option A: Using Pre-Built Binary (recommended)
+
+1. **Download the latest release** from [Releases](https://github.com/PACTA-Team/pacta/releases)
+2. **Download the Qwen2.5-0.5B-Instruct GGUF model** (q4_0 quant, ~429 MB):
+   ```bash
+   # From Hugging Face:
+   wget https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
+   ```
+3. **Place the model file** in the `models` directory next to the binary:
+   ```bash
+   mkdir -p internal/ai/minirag/models
+   cp qwen2.5-0.5b-instruct-q4_0.gguf internal/ai/minirag/models/
+   ```
+   **Important**: The release binary expects the model at
+   `internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf` relative to the
+   current working directory. You can also configure a custom path in Settings → AI.
+
+4. **Run PACTA**:
+   ```bash
+   ./pacta
+   ```
+   The app opens at `http://127.0.0.1:3000`.
+
+5. **Enable AI in Settings**:
+   - Log in as admin
+   - Navigate to **Settings → AI**
+   - Set **RAG Mode** to `local`
+   - Set **Local Mode** to `cgo`
+   - Save
+
+You can now use **contract generation** and **review** features fully offline.
+
+#### Option B: Build from Source (developer)
+
+If you're building from source, the CI automatically downloads the model. For
+local development:
+
+```bash
+# Clone and build
+git clone https://github.com/PACTA-Team/pacta.git
+cd pacta
+
+# Install dependencies: Go 1.25+, CMake, C compiler
+# On Ubuntu/Debian:
+sudo apt-get install build-essential cmake
+
+# Build frontend
+cd pacta_appweb && npm ci && npm run build && cd ..
+
+# Build Go binary with CGO enabled
+CGO_ENABLED=1 go build ./cmd/pacta
+
+# Download model (if not present)
+mkdir -p internal/ai/minirag/models
+wget -O internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf \
+  https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
+
+# Run
+./pacta
+```
+
+The build process automatically compiles `llama.cpp` from the vendored source in
+`internal/ai/minirag/llama.cpp/` (the repository includes a shallow clone; CI
+does a full clone and build).
+
+### Configuration Reference
+
+Settings are stored in the `system_settings` table (accessible via UI → Settings → AI):
+
+| Key | Values | Description | Default |
+|-----|--------|-------------|---------|
+| `rag_mode` | `local`, `external`, `hybrid` | Top-level RAG mode | `external` |
+| `local_mode` | `cgo`, `ollama` | Local engine selection (only for `rag_mode=local|hybrid`) | `cgo` |
+| `local_model` | Path to `.gguf` file | Model filename or absolute path | `qwen2.5-0.5b-instruct-q4_0.gguf` |
+| `embedding_model` | Model name (Ollama) | Embeddings model served by Ollama | `all-minilm-l6-v2` |
+| `hybrid_strategy` | `local-first`, `external-first`, `parallel` | Query strategy for hybrid mode | `local-first` |
+| `hybrid_rerank` | `true`, `false` | Enable reranking of combined results | `true` |
+| `ai_provider` | `openai`, `groq`, `anthropic`, … | External provider (for `external`/`hybrid`) | — |
+| `ai_api_key` | Encrypted key | API credential for external provider | — |
+| `ai_model` | Model ID | External model name (e.g. `gpt-4`) | — |
+| `ai_endpoint` | URL | Custom endpoint (optional) | — |
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PACTA (Go binary)                                      │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  Handlers (/api/ai/*)                            │ │
+│  │    ├─ HandleRAGLocal  → LocalClient.Generate()   │ │
+│  │    ├─ HandleRAGHybrid → Orchestrator.Query()     │ │
+│  │    └─ …                                          │ │
+│  └───────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  MiniRAG Package (internal/ai/minirag)           │ │
+│  │    ├─ LocalClient                                │ │
+│  │    │   ├─ cgoLLMInference (CGo + llama.cpp)     │ │
+│  │    │   └─ OllamaClient (HTTP fallback)          │ │
+│  │    ├─ EmbeddingClient → Ollama API / hash fallback│ │
+│  │    ├─ VectorDB (HNSW, pure Go, per-company)     │ │
+│  │    └─ Indexer (PDF parsing, chunking)           │ │
+│  └───────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  Hybrid Orchestrator (internal/ai/hybrid)        │ │
+│  │    ├─ Strategy: local-first / external-first     │ │
+│  │    └─ Reranking: combine & rank results          │ │
+│  └───────────────────────────────────────────────────┘ │
+│                                                         │
+│  Runtime dependencies:                                  │
+│  - cgo mode: GGUF model file (internal/ai/minirag/models/) │
+│  - ollama mode: Ollama HTTP server on localhost:11434   │
+│  - external mode: Internet + API key                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Offline Operation Checklist
+
+To run PACTA completely **air-gapped** (no internet):
+
+1. ✅ Build or download the PACTA binary
+2. ✅ Obtain the `qwen2.5-0.5b-instruct-q4_0.gguf` model file **in advance**
+3. ✅ Place the model at `internal/ai/minirag/models/` (relative to CWD)
+4. ✅ Set RAG mode = `local`, Local mode = `cgo` in Settings
+5. ✅ Start the app — no network calls are made
+
+**Model size**: ~429 MB (q4_0 quantized). Once downloaded, all inference is local.
+
+### Troubleshooting
+
+**"AI not configured" error**  
+→ Go to Settings → AI and enable the feature. Set `rag_mode` to `local` or `hybrid`.
+
+**"Model not found" error**  
+→ Ensure the `.gguf` file exists at `internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf` or configure an absolute path in `local_model` setting.
+
+**CGO-related build errors**  
+→ Install C toolchain: `sudo apt-get install build-essential` (Linux) or Xcode Command Line Tools (macOS). Build with `CGO_ENABLED=1`.
+
+**Out of memory**  
+→ The Qwen2.5-0.5B model uses ~1–2 GB RAM during inference. Ensure your system has at least 4 GB free.
+
+**Want a smaller model?**  
+→ You can use any GGUF-format model compatible with llama.cpp. Update the
+`local_model` setting to point to your custom `.gguf` file. Recommended: models
+≤ 500 MB to keep binary size reasonable.
+
+---
+
+---
+
+## Local AI with MiniRAG (Alpha — Self-Hosted, Offline-Capable)
+
+PACTA includes **MiniRAG**, a fully local retrieval-augmented generation system
+that operates **100% offline** using the `cgo` mode (CGo + llama.cpp). This gives
+you contract generation and review capabilities **without any cloud dependency**.
+
+### Features
+- **Offline-first**: No internet required once model is downloaded
+- **Local vector database**: per-company embeddings stored in SQLite-backed HNSW index
+- **Hybrid modes**: combine local inference with external APIs (OpenAI, Groq) for fallback
+- **PDF/Word parsing**: built-in document text extraction (with Apache Tika optional)
+
+### Supported Modes
+
+| Mode | Description | Offline? | Requirements |
+|------|-------------|----------|--------------|
+| `cgo` | Qwen2.5-0.5B-Instruct embedded via llama.cpp (CGo) | ✅ Yes | Model file present, CGO_ENABLED=1, llama.cpp compiled |
+| `ollama` | Ollama HTTP API (local server) | ⚠️ Yes, if Ollama installed | Ollama service running locally |
+| `external` | Cloud APIs (OpenAI, Groq, etc.) | ❌ No | API key + internet |
+| `hybrid` | Combines local + external based on strategy | ✅ Partial | Depends on local mode chosen |
+
+**Note**: The `cgo` mode is the only truly offline option. The model (429 MB `.gguf`
+file) is **not embedded in the binary** — it's stored separately under
+`internal/ai/minirag/models/`. The binary contains the inference engine
+(llama.cpp via CGo), but you must provide the model weights file.
+
+### Quick Start (Local/Offline Setup)
+
+#### Option A: Using Pre-Built Binary (recommended)
+
+1. **Download the latest release** from [Releases](https://github.com/PACTA-Team/pacta/releases)
+2. **Download the Qwen2.5-0.5B-Instruct GGUF model** (q4_0 quant, ~429 MB):
+   ```bash
+   # From Hugging Face:
+   wget https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
+   ```
+3. **Place the model file** in the `models` directory next to the binary:
+   ```bash
+   mkdir -p internal/ai/minirag/models
+   cp qwen2.5-0.5b-instruct-q4_0.gguf internal/ai/minirag/models/
+   ```
+   **Important**: The release binary expects the model at
+   `internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf` relative to the
+   current working directory. You can also configure a custom path in Settings → AI.
+
+4. **Run PACTA**:
+   ```bash
+   ./pacta
+   ```
+   The app opens at `http://127.0.0.1:3000`.
+
+5. **Enable AI in Settings**:
+   - Log in as admin
+   - Navigate to **Settings → AI**
+   - Set **RAG Mode** to `local`
+   - Set **Local Mode** to `cgo`
+   - Save
+
+You can now use **contract generation** and **review** features fully offline.
+
+#### Option B: Build from Source (developer)
+
+If you're building from source, the CI automatically downloads the model. For
+local development:
+
+```bash
+# Clone and build
+git clone https://github.com/PACTA-Team/pacta.git
+cd pacta
+
+# Install dependencies: Go 1.25+, CMake, C compiler
+# On Ubuntu/Debian:
+sudo apt-get install build-essential cmake
+
+# Build frontend
+cd pacta_appweb && npm ci && npm run build && cd ..
+
+# Build Go binary with CGO enabled
+CGO_ENABLED=1 go build ./cmd/pacta
+
+# Download model (if not present)
+mkdir -p internal/ai/minirag/models
+wget -O internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf \
+  https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
+
+# Run
+./pacta
+```
+
+The build process automatically compiles `llama.cpp` from the vendored source in
+`internal/ai/minirag/llama.cpp/` (the repository includes a shallow clone; CI
+does a full clone and build).
+
+### Configuration Reference
+
+Settings are stored in the `system_settings` table (accessible via UI → Settings → AI):
+
+| Key | Values | Description | Default |
+|-----|--------|-------------|---------|
+| `rag_mode` | `local`, `external`, `hybrid` | Top-level RAG mode | `external` |
+| `local_mode` | `cgo`, `ollama` | Local engine selection (only for `rag_mode=local|hybrid`) | `cgo` |
+| `local_model` | Path to `.gguf` file | Model filename or absolute path | `qwen2.5-0.5b-instruct-q4_0.gguf` |
+| `embedding_model` | Model name (Ollama) | Embeddings model served by Ollama | `all-minilm-l6-v2` |
+| `hybrid_strategy` | `local-first`, `external-first`, `parallel` | Query strategy for hybrid mode | `local-first` |
+| `hybrid_rerank` | `true`, `false` | Enable reranking of combined results | `true` |
+| `ai_provider` | `openai`, `groq`, `anthropic`, … | External provider (for `external`/`hybrid`) | — |
+| `ai_api_key` | Encrypted key | API credential for external provider | — |
+| `ai_model` | Model ID | External model name (e.g. `gpt-4`) | — |
+| `ai_endpoint` | URL | Custom endpoint (optional) | — |
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PACTA (Go binary)                                      │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  Handlers (/api/ai/*)                            │ │
+│  │    ├─ HandleRAGLocal  → LocalClient.Generate()   │ │
+│  │    ├─ HandleRAGHybrid → Orchestrator.Query()     │ │
+│  │    └─ …                                          │ │
+│  └───────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  MiniRAG Package (internal/ai/minirag)           │ │
+│  │    ├─ LocalClient                                │ │
+│  │    │   ├─ cgoLLMInference (CGo + llama.cpp)     │ │
+│  │    │   └─ OllamaClient (HTTP fallback)          │ │
+│  │    ├─ EmbeddingClient → Ollama API / hash fallback│ │
+│  │    ├─ VectorDB (HNSW, pure Go, per-company)     │ │
+│  │    └─ Indexer (PDF parsing, chunking)           │ │
+│  └───────────────────────────────────────────────────┘ │
+│                                                         │
+│  ┌───────────────────────────────────────────────────┐ │
+│  │  Hybrid Orchestrator (internal/ai/hybrid)        │ │
+│  │    ├─ Strategy: local-first / external-first     │ │
+│  │    └─ Reranking: combine & rank results          │ │
+│  └───────────────────────────────────────────────────┘ │
+│                                                         │
+│  Runtime dependencies:                                  │
+│  - cgo mode: GGUF model file (internal/ai/minirag/models/) │
+│  - ollama mode: Ollama HTTP server on localhost:11434   │ │
+│  - external mode: Internet + API key                   │ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Offline Operation Checklist
+
+To run PACTA completely **air-gapped** (no internet):
+
+1. ✅ Build or download the PACTA binary
+2. ✅ Obtain the `qwen2.5-0.5b-instruct-q4_0.gguf` model file **in advance**
+3. ✅ Place the model at `internal/ai/minirag/models/` (relative to CWD)
+4. ✅ Set RAG mode = `local`, Local mode = `cgo` in Settings
+5. ✅ Start the app — no network calls are made
+
+**Model size**: ~429 MB (q4_0 quantized). Once downloaded, all inference is local.
+
+### Troubleshooting
+
+**"AI not configured" error**  
+→ Go to Settings → AI and enable the feature. Set `rag_mode` to `local` or `hybrid`.
+
+**"Model not found" error**  
+→ Ensure the `.gguf` file exists at `internal/ai/minirag/models/qwen2.5-0.5b-instruct-q4_0.gguf` or configure an absolute path in `local_model` setting.
+
+**CGO-related build errors**  
+→ Install C toolchain: `sudo apt-get install build-essential` (Linux) or Xcode Command Line Tools (macOS). Build with `CGO_ENABLED=1`.
+
+**Out of memory**  
+→ The Qwen2.5-0.5B model uses ~1–2 GB RAM during inference. Ensure your system has at least 4 GB free.
+
+**Want a smaller model?**  
+→ You can use any GGUF-format model compatible with llama.cpp. Update the
+`local_model` setting to point to your custom `.gguf` file. Recommended: models
+≤ 500 MB to keep binary size reasonable.
+
+---
+
+## Themis AI (Alpha — feature flag disabled by default)
 
 | Method   | Path                        | Auth | Description                    |
 |----------|-----------------------------|------|--------------------------------|
@@ -175,7 +614,7 @@ For a complete history of changes, please see the [full changelog →](CHANGELOG
 
 ## Development
 
-See the [Development Guide](docs/DEVELOPMENT.md) for prerequisites, local setup, and contribution guidelines.
+See the [Development Guide](docs/DEVELOPMENT.md) for prerequisites, local setup, and contribution guidelines. For contribution workflow and best practices, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Quick start for developers:
 

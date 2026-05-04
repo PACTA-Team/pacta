@@ -1,5 +1,6 @@
 # Binaries
 pacta
+pacta-minirag
 *.exe
 *.dll
 *.so

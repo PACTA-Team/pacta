@@ -1,0 +1,19 @@
+CONTRATO DE CONFIDENCIALIDAD
+
+EL PROVEEDOR se obliga a mantener la confidencialidad de la información del CLIENTE. 
+El proveedor no divulgará datos personales, secretos comerciales, ni know-how. 
+Esta obligación sobrevivirá por cinco años tras la terminación del contrato. 
+El proveedor indemnizará al cliente por cualquier divulgación no autorizada.
+
+El término "información confidencial" incluye, pero no se limita a: 
+- Datos personales de clientes y empleados
+- Secretos comerciales y fórmulas químicas
+- Estrategias de mercado y planes de negocio
+- Know-how técnico y procedimientos operativos
+
+Toda la información marcada como "Confidencial" o que razonablemente deba entenderse como tal, 
+estará protegida bajo este acuerdo. La obligación de confidencialidad se extiende a 
+subcontratistas y empleados del proveedor.
+
+En caso de incumplimiento, el cliente tendrá derecho a reclamar daños y perjuicios, 
+incluyendo lucro cesante, sin perjuicio de otras acciones legales que correspondan.

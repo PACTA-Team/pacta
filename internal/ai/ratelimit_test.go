@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	dbpkg "github.com/PACTA-Team/pacta/internal/db"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -38,7 +39,7 @@ func TestRateLimiter_Allow(t *testing.T) {
 	db := setupRateLimitTestDB(t)
 	defer db.Close()
 
-	rl := NewRateLimiter(db)
+	rl := NewRateLimiter(dbpkg.New(db))
 	rl.SetLimit(100)
 
 	// 100 requests should succeed
@@ -64,7 +65,7 @@ func TestRateLimiter_MultiCompany(t *testing.T) {
 	db := setupRateLimitTestDB(t)
 	defer db.Close()
 
-	rl := NewRateLimiter(db)
+	rl := NewRateLimiter(dbpkg.New(db))
 	rl.SetLimit(100)
 
 	// Company 1 hits its limit
@@ -104,7 +105,7 @@ func TestRateLimiter_DayRollover(t *testing.T) {
 	db := setupRateLimitTestDB(t)
 	defer db.Close()
 
-	rl := NewRateLimiter(db)
+	rl := NewRateLimiter(dbpkg.New(db))
 	rl.SetLimit(100)
 
 	// Use up all quota for company 1 on today's date
@@ -162,7 +163,7 @@ func TestRateLimiter_Allow_Concurrency(t *testing.T) {
 	db := setupRateLimitTestDB(t)
 	defer db.Close()
 
-	rl := NewRateLimiter(db)
+	rl := NewRateLimiter(dbpkg.New(db))
 	rl.SetLimit(100)
 
 	var wg sync.WaitGroup

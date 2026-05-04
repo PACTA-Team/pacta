@@ -1,9 +1,10 @@
 package ai
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 // SimilarContract represents a contract retrieved for RAG
@@ -14,51 +15,45 @@ type SimilarContract struct {
 	Content string // Extracted text from document
 }
 
-// ContractRetriever handles retrieving similar contracts from SQLite
+// ContractRetriever handles retrieving similar contracts using sqlc Queries
 type ContractRetriever struct {
-	DB *sql.DB
+	Queries *db.Queries
 }
 
-// NewContractRetriever creates a new contract retriever
-func NewContractRetriever(db *sql.DB) *ContractRetriever {
-	return &ContractRetriever{DB: db}
+// NewContractRetriever creates a new contract retriever using sqlc Queries
+func NewContractRetriever(queries *db.Queries) *ContractRetriever {
+	return &ContractRetriever{Queries: queries}
 }
 
 // GetSimilarContracts retrieves similar contracts based on type and counterpart, scoped to a company
 func (r *ContractRetriever) GetSimilarContracts(companyID int, contractType string, clientID, supplierID int, limit int) ([]SimilarContract, error) {
-	query := `
-		SELECT c.id, c.title, c.type, COALESCE(c.object, '') as content
-		FROM contracts c
-		WHERE c.type = ?
-		  AND c.company_id = ?
-		  AND c.deleted_at IS NULL
-		  AND (c.client_id = ? OR c.supplier_id = ?)
-		ORDER BY c.created_at DESC
-		LIMIT ?
-	`
-
-	rows, err := r.DB.Query(query, contractType, companyID, clientID, supplierID, limit)
+	rows, err := r.Queries.GetSimilarContracts(context.Background(), db.GetSimilarContractsParams{
+		ContractType: contractType,
+		CompanyID:   int64(companyID),
+		ClientID:    int64(clientID),
+		SupplierID:  int64(supplierID),
+		Limit:       int32(limit),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to query contracts: %w", err)
 	}
-	defer rows.Close()
 
 	var contracts []SimilarContract
-	for rows.Next() {
-		var c SimilarContract
-		if err := rows.Scan(&c.ID, &c.Title, &c.Type, &c.Content); err != nil {
-			continue // Skip problematic rows
-		}
-		contracts = append(contracts, c)
+	for _, row := range rows {
+		contracts = append(contracts, SimilarContract{
+			ID:      int(row.ID),
+			Title:   row.Title,
+			Type:    row.Type,
+			Content: row.Content,
+		})
 	}
-
 	return contracts, nil
 }
 
 // BuildRAGContext builds a context string from similar contracts
 func BuildRAGContext(contracts []SimilarContract) string {
 	if len(contracts) == 0 {
-		return "No previous contracts available for reference."
+		return "No previous contracts available for reference.\n"
 	}
 
 	var builder strings.Builder

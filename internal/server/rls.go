@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 var ErrAccessDenied = fmt.Errorf("access denied")
@@ -23,12 +26,8 @@ func validateTableName(table string) bool {
 	return allowedTables[table]
 }
 
-func EnforceCompanyAccess(db *sql.DB, userID, companyID int) error {
-	var count int
-	err := db.QueryRow(`
-		SELECT COUNT(*) FROM user_companies 
-		WHERE user_id = ? AND company_id = ? AND deleted_at IS NULL
-	`, userID, companyID).Scan(&count)
+func EnforceCompanyAccess(queries *db.Queries, userID, companyID int) error {
+	count, err := queries.CountUserCompanyAccess(context.Background(), userID, companyID)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,10 @@
+version: "2"
+sql:
+  - schema: "migrations/*.sql"
+    queries: "queries/*.sql"
+    engine: "sqlite"
+    gen:
+      go:
+        package: "db"
+        out: "."
+        emit_interface: true  # Genera interfaz Queries para poder mockear en tests y usar WithTx

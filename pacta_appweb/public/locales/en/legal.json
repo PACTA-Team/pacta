@@ -1,0 +1,70 @@
+{
+  "legalSettings": {
+    "title": "Legal AI Settings",
+    "description": "Configure AI-powered legal document analysis and assistance",
+    "enableLabel": "Enable Legal AI",
+    "enableDescription": "Activate AI-powered legal document analysis and chat assistance",
+    "integrationLabel": "Integration Mode",
+    "integrationDescription": "Choose how to integrate the Legal AI system",
+    "documentManagement": "Document Management",
+    "uploadDocument": "Upload Document",
+    "documentsDescription": "Manage legal documents for AI analysis",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "toggleSuccess": "Legal AI settings updated successfully",
+    "saveError": "Failed to save Legal AI settings",
+    "loadError": "Failed to load Legal AI settings",
+    "uploadSuccess": "Document uploaded successfully",
+    "uploadError": "Failed to upload document",
+    "reindexSuccess": "Document reindexed successfully",
+    "reindexError": "Failed to reindex document",
+    "deleteSuccess": "Document deleted successfully",
+    "deleteError": "Failed to delete document",
+    "documentTitle": "Title",
+    "titlePlaceholder": "e.g., Foreign Investment Law",
+    "documentType": "Document Type",
+    "selectType": "Select type...",
+    "effectiveDate": "Effective Date",
+    "tags": "Tags (comma-separated)",
+    "tagsPlaceholder": "e.g., investment, foreign",
+    "file": "File (PDF)",
+    "errors": {
+      "required_fields": "All fields are required",
+      "file_too_large": "File too large (max 50MB)",
+      "upload_failed": "Upload failed"
+    },
+    "table": {
+      "title": "Legal Documents",
+      "type": "Type",
+      "chunks": "Chunks",
+      "indexed": "Indexed",
+      "created": "Created",
+      "actions": "Actions",
+      "confirmDelete": "Are you sure you want to delete this document?"
+    }
+  },
+  "chat": {
+    "title": "Legal AI Chat",
+    "subtitle": "Get AI-powered assistance with legal documents and analysis",
+    "welcome": "Welcome to Legal AI Assistant",
+    "welcomeSubtitle": "Ask questions about your legal documents or request analysis",
+    "inputPlaceholder": "Type your legal question here...",
+    "thinking": "Thinking...",
+    "noResponse": "No response received from AI",
+    "error": "An error occurred while processing your request",
+    "disclaimer": "AI-generated content may contain inaccuracies. Always verify with a legal professional.",
+    "sessionTitle": "Legal Chat"
+  },
+  "validation": {
+    "title": "Document Validation",
+    "description": "Validate legal documents and detect potential risks",
+    "risksDetected": "risks detected",
+    "overallRisk": "Overall Risk Level",
+    "apply": "Apply Changes",
+    "applyAll": "Apply All",
+    "close": "Close",
+    "fullAnalysis": "Full Analysis",
+    "analyzing": "Analyzing document...",
+    "noResults": "No validation results available"
+  }
+}

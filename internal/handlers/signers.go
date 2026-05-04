@@ -1,10 +1,15 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 type signerRow struct {
@@ -38,54 +43,31 @@ func (h *Handler) listSigners(w http.ResponseWriter, r *http.Request) {
 	}
 	companyType := r.URL.Query().Get("company_type") // Optional: "client" or "supplier"
 
-	// Optimized path: both company_id AND company_type provided → single filtered query (N+1 fix)
+	// Optimized path: both company_id AND company_type provided → single filtered query
 	if companyType == "client" || companyType == "supplier" {
-		rows, err := h.DB.Query(`
-			SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
-			FROM authorized_signers
-			WHERE deleted_at IS NULL AND company_id = ? AND company_type = ?
-			ORDER BY first_name, last_name
-		`, companyID, companyType)
+		signers, err := h.Queries.ListSignersByCompanyAndType(r.Context(), db.ListSignersByCompanyAndTypeParams{
+			CompanyID:   int64(companyID),
+			CompanyType: companyType,
+		})
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, "failed to list signers")
 			return
 		}
-		defer rows.Close()
-
-		var signers []signerRow
-		for rows.Next() {
-			var s signerRow
-			if err := rows.Scan(&s.ID, &s.CompanyID, &s.CompanyType, &s.FirstName, &s.LastName, &s.Position, &s.Phone, &s.Email, &s.CreatedAt, &s.UpdatedAt); err != nil {
-				continue
-			}
-			signers = append(signers, s)
-		}
 		if signers == nil {
-			signers = []signerRow{}
+			signers = []db.ListSignersByCompanyAndTypeRow{}
 		}
 		h.JSON(w, http.StatusOK, signers)
 		return
 	}
 
 	// Legacy path: no company_type filter → return all signers for company_id
-	rows, err := h.DB.Query(`
-		SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
-		FROM authorized_signers WHERE deleted_at IS NULL AND company_id = ? ORDER BY last_name, first_name
-	`, companyID)
+	signers, err := h.Queries.ListSignersByCompany(r.Context(), int64(companyID))
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to list signers")
 		return
 	}
-	defer rows.Close()
-
-	var signers []signerRow
-	for rows.Next() {
-		var s signerRow
-		rows.Scan(&s.ID, &s.CompanyID, &s.CompanyType, &s.FirstName, &s.LastName, &s.Position, &s.Phone, &s.Email, &s.CreatedAt, &s.UpdatedAt)
-		signers = append(signers, s)
-	}
 	if signers == nil {
-		signers = []signerRow{}
+		signers = []db.ListSignersByCompanyRow{}
 	}
 	h.JSON(w, http.StatusOK, signers)
 }
@@ -115,17 +97,21 @@ func (h *Handler) createSigner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate foreign key: check company exists and belongs to user's company
-	var companyExists int
+	var companyExists int64
 	if req.CompanyType == "client" {
-		if err := h.DB.QueryRow("SELECT COUNT(*) FROM clients WHERE id = ? AND deleted_at IS NULL AND company_id = ?", req.CompanyID, companyID).Scan(&companyExists); err != nil {
-			h.Error(w, http.StatusInternalServerError, "failed to create signer")
-			return
-		}
+		companyExists, err = h.Queries.ClientExists(r.Context(), db.ClientExistsParams{
+			ID:        int64(req.CompanyID),
+			CompanyID: int64(companyID),
+		})
 	} else {
-		if err := h.DB.QueryRow("SELECT COUNT(*) FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", req.CompanyID, companyID).Scan(&companyExists); err != nil {
-			h.Error(w, http.StatusInternalServerError, "failed to create signer")
-			return
-		}
+		companyExists, err = h.Queries.SupplierExists(r.Context(), db.SupplierExistsParams{
+			ID:        int64(req.CompanyID),
+			CompanyID: int64(companyID),
+		})
+	}
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to create signer")
+		return
 	}
 	if companyExists == 0 {
 		h.Error(w, http.StatusBadRequest, req.CompanyType+" not found")
@@ -133,17 +119,22 @@ func (h *Handler) createSigner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.getUserID(r)
-	result, err := h.DB.Exec(
-		"INSERT INTO authorized_signers (company_id, company_type, first_name, last_name, position, phone, email, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		req.CompanyID, req.CompanyType, req.FirstName, req.LastName, req.Position, req.Phone, req.Email, userID)
+	signer, err := h.Queries.CreateSigner(r.Context(), db.CreateSignerParams{
+		CompanyID:   int64(req.CompanyID),
+		CompanyType: req.CompanyType,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Position:    req.Position,
+		Phone:       req.Phone,
+		Email:       req.Email,
+		CreatedBy:   int64(userID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to create signer")
 		return
 	}
-	id64, _ := result.LastInsertId()
-	id := int(id64)
-	h.auditLog(r, userID, companyID, "create", "signer", &id, nil, map[string]interface{}{
-		"id":           id,
+	h.auditLog(r, userID, companyID, "create", "signer", &signer.ID, nil, map[string]interface{}{
+		"id":           signer.ID,
 		"company_id":   req.CompanyID,
 		"company_type": req.CompanyType,
 		"first_name":   req.FirstName,
@@ -151,7 +142,7 @@ func (h *Handler) createSigner(w http.ResponseWriter, r *http.Request) {
 		"position":     req.Position,
 		"email":        req.Email,
 	})
-	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "status": "created"})
+	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": signer.ID, "status": "created"})
 }
 
 func (h *Handler) HandleSignerByID(w http.ResponseWriter, r *http.Request) {
@@ -176,19 +167,16 @@ func (h *Handler) HandleSignerByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getSigner(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
-	var s signerRow
-	err := h.DB.QueryRow(`
-		SELECT id, company_id, company_type, first_name, last_name, position, phone, email, created_at, updated_at
-		FROM authorized_signers WHERE id = ? AND deleted_at IS NULL AND company_id IN (
-			SELECT id FROM clients WHERE company_id = ? AND deleted_at IS NULL
-			UNION ALL
-			SELECT id FROM suppliers WHERE company_id = ? AND deleted_at IS NULL
-		)
-	`, id, companyID, companyID).Scan(&s.ID, &s.CompanyID, &s.CompanyType, &s.FirstName, &s.LastName, &s.Position, &s.Phone, &s.Email, &s.CreatedAt, &s.UpdatedAt)
+	signer, err := h.Queries.GetSignerWithValidation(r.Context(), db.GetSignerWithValidationParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "signer not found")
 		return
 	}
+	h.JSON(w, http.StatusOK, signer)
+}
 	h.JSON(w, http.StatusOK, s)
 }
 
@@ -211,25 +199,29 @@ func (h *Handler) updateSigner(w http.ResponseWriter, r *http.Request, id int) {
 		companyType := req.CompanyType
 		if companyType == "" {
 			// Fetch existing company_type to validate against
-			var existingType string
-			if err := h.DB.QueryRow("SELECT company_type FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", id).Scan(&existingType); err != nil {
+			existingSigner, err := h.Queries.GetSignerByID(r.Context(), int64(id))
+			if err != nil {
 				h.Error(w, http.StatusNotFound, "signer not found")
 				return
 			}
-			companyType = existingType
+			companyType = existingSigner.CompanyType
 		}
 
-		var companyExists int
+		var companyExists int64
 		if companyType == "client" {
-			if err := h.DB.QueryRow("SELECT COUNT(*) FROM clients WHERE id = ? AND deleted_at IS NULL AND company_id = ?", req.CompanyID, companyID).Scan(&companyExists); err != nil {
-				h.Error(w, http.StatusInternalServerError, "failed to update signer")
-				return
-			}
+			companyExists, err = h.Queries.ClientExists(r.Context(), db.ClientExistsParams{
+				ID:        int64(req.CompanyID),
+				CompanyID: int64(companyID),
+			})
 		} else {
-			if err := h.DB.QueryRow("SELECT COUNT(*) FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", req.CompanyID, companyID).Scan(&companyExists); err != nil {
-				h.Error(w, http.StatusInternalServerError, "failed to update signer")
-				return
-			}
+			companyExists, err = h.Queries.SupplierExists(r.Context(), db.SupplierExistsParams{
+				ID:        int64(req.CompanyID),
+				CompanyID: int64(companyID),
+			})
+		}
+		if err != nil {
+			h.Error(w, http.StatusInternalServerError, "failed to update signer")
+			return
 		}
 		if companyExists == 0 {
 			h.Error(w, http.StatusBadRequest, companyType+" not found")
@@ -238,74 +230,87 @@ func (h *Handler) updateSigner(w http.ResponseWriter, r *http.Request, id int) {
 	}
 
 	// Fetch previous state
-	var prevFirstName, prevLastName, prevPosition, prevPhone, prevEmail string
-	var prevCompanyID int
-	var prevCompanyType string
-	err := h.DB.QueryRow("SELECT company_id, company_type, first_name, last_name, position, phone, email FROM authorized_signers WHERE id = ? AND deleted_at IS NULL AND company_id IN (SELECT id FROM clients WHERE company_id = ? AND deleted_at IS NULL UNION ALL SELECT id FROM suppliers WHERE company_id = ? AND deleted_at IS NULL)", id, companyID, companyID).Scan(&prevCompanyID, &prevCompanyType, &prevFirstName, &prevLastName, &prevPosition, &prevPhone, &prevEmail)
+	prevSigner, err := h.Queries.GetSignerWithValidation(r.Context(), db.GetSignerWithValidationParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "signer not found")
 		return
 	}
 
-	result, err := h.DB.Exec(`
-		UPDATE authorized_signers SET company_id=?, company_type=?, first_name=?, last_name=?, position=?, phone=?, email=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL
-	`, req.CompanyID, req.CompanyType, req.FirstName, req.LastName, req.Position, req.Phone, req.Email, id)
+	// Update signer
+	updatedSigner, err := h.Queries.UpdateSigner(r.Context(), db.UpdateSignerParams{
+		ID:          int64(id),
+		CompanyID:   int64(req.CompanyID),
+		CompanyType: req.CompanyType,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Position:    sql.NullString{String: req.Position, Valid: req.Position != ""},
+		Phone:       sql.NullString{String: req.Phone, Valid: req.Phone != ""},
+		Email:       sql.NullString{String: req.Email, Valid: req.Email != ""},
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update signer")
 		return
 	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		h.Error(w, http.StatusNotFound, "signer not found")
-		return
-	}
+
 	h.auditLog(r, h.getUserID(r), companyID, "update", "signer", &id, map[string]interface{}{
-		"id":           id,
-		"company_id":   prevCompanyID,
-		"company_type": prevCompanyType,
-		"first_name":   prevFirstName,
-		"last_name":    prevLastName,
-		"position":     prevPosition,
-		"phone":        prevPhone,
-		"email":        prevEmail,
+		"id":           prevSigner.ID,
+		"company_id":   prevSigner.CompanyID,
+		"company_type": prevSigner.CompanyType,
+		"first_name":   prevSigner.FirstName,
+		"last_name":    prevSigner.LastName,
+		"position":     prevSigner.Position,
+		"phone":        prevSigner.Phone,
+		"email":        prevSigner.Email,
 	}, map[string]interface{}{
-		"id":           id,
-		"company_id":   req.CompanyID,
-		"company_type": req.CompanyType,
-		"first_name":   req.FirstName,
-		"last_name":    req.LastName,
-		"position":     req.Position,
-		"phone":        req.Phone,
-		"email":        req.Email,
+		"id":           updatedSigner.ID,
+		"company_id":   updatedSigner.CompanyID,
+		"company_type": updatedSigner.CompanyType,
+		"first_name":   updatedSigner.FirstName,
+		"last_name":    updatedSigner.LastName,
+		"position":     updatedSigner.Position,
+		"phone":        updatedSigner.Phone,
+		"email":        updatedSigner.Email,
 	})
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *Handler) deleteSigner(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
-	var prevFirstName, prevLastName string
-	err := h.DB.QueryRow("SELECT first_name, last_name FROM authorized_signers WHERE id = ? AND deleted_at IS NULL", id).Scan(&prevFirstName, &prevLastName)
+
+	// Fetch previous state for audit log
+	prevSigner, err := h.Queries.GetSignerByID(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "signer not found")
 		return
 	}
-	result, err := h.DB.Exec(
-		"UPDATE authorized_signers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL",
-		id)
+
+	err = h.Queries.DeleteSigner(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete signer")
 		return
 	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		h.Error(w, http.StatusNotFound, "signer not found")
-		return
-	}
+
 	h.auditLog(r, h.getUserID(r), companyID, "delete", "signer", &id, map[string]interface{}{
 		"id":         id,
-		"first_name": prevFirstName,
-		"last_name":  prevLastName,
+		"first_name": prevSigner.FirstName,
+		"last_name":  prevSigner.LastName,
+	}, nil)
+	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+	err = h.Queries.DeleteSigner(r.Context(), int64(id))
+	if err != nil {
+		h.Error(w, http.StatusInternalServerError, "failed to delete signer")
+		return
+	}
+
+	h.auditLog(r, h.getUserID(r), companyID, "delete", "signer", &id, map[string]interface{}{
+		"id":         id,
+		"first_name": prevSigner.FirstName,
+		"last_name":  prevSigner.LastName,
 	}, nil)
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

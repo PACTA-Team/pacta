@@ -1,19 +1,19 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/PACTA-Team/pacta/internal/ai"
-	"github.com/PACTA-Team/pacta/internal/models"
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 // GetSetting retrieves a single setting by key, returns defaultValue if not found
 func (h *Handler) GetSetting(key string, defaultValue string) string {
-	var value string
-	err := h.DB.QueryRow("SELECT value FROM system_settings WHERE key = ?", key).Scan(&value)
+	value, err := h.Queries.GetSettingValue(context.Background(), key)
 	if err != nil || value == "" {
 		// Fallback to environment variable
 		if envValue := os.Getenv(strings.ToUpper(key)); envValue != "" {
@@ -39,21 +39,14 @@ func (h *Handler) GetSystemSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.DB.Query("SELECT id, key, value, category, updated_by, updated_at FROM system_settings ORDER BY category, key")
+	settings, err := h.Queries.GetAllSettings(context.Background())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
 
-	var settings []models.SystemSetting
-	for rows.Next() {
-		var s models.SystemSetting
-		if err := rows.Scan(&s.ID, &s.Key, &s.Value, &s.Category, &s.UpdatedBy, &s.UpdatedAt); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		settings = append(settings, s)
+	if settings == nil {
+		settings = []db.SystemSetting{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -89,10 +82,11 @@ func (h *Handler) UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 			}
 			value = encrypted
 		}
-		_, err := h.DB.Exec(
-			"UPDATE system_settings SET value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?",
-			value, userID, s.Key,
-		)
+		err := h.Queries.UpdateSettingValue(context.Background(), db.UpdateSettingValueParams{
+			Key:       s.Key,
+			Value:     value,
+			UpdatedBy: int64(userID),
+		})
 		if err != nil {
 			h.Error(w, http.StatusInternalServerError, err.Error())
 			return

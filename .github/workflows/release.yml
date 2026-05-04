@@ -20,6 +20,8 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
       - uses: actions/checkout@v6
         with:
@@ -43,27 +45,53 @@ jobs:
       - name: Copy frontend dist
         run: cp -r pacta_appweb/dist cmd/pacta/dist
 
-      - name: Verify embedded assets
-        run: |
-          echo "Verifying embedded assets..."
-          if [ ! -d "cmd/pacta/dist" ]; then
-            echo "ERROR: cmd/pacta/dist directory not found"
-            exit 1
-          fi
-          if [ ! -d "cmd/pacta/dist/assets" ]; then
-            echo "ERROR: cmd/pacta/dist/assets directory not found"
-            exit 1
-          fi
-          ASSET_COUNT=$(ls cmd/pacta/dist/assets | wc -l)
-          echo "Found $ASSET_COUNT asset files"
-          if [ "$ASSET_COUNT" -lt "10" ]; then
-            echo "ERROR: Expected at least 10 assets, found $ASSET_COUNT"
-            exit 1
-          fi
-          echo "Verification passed!"
+      - name: Install sqlc
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.46.0
 
-      - name: Clean build artifacts
-        run: rm -f pacta_appweb/*.tsbuildinfo
+      - name: Generate sqlc code
+        run: sqlc generate
+
+      - name: Verify generated code up-to-date
+        run: git diff --exit-code internal/db/queries_gen.go
+
+      - name: Clone llama.cpp
+        run: |
+          if [ ! -d "internal/ai/minirag/llama.cpp/.git" ]; then
+            rm -rf internal/ai/minirag/llama.cpp
+            git clone --depth 1 https://github.com/ggerganov/llama.cpp.git internal/ai/minirag/llama.cpp
+          fi
+
+      - name: Cache llama.cpp build
+        uses: actions/cache@v4
+        with:
+          path: internal/ai/minirag/llama.cpp/build
+          key: ${{ runner.os }}-llama-cpp-${{ hashFiles('internal/ai/minirag/llama.cpp/**') }}
+          restore-keys: |
+            ${{ runner.os }}-llama-cpp-
+
+      - name: Build llama.cpp
+        run: |
+          cd internal/ai/minirag/llama.cpp
+          mkdir -p build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+          make -j$(nproc)
+
+      - name: Build with CGO (embedded BGE)
+        run: |
+          export CGO_ENABLED=1
+          export CGO_CFLAGS="-I$(pwd)/internal/ai/minirag/llama.cpp/include \
+                             -I$(pwd)/internal/ai/minirag/llama.cpp/ggml/include"
+          export CGO_LDFLAGS="-L$(pwd)/internal/ai/minirag/llama.cpp/build \
+                             -lllama -lggml -lggml-base -lm -lstdc++ -lpthread"
+          go build -o pacta ./cmd/pacta
+        env:
+          CGO_ENABLED: 1
+
+      - name: Run Go tests
+        run: go test ./... -v -count=1 -timeout=10m
+
+      - name: Vet Go code
+        run: go vet ./...
 
       - uses: goreleaser/goreleaser-action@v7
         with:

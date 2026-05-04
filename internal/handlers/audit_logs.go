@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
@@ -28,57 +30,81 @@ func (h *Handler) HandleAuditLogs(w http.ResponseWriter, r *http.Request) {
 	companyID := h.GetCompanyID(r)
 	query := r.URL.Query()
 
-	// Build dynamic query with filters
-	sql := `
-		SELECT id, user_id, action, entity_type, entity_id, previous_state, new_state, ip_address, created_at
-		FROM audit_logs WHERE company_id = ?
-	`
-	args := []interface{}{companyID}
+	// Build params for filtered query
+	entityType := query.Get("entity_type")
+	entityIDStr := query.Get("entity_id")
+	userIDStr := query.Get("user_id")
+	action := query.Get("action")
 
-	if entityType := query.Get("entity_type"); entityType != "" {
-		sql += " AND entity_type = ?"
-		args = append(args, entityType)
-	}
-	if entityID := query.Get("entity_id"); entityID != "" {
-		if id, err := strconv.Atoi(entityID); err == nil {
-			sql += " AND entity_id = ?"
-			args = append(args, id)
+	entityID := 0
+	if entityIDStr != "" {
+		if id, err := strconv.Atoi(entityIDStr); err == nil {
+			entityID = id
 		}
 	}
-	if userID := query.Get("user_id"); userID != "" {
-		if id, err := strconv.Atoi(userID); err == nil {
-			sql += " AND user_id = ?"
-			args = append(args, id)
+	userID := 0
+	if userIDStr != "" {
+		if id, err := strconv.Atoi(userIDStr); err == nil {
+			userID = id
 		}
 	}
-	if action := query.Get("action"); action != "" {
-		sql += " AND action = ?"
-		args = append(args, action)
+
+	var err error
+	var logs []db.ListAuditLogsByFiltersRow
+
+	if entityType == "" && entityID == 0 && userID == 0 && action == "" {
+		// Simple case: no filters
+		logs, err = h.Queries.ListAuditLogsByCompany(r.Context(), int64(companyID))
+	} else {
+		// Use filtered query
+		logs, err = h.Queries.ListAuditLogsByFilters(r.Context(), db.ListAuditLogsByFiltersParams{
+			CompanyID:  int64(companyID),
+			EntityType: entityType,
+			EntityID:   int64(entityID),
+			UserID:     int64(userID),
+			Action:     action,
+		})
 	}
-
-	sql += " ORDER BY created_at DESC LIMIT 100"
-
-	rows, err := h.DB.Query(sql, args...)
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to query audit logs")
 		return
 	}
-	defer rows.Close()
 
-	var logs []auditLogRow
-	for rows.Next() {
-		var l auditLogRow
-		rows.Scan(&l.ID, &l.UserID, &l.Action, &l.EntityType, &l.EntityID, &l.PreviousState, &l.NewState, &l.IPAddress, &l.CreatedAt)
-		logs = append(logs, l)
-	}
-	if err := rows.Err(); err != nil {
-		h.Error(w, http.StatusInternalServerError, "failed to scan audit logs")
-		return
-	}
 	if logs == nil {
-		logs = []auditLogRow{}
+		logs = []db.ListAuditLogsByFiltersRow{}
 	}
-	h.JSON(w, http.StatusOK, logs)
+
+	// Convert to auditLogRow format
+	var result []auditLogRow
+	for _, l := range logs {
+		row := auditLogRow{
+			ID:        int(l.ID),
+			UserID:    &[]int{int(l.UserID)}[0],
+			Action:    l.Action,
+			EntityType: l.EntityType,
+			EntityID:  &[]int{int(l.EntityID.Int64)}[0],
+			IPAddress: &l.IPAddress.String,
+			CreatedAt: l.CreatedAt,
+		}
+		if l.EntityID.Valid {
+			id := int(l.EntityID.Int64)
+			row.EntityID = &id
+		}
+		if l.PreviousState.Valid {
+			s := l.PreviousState.String
+			row.PreviousState = &s
+		}
+		if l.NewState.Valid {
+			s := l.NewState.String
+			row.NewState = &s
+		}
+		if l.UserID != 0 {
+			row.UserID = &[]int{int(l.UserID)}[0]
+		}
+		result = append(result, row)
+	}
+
+	h.JSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) InsertAuditLog(userID int, action, entityType string, entityID *int, prevState, newState *string, r *http.Request) {
@@ -90,10 +116,16 @@ func (h *Handler) InsertAuditLog(userID int, action, entityType string, entityID
 	if r != nil {
 		companyID = h.GetCompanyID(r)
 	}
-	_, err := h.DB.Exec(`
-		INSERT INTO audit_logs (user_id, action, entity_type, entity_id, previous_state, new_state, ip_address, created_at, company_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-	`, userID, action, entityType, entityID, prevState, newState, ip, companyID)
+	_, err := h.Queries.CreateAuditLog(r.Context(), db.CreateAuditLogParams{
+		UserID:      int64(userID),
+		Action:      action,
+		EntityType:  entityType,
+		EntityID:    entityID,
+		PreviousState: prevState,
+		NewState:    newState,
+		IPAddress:   ip,
+		CompanyID:   int64(companyID),
+	})
 	if err != nil {
 		log.Printf("[audit] ERROR inserting log: %v", err)
 	}

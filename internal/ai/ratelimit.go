@@ -1,21 +1,24 @@
 package ai
 
 import (
+	"context"
 	"database/sql"
 	"time"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 // RateLimiter enforces daily rate limits per company using shared DB storage.
 type RateLimiter struct {
-	db    *sql.DB
-	limit int // max requests per day (default 100)
+	queries *db.Queries
+	limit   int // max requests per day (default 100)
 }
 
-// NewRateLimiter creates a RateLimiter backed by the provided DB.
-func NewRateLimiter(db *sql.DB) *RateLimiter {
+// NewRateLimiter creates a RateLimiter backed by the provided Queries.
+func NewRateLimiter(queries *db.Queries) *RateLimiter {
 	return &RateLimiter{
-		db:    db,
-		limit: 100,
+		queries: queries,
+		limit:   100,
 	}
 }
 
@@ -24,41 +27,33 @@ func NewRateLimiter(db *sql.DB) *RateLimiter {
 func (rl *RateLimiter) Allow(companyID int) (remaining int, ok bool) {
 	today := time.Now().UTC().Format("2006-01-02")
 
-	// Begin transaction to avoid race conditions
-	tx, err := rl.db.Begin()
+	// Use the underlying DB to start a transaction (sqlc Queries doesn't expose Begin)
+	tx, err := rl.queries.DB().Begin()
 	if err != nil {
 		return 0, false
 	}
 	defer tx.Rollback()
 
-	var count int
-	err = tx.QueryRow("SELECT count FROM ai_rate_limits WHERE company_id = ? AND date = ?", companyID, today).Scan(&count)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, false
-	}
+	// Create a Queries bound to this transaction
+	txQueries := db.NewQueriesWithTx(tx)
 
-	// Already at limit?
-	if count >= rl.limit {
-		return 0, false
-	}
-
-	// Increment counter
-	if err == sql.ErrNoRows {
-		_, err = tx.Exec("INSERT INTO ai_rate_limits (company_id, date, count) VALUES (?, ?, 1)", companyID, today)
-	} else {
-		_, err = tx.Exec("UPDATE ai_rate_limits SET count = count + 1 WHERE company_id = ? AND date = ?", companyID, today)
-	}
+	// Atomically increment and get new count
+	newCount, err := txQueries.IncrementRateLimit(context.Background(), companyID, today)
 	if err != nil {
 		return 0, false
 	}
 
-	if err = tx.Commit(); err != nil {
+	if newCount > rl.limit {
 		return 0, false
 	}
 
-	remaining = rl.limit - (count + 1)
+	remaining = rl.limit - newCount
 	if remaining < 0 {
 		remaining = 0
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, false
 	}
 	return remaining, true
 }

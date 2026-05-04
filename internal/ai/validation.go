@@ -1,20 +1,21 @@
 package ai
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 // ValidateStartupConfig checks AI configuration on startup.
 // Returns nil if OK, or an error warning if misconfigured.
-func ValidateStartupConfig(db *sql.DB, encryptionKey string) error {
+func ValidateStartupConfig(queries *db.Queries, encryptionKey string) error {
 	// Check if AI is configured in DB
-	var provider, apiKey string
-	err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'ai_provider' AND deleted_at IS NULL").Scan(&provider)
+	provider, err := queries.GetSettingValue(context.Background(), "ai_provider")
 	if err != nil || provider == "" {
 		return nil // AI not configured — okay
 	}
-	err = db.QueryRow("SELECT value FROM system_settings WHERE key = 'ai_api_key' AND deleted_at IS NULL").Scan(&apiKey)
+	apiKey, err := queries.GetSettingValue(context.Background(), "ai_api_key")
 	if err != nil || apiKey == "" {
 		return fmt.Errorf("AI provider configured but API key missing in database")
 	}

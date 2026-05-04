@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/PACTA-Team/pacta/internal/db"
 )
 
 type supplierRow struct {
-	ID        int     `json:"id"`
-	Name      string  `json:"name"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
 	Address   *string `json:"address,omitempty"`
 	REUCode   *string `json:"reu_code,omitempty"`
 	Contacts  *string `json:"contacts,omitempty"`
@@ -34,27 +36,32 @@ func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) {
 	if cid := r.URL.Query().Get("company_id"); cid != "" {
 		companyID, _ = strconv.Atoi(cid)
 	}
-	rows, err := h.DB.Query(`
-		SELECT id, name, address, reu_code, contacts, created_at, updated_at
-		FROM suppliers WHERE deleted_at IS NULL AND company_id = ? ORDER BY name
-	`, companyID)
+	suppliers, err := h.Queries.ListSuppliersByCompany(r.Context(), int64(companyID))
 	if err != nil {
 		log.Printf("[handlers/suppliers] ERROR: %v", err)
-		h.Error(w, http.StatusInternalServerError, "internal server error")
+		h.Error(w, http.StatusInternalServerError, "failed to list suppliers")
 		return
 	}
-	defer rows.Close()
 
-	var suppliers []supplierRow
-	for rows.Next() {
-		var s supplierRow
-		rows.Scan(&s.ID, &s.Name, &s.Address, &s.REUCode, &s.Contacts, &s.CreatedAt, &s.UpdatedAt)
-		suppliers = append(suppliers, s)
-	}
 	if suppliers == nil {
-		suppliers = []supplierRow{}
+		suppliers = []db.ListSuppliersByCompanyRow{}
 	}
-	h.JSON(w, http.StatusOK, suppliers)
+
+	// Convert to supplierRow format
+	var result []supplierRow
+	for _, s := range suppliers {
+		result = append(result, supplierRow{
+			ID:        s.ID,
+			Name:      s.Name,
+			Address:   s.Address,
+			REUCode:   s.ReuCode,
+			Contacts:  s.Contacts,
+			CreatedAt: s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt: s.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		})
+	}
+
+	h.JSON(w, http.StatusOK, result)
 }
 
 type createSupplierRequest struct {
@@ -75,24 +82,27 @@ func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := h.getUserID(r)
-	result, err := h.DB.Exec(
-		"INSERT INTO suppliers (name, address, reu_code, contacts, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?)",
-		req.Name, req.Address, req.REUCode, req.Contacts, userID, companyID)
+	supplier, err := h.Queries.CreateSupplier(r.Context(), db.CreateSupplierParams{
+		CompanyID: int64(companyID),
+		Name:      req.Name,
+		Address:   req.Address,
+		REUCode:  req.REUCode,
+		Contacts:  req.Contacts,
+		CreatedBy: int64(userID),
+	})
 	if err != nil {
 		log.Printf("[handlers/suppliers] ERROR: %v", err)
 		h.Error(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	id64, _ := result.LastInsertId()
-	id := int(id64)
-	h.auditLog(r, userID, companyID, "create", "supplier", &id, nil, map[string]interface{}{
-		"id":       id,
+	h.auditLog(r, userID, companyID, "create", "supplier", &supplier.ID, nil, map[string]interface{}{
+		"id":       supplier.ID,
 		"name":     req.Name,
 		"address":  req.Address,
 		"reu_code": req.REUCode,
 		"contacts": req.Contacts,
 	})
-	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": id, "status": "created"})
+	h.JSON(w, http.StatusCreated, map[string]interface{}{"id": supplier.ID, "status": "created"})
 }
 
 func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
@@ -118,17 +128,16 @@ func (h *Handler) HandleSupplierByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getSupplier(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
-	var s supplierRow
-	err := h.DB.QueryRow(`
-		SELECT id, name, address, reu_code, contacts, created_at, updated_at
-		FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?
-	`, id, companyID).Scan(&s.ID, &s.Name, &s.Address, &s.REUCode, &s.Contacts, &s.CreatedAt, &s.UpdatedAt)
+	supplier, err := h.Queries.GetSupplierByIDWithCompany(r.Context(), db.GetSupplierByIDWithCompanyParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
 	h.auditLog(r, h.getUserID(r), companyID, "READ", "supplier", &id, nil, nil)
-	h.JSON(w, http.StatusOK, s)
+	h.JSON(w, http.StatusOK, supplier)
 }
 
 func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int) {
@@ -138,33 +147,33 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 		h.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+
 	// Fetch previous state
-	var prevName, prevAddress, prevREUCode, prevContacts string
-	err := h.DB.QueryRow("SELECT name, address, reu_code, contacts FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&prevName, &prevAddress, &prevREUCode, &prevContacts)
+	prevSupplier, err := h.Queries.GetSupplierByID(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
 
-	result, err := h.DB.Exec(`
-		UPDATE suppliers SET name=?, address=?, reu_code=?, contacts=?, updated_at=CURRENT_TIMESTAMP
-		WHERE id=? AND deleted_at IS NULL AND company_id = ?
-	`, req.Name, req.Address, req.REUCode, req.Contacts, id, companyID)
+	_, err = h.Queries.UpdateSupplier(r.Context(), db.UpdateSupplierParams{
+		Name:      req.Name,
+		Address:   req.Address,
+		REUCode:   req.REUCode,
+		Contacts:  req.Contacts,
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to update supplier")
 		return
 	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		h.Error(w, http.StatusNotFound, "supplier not found")
-		return
-	}
+
 	h.auditLog(r, h.getUserID(r), companyID, "update", "supplier", &id, map[string]interface{}{
 		"id":       id,
-		"name":     prevName,
-		"address":  prevAddress,
-		"reu_code": prevREUCode,
-		"contacts": prevContacts,
+		"name":     prevSupplier.Name,
+		"address":  prevSupplier.Address,
+		"reu_code": prevSupplier.REUCode,
+		"contacts": prevSupplier.Contacts,
 	}, map[string]interface{}{
 		"id":       id,
 		"name":     req.Name,
@@ -172,32 +181,31 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request, id int)
 		"reu_code": req.REUCode,
 		"contacts": req.Contacts,
 	})
+
 	h.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *Handler) deleteSupplier(w http.ResponseWriter, r *http.Request, id int) {
 	companyID := h.GetCompanyID(r)
-	var prevName string
-	err := h.DB.QueryRow("SELECT name FROM suppliers WHERE id = ? AND deleted_at IS NULL AND company_id = ?", id, companyID).Scan(&prevName)
+	prevSupplier, err := h.Queries.GetSupplierByID(r.Context(), int64(id))
 	if err != nil {
 		h.Error(w, http.StatusNotFound, "supplier not found")
 		return
 	}
-	result, err := h.DB.Exec(
-		"UPDATE suppliers SET deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL AND company_id = ?",
-		id, companyID)
+
+	_, err = h.Queries.DeleteSupplier(r.Context(), db.DeleteSupplierParams{
+		ID:        int64(id),
+		CompanyID: int64(companyID),
+	})
 	if err != nil {
 		h.Error(w, http.StatusInternalServerError, "failed to delete supplier")
 		return
 	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		h.Error(w, http.StatusNotFound, "supplier not found")
-		return
-	}
+
 	h.auditLog(r, h.getUserID(r), companyID, "delete", "supplier", &id, map[string]interface{}{
 		"id":   id,
-		"name": prevName,
+		"name": prevSupplier.Name,
 	}, nil)
+
 	h.JSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
