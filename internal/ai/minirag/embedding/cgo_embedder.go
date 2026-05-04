@@ -23,10 +23,10 @@ import (
 	_ "embed"
 )
 
-//go:embed ../models/bge-small-en-v1.5.Q8_0.gguf
+//go:embed models/bge-small-en-v1.5.Q8_0.gguf
 var embeddedModel []byte
 
-//go:embed ../models/adapter_weights.bin
+//go:embed models/adapter_weights.bin
 var embeddedAdapter []byte
 
 // Embedder generates embeddings using llama.cpp via CGo.
