@@ -10,30 +10,30 @@ import (
 
 // LegalDocumentRow represents a row from legal_documents
 type LegalDocumentRow struct {
-	ID           int        `json:"id"`
-	Title        string     `json:"title"`
-	DocumentType string     `json:"document_type"`
-	Source       string     `json:"source,omitempty"`
-	Content      string     `json:"content"`
-	ContentHash  string     `json:"content_hash"`
-	Language     string     `json:"language"`
-	Jurisdiction string     `json:"jurisdiction"`
-	EffectiveDate *string    `json:"effective_date,omitempty"`
+	ID              int        `json:"id"`
+	Title           string     `json:"title"`
+	DocumentType    string     `json:"document_type"`
+	Source          string     `json:"source,omitempty"`
+	Content         string     `json:"content"`
+	ContentHash     string     `json:"content_hash"`
+	Language        string     `json:"language"`
+	Jurisdiction    string     `json:"jurisdiction"`
+	EffectiveDate   *string    `json:"effective_date,omitempty"`
 	PublicationDate *string    `json:"publication_date,omitempty"`
-	GacetaNumber string     `json:"gaceta_number,omitempty"`
-	Tags         []string   `json:"tags"`
-	ChunkCount   int        `json:"chunk_count"`
-	IndexedAt    *time.Time `json:"indexed_at,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
-	CompanyID    int        `json:"company_id"`
-	UploadedBy   int        `json:"uploaded_by"`
-	StoragePath  string     `json:"storage_path"`
-	MimeType     string     `json:"mime_type,omitempty"`
-	SizeBytes    int        `json:"size_bytes,omitempty"`
-	ChunkConfig  string     `json:"chunk_config,omitempty"`
-	IsIndexed    bool       `json:"is_indexed"`
+	GacetaNumber    string     `json:"gaceta_number,omitempty"`
+	Tags            []string   `json:"tags"`
+	ChunkCount      int        `json:"chunk_count"`
+	IndexedAt       *time.Time `json:"indexed_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	DeletedAt       *time.Time `json:"deleted_at,omitempty"`
+	CompanyID       int        `json:"company_id"`
+	UploadedBy      int        `json:"uploaded_by"`
+	StoragePath     string     `json:"storage_path"`
+	MimeType        string     `json:"mime_type,omitempty"`
+	SizeBytes       int        `json:"size_bytes,omitempty"`
+	ChunkConfig     string     `json:"chunk_config,omitempty"`
+	IsIndexed       bool       `json:"is_indexed"`
 }
 
 // LegalChatMessageRow represents a row from ai_legal_chat_history
@@ -60,10 +60,10 @@ type CreateLegalChatMessageParams struct {
 
 // LegalChatSession represents a chat session summary
 type LegalChatSession struct {
-	SessionID   string    `json:"session_id"`
-	UserID      int       `json:"user_id"`
+	SessionID    string    `json:"session_id"`
+	UserID       int       `json:"user_id"`
 	LastMessage  time.Time `json:"last_message"`
-	CreatedAt   time.Time `json:"created_at"`
+	CreatedAt    time.Time `json:"created_at"`
 	MessageCount int       `json:"message_count"`
 }
 
@@ -108,21 +108,21 @@ func CreateLegalDocument(ctx context.Context, queries *Queries, arg CreateLegalD
 	}
 
 	row, err := queries.CreateLegalDocument(ctx, CreateLegalDocumentParams{
-		Title:         arg.Title,
-		DocumentType:  arg.DocumentType,
-		Source:        arg.Source,
-		Content:        arg.Content,
-		ContentHash:    arg.ContentHash,
-		Language:       arg.Language,
-		Jurisdiction:   arg.Jurisdiction,
-		EffectiveDate: arg.EffectiveDate,
+		Title:           arg.Title,
+		DocumentType:    arg.DocumentType,
+		Source:          arg.Source,
+		Content:         arg.Content,
+		ContentHash:     arg.ContentHash,
+		Language:        arg.Language,
+		Jurisdiction:    arg.Jurisdiction,
+		EffectiveDate:   arg.EffectiveDate,
 		PublicationDate: arg.PublicationDate,
-		GacetaNumber:  arg.GacetaNumber,
-		Tags:           string(tagsJSON),
-		ChunkCount:     arg.ChunkCount,
-		IndexedAt:     arg.IndexedAt,
-		CreatedAt:     arg.CreatedAt,
-		UpdatedAt:     arg.UpdatedAt,
+		GacetaNumber:    arg.GacetaNumber,
+		Tags:            string(tagsJSON),
+		ChunkCount:      arg.ChunkCount,
+		IndexedAt:       arg.IndexedAt,
+		CreatedAt:       arg.CreatedAt,
+		UpdatedAt:       arg.UpdatedAt,
 	})
 	if err != nil {
 		return LegalDocumentRow{}, err
@@ -245,10 +245,10 @@ func ListLegalChatSessions(ctx context.Context, queries *Queries, userID int) ([
 	var sessions []LegalChatSession
 	for _, r := range rows {
 		sessions = append(sessions, LegalChatSession{
-			SessionID:   r.SessionID,
-			UserID:      int(r.UserID),
+			SessionID:    r.SessionID,
+			UserID:       int(r.UserID),
 			LastMessage:  r.LastMessage,
-			CreatedAt:   r.CreatedAt,
+			CreatedAt:    r.CreatedAt,
 			MessageCount: int(r.MessageCount),
 		})
 	}
@@ -270,10 +270,10 @@ func legalDocumentRowFromDB(row GetLegalDocumentRow) LegalDocumentRow {
 		DocumentType: row.DocumentType,
 		Source:       row.Source,
 		Content:      row.Content,
-		ContentHash:   row.ContentHash,
-		Language:      row.Language,
-		Jurisdiction:  row.Jurisdiction,
-		ChunkCount:    int(row.ChunkCount),
+		ContentHash:  row.ContentHash,
+		Language:     row.Language,
+		Jurisdiction: row.Jurisdiction,
+		ChunkCount:   int(row.ChunkCount),
 		CreatedAt:    row.CreatedAt,
 		UpdatedAt:    row.UpdatedAt,
 		CompanyID:    int(row.CompanyID),

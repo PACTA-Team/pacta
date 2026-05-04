@@ -151,21 +151,21 @@ func TestGetLegalDocument(t *testing.T) {
 
 	// Insert test doc
 	arg := CreateLegalDocumentParams{
-		Title:         "Ley de Prueba",
-		DocumentType:  "ley",
-		Content:       "Contenido de prueba",
-		ContentHash:   "hash456",
-		Language:      "es",
-		Jurisdiction:  "Cuba",
-		CreatedAt:     now,
-		UpdatedAt:     now,
-		CompanyID:     1,
-		UploadedBy:    1,
-		StoragePath:   "data/legal_corpus/1/test2.pdf",
-		MimeType:      "application/pdf",
-		SizeBytes:     2048,
-		ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
-		IsIndexed:     false,
+		Title:        "Ley de Prueba",
+		DocumentType: "ley",
+		Content:      "Contenido de prueba",
+		ContentHash:  "hash456",
+		Language:     "es",
+		Jurisdiction: "Cuba",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		CompanyID:    1,
+		UploadedBy:   1,
+		StoragePath:  "data/legal_corpus/1/test2.pdf",
+		MimeType:     "application/pdf",
+		SizeBytes:    2048,
+		ChunkConfig:  `{"size":1000,"overlap":200,"strategy":"structured"}`,
+		IsIndexed:    false,
 	}
 	created, err := CreateLegalDocument(ctx, db, arg)
 	if err != nil {
@@ -196,38 +196,38 @@ func TestListLegalDocuments(t *testing.T) {
 	// Insert two docs
 	docs := []CreateLegalDocumentParams{
 		{
-			Title:         "Law 1",
-			DocumentType:  "law",
-			Content:       "Content 1",
-			ContentHash:   "hash1",
-			Language:      "es",
-			Jurisdiction:  "Cuba",
-			CreatedAt:     now,
-			UpdatedAt:     now,
-			CompanyID:     1,
-			UploadedBy:    1,
-			StoragePath:   "data/legal_corpus/1/doc1.pdf",
-			MimeType:      "application/pdf",
-			SizeBytes:     1024,
-			ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
-			IsIndexed:     false,
+			Title:        "Law 1",
+			DocumentType: "law",
+			Content:      "Content 1",
+			ContentHash:  "hash1",
+			Language:     "es",
+			Jurisdiction: "Cuba",
+			CreatedAt:    now,
+			UpdatedAt:    now,
+			CompanyID:    1,
+			UploadedBy:   1,
+			StoragePath:  "data/legal_corpus/1/doc1.pdf",
+			MimeType:     "application/pdf",
+			SizeBytes:    1024,
+			ChunkConfig:  `{"size":1000,"overlap":200,"strategy":"structured"}`,
+			IsIndexed:    false,
 		},
 		{
-			Title:         "Law 2",
-			DocumentType:  "law",
-			Content:       "Content 2",
-			ContentHash:   "hash2",
-			Language:      "es",
-			Jurisdiction:  "Cuba",
-			CreatedAt:     now,
-			UpdatedAt:     now,
-			CompanyID:     1,
-			UploadedBy:    1,
-			StoragePath:   "data/legal_corpus/1/doc2.pdf",
-			MimeType:      "application/pdf",
-			SizeBytes:     2048,
-			ChunkConfig:   `{"size":1000,"overlap":200,"strategy":"structured"}`,
-			IsIndexed:     false,
+			Title:        "Law 2",
+			DocumentType: "law",
+			Content:      "Content 2",
+			ContentHash:  "hash2",
+			Language:     "es",
+			Jurisdiction: "Cuba",
+			CreatedAt:    now,
+			UpdatedAt:    now,
+			CompanyID:    1,
+			UploadedBy:   1,
+			StoragePath:  "data/legal_corpus/1/doc2.pdf",
+			MimeType:     "application/pdf",
+			SizeBytes:    2048,
+			ChunkConfig:  `{"size":1000,"overlap":200,"strategy":"structured"}`,
+			IsIndexed:    false,
 		},
 	}
 
@@ -345,8 +345,6 @@ func TestDeleteLegalDocument(t *testing.T) {
 		t.Error("Expected document to be soft-deleted (should return error)")
 	}
 }
-
-
 
 func TestGetAILegalEnabled(t *testing.T) {
 	db := setupLegalTestDB(t)

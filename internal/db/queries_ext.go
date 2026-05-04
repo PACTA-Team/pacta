@@ -20,14 +20,14 @@ func NewQueriesWithTx(tx *sql.Tx) *Queries {
 
 // GetContractForRAGRow represents the result of the GetContractForRAG query.
 type GetContractForRAGRow struct {
-	ID            int64     `json:"id"`
-	Title         string    `json:"title"`
-	Type          string    `json:"type"`
-	Object        []byte    `json:"object"` // may contain JSON or extra text
-	Content       string    `json:"content"`
-	ClientName    string    `json:"client_name"`
-	SupplierName  string    `json:"supplier_name"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID           int64     `json:"id"`
+	Title        string    `json:"title"`
+	Type         string    `json:"type"`
+	Object       []byte    `json:"object"` // may contain JSON or extra text
+	Content      string    `json:"content"`
+	ClientName   string    `json:"client_name"`
+	SupplierName string    `json:"supplier_name"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // GetContractForRAG retrieves a contract with joined client/supplier names for RAG indexing.
@@ -50,4 +50,3 @@ func (q *Queries) GetContractForRAG(ctx context.Context, id int64) (GetContractF
 	)
 	return row, err
 }
-

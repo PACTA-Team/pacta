@@ -317,11 +317,11 @@ func (q *Queries) GetLegalChatHistoryBySession(ctx context.Context, sessionID st
 
 // GetLegalChatSessionsByUser returns chat sessions for a user.
 func (q *Queries) GetLegalChatSessionsByUser(ctx context.Context, userID int64) ([]struct {
-	SessionID      string
-	UserID         int64
-	LastMessage    time.Time
-	CreatedAt      time.Time
-	MessageCount   int
+	SessionID    string
+	UserID       int64
+	LastMessage  time.Time
+	CreatedAt    time.Time
+	MessageCount int
 }, error) {
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT session_id, user_id, MAX(created_at) as last_message,
