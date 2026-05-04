@@ -98,17 +98,6 @@ jobs:
           cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
           make -j$(nproc)
 
-      - name: Build FAISS
-        working-directory: internal/ai/minirag/vector/faiss
-        run: |
-          if [ ! -d "faiss" ]; then
-            git clone --depth 1 https://github.com/facebookresearch/faiss .
-          fi
-          mkdir -p build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF -DBUILD_SHARED_LIBS=OFF ..
-          make -j$(nproc) faiss
-
       - name: Run MiniRAG tests
         env:
           CGO_ENABLED: 1
